@@ -1,3 +1,15 @@
+## [0.1.67](https://github.com/getplumber/plumber/compare/v0.1.66...v0.1.67) (2026-03-16)
+
+
+### ✨ Features
+
+* add structured error codes (PLB-XXXX) with documentation links ([692f9d4](https://github.com/getplumber/plumber/commit/692f9d429d779eaa3df27f743314c7b7e247533f)), closes [#92](https://github.com/getplumber/plumber/issues/92)
+
+
+### 🐛 Bug Fixes
+
+* **issues:** Update issues urls and prefix ([7ced522](https://github.com/getplumber/plumber/commit/7ced52221ba9b7c5be9670ad386d56fc409e099f))
+
 ## [0.1.66](https://github.com/getplumber/plumber/compare/v0.1.65...v0.1.66) (2026-03-13)
 
 
