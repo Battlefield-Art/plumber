@@ -1,3 +1,10 @@
+## [0.1.68](https://github.com/getplumber/plumber/compare/v0.1.67...v0.1.68) (2026-03-17)
+
+
+### 🐛 Bug Fixes
+
+* **issues:** Update issues link ([bc42f2f](https://github.com/getplumber/plumber/commit/bc42f2fdd8c0b74e210d254423e57951327aa48a))
+
 ## [0.1.67](https://github.com/getplumber/plumber/compare/v0.1.66...v0.1.67) (2026-03-16)
 
 
