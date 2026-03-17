@@ -4,62 +4,58 @@ package control
 // Each issue code links to its dedicated documentation page.
 const docsBaseURL = "https://getplumber.io/docs/use-plumber/issues/"
 
-// ErrorCode represents a unique Plumber issue code (ISSUE-XX format).
+// ErrorCode represents a unique Plumber issue code (ISSUE-XXX format).
 type ErrorCode string
 
-// Issue codes for container image controls
+// Issue codes for container image controls (1xx)
 const (
-	// ISSUE-3: Container image uses a forbidden tag (e.g., latest, dev)
-	CodeImageForbiddenTag ErrorCode = "ISSUE-3"
-	// ISSUE-33: Container image is not pinned by digest
-	CodeImageNotPinnedByDigest ErrorCode = "ISSUE-33"
-	// ISSUE-2: Container image comes from an unauthorized registry
-	CodeImageUnauthorizedSource ErrorCode = "ISSUE-2"
+	// ISSUE-101: Container image comes from an unauthorized registry
+	CodeImageUnauthorizedSource ErrorCode = "ISSUE-101"
+	// ISSUE-102: Container image uses a forbidden tag (e.g., latest, dev)
+	CodeImageForbiddenTag ErrorCode = "ISSUE-102"
+	// ISSUE-103: Container image is not pinned by digest
+	CodeImageNotPinnedByDigest ErrorCode = "ISSUE-103"
 )
 
-// Issue codes for branch protection controls
+// Issue codes for CI/CD variable controls (2xx)
 const (
-	// ISSUE-14: Branch is not protected
-	CodeBranchUnprotected ErrorCode = "ISSUE-14"
-	// ISSUE-27: Branch has non-compliant protection settings
-	CodeBranchNonCompliant ErrorCode = "ISSUE-27"
+	// ISSUE-203: Pipeline enables CI debug trace (CI_DEBUG_TRACE or CI_DEBUG_SERVICES)
+	CodeDebugTraceEnabled ErrorCode = "ISSUE-203"
+	// ISSUE-204: Unsafe variable expansion in shell re-interpretation context (eval, sh -c, etc.)
+	CodeUnsafeVariableExpansion ErrorCode = "ISSUE-204"
 )
 
-// Issue codes for pipeline origin controls
+// Issue codes for pipeline composition controls (4xx)
 const (
-	// ISSUE-8: Job is hardcoded (not sourced from include/component)
-	CodeJobHardcoded ErrorCode = "ISSUE-8"
-	// ISSUE-10: Include uses an outdated version
-	CodeIncludeOutdated ErrorCode = "ISSUE-10"
-	// ISSUE-11: Include uses a forbidden version
-	CodeIncludeForbiddenVersion ErrorCode = "ISSUE-11"
+	// ISSUE-401: Job is hardcoded (not sourced from include/component)
+	CodeJobHardcoded ErrorCode = "ISSUE-401"
+	// ISSUE-403: Include uses an outdated version
+	CodeIncludeOutdated ErrorCode = "ISSUE-403"
+	// ISSUE-404: Include uses a forbidden version
+	CodeIncludeForbiddenVersion ErrorCode = "ISSUE-404"
+	// ISSUE-405: Required template is missing from the pipeline
+	CodeTemplateMissing ErrorCode = "ISSUE-405"
+	// ISSUE-406: Required template jobs are overridden
+	CodeTemplateOverridden ErrorCode = "ISSUE-406"
+	// ISSUE-408: Required component is missing from the pipeline
+	CodeComponentMissing ErrorCode = "ISSUE-408"
+	// ISSUE-409: Required component jobs are overridden
+	CodeComponentOverridden ErrorCode = "ISSUE-409"
+	// ISSUE-410: Security job is weakened (allow_failure, rules override, when: manual)
+	CodeSecurityJobWeakened ErrorCode = "ISSUE-410"
 )
 
-// Issue codes for required includes controls
+// Issue codes for access and authorization controls (5xx)
 const (
-	// ISSUE-29: Required component is missing from the pipeline
-	CodeComponentMissing ErrorCode = "ISSUE-29"
-	// ISSUE-30: Required component jobs are overridden
-	CodeComponentOverridden ErrorCode = "ISSUE-30"
-	// ISSUE-12: Required template is missing from the pipeline
-	CodeTemplateMissing ErrorCode = "ISSUE-12"
-	// ISSUE-13: Required template jobs are overridden
-	CodeTemplateOverridden ErrorCode = "ISSUE-13"
-)
-
-// Issue codes for security controls
-const (
-	// ISSUE-34: Pipeline enables CI debug trace (CI_DEBUG_TRACE or CI_DEBUG_SERVICES)
-	CodeDebugTraceEnabled ErrorCode = "ISSUE-34"
-	// ISSUE-35: Unsafe variable expansion in shell re-interpretation context (eval, sh -c, etc.)
-	CodeUnsafeVariableExpansion ErrorCode = "ISSUE-35"
-	// ISSUE-36: Security job is weakened (allow_failure, rules override, when: manual)
-	CodeSecurityJobWeakened ErrorCode = "ISSUE-36"
+	// ISSUE-501: Branch is not protected
+	CodeBranchUnprotected ErrorCode = "ISSUE-501"
+	// ISSUE-505: Branch has non-compliant protection settings
+	CodeBranchNonCompliant ErrorCode = "ISSUE-505"
 )
 
 // ErrorCodeInfo provides metadata about an issue code.
 type ErrorCodeInfo struct {
-	// Code is the unique issue code (e.g., ISSUE-3).
+	// Code is the unique issue code (e.g., ISSUE-102).
 	Code ErrorCode `json:"code"`
 	// Title is a short human-readable title.
 	Title string `json:"title"`
@@ -75,10 +71,18 @@ type ErrorCodeInfo struct {
 
 // errorCodeRegistry maps issue codes to their metadata.
 var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
-	// Container image controls
+	// Container image controls (1xx)
+	CodeImageUnauthorizedSource: {
+		Code:        CodeImageUnauthorizedSource,
+		Title:       "Untrusted image source",
+		Description: "A container image is pulled from a registry that is not listed in the authorized sources. Using untrusted registries increases supply chain attack risk.",
+		Remediation: "Use images from an authorized registry configured in .plumber.yaml under containerImageMustComeFromAuthorizedSources.authorizedSources, or add the registry to the authorized list.",
+		DocURL:      docsBaseURL + string(CodeImageUnauthorizedSource),
+		ControlName: "containerImageMustComeFromAuthorizedSources",
+	},
 	CodeImageForbiddenTag: {
 		Code:        CodeImageForbiddenTag,
-		Title:       "Forbidden image tag",
+		Title:       "Forbidden container image tag",
 		Description: "A container image in the pipeline uses a tag that is forbidden by the configuration (e.g., 'latest', 'dev'). Mutable tags make builds non-reproducible because the underlying image can change without notice.",
 		Remediation: "Pin the image to a specific immutable version tag (e.g., 'python:3.12.1' instead of 'python:latest'). Configure forbidden tags in .plumber.yaml under containerImageMustNotUseForbiddenTags.forbiddenTags.",
 		DocURL:      docsBaseURL + string(CodeImageForbiddenTag),
@@ -86,103 +90,17 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	},
 	CodeImageNotPinnedByDigest: {
 		Code:        CodeImageNotPinnedByDigest,
-		Title:       "Image not pinned by digest",
+		Title:       "Container image is not pinned by digest",
 		Description: "A container image in the pipeline is not pinned by its SHA256 digest. Without digest pinning, a tag can be reassigned to a different image, introducing supply chain risks.",
 		Remediation: "Pin the image using its digest: 'image: registry.example.com/myimage@sha256:abc123...'. You can find the digest with 'docker inspect --format={{.RepoDigests}} <image>'.",
 		DocURL:      docsBaseURL + string(CodeImageNotPinnedByDigest),
 		ControlName: "containerImageMustNotUseForbiddenTags",
 	},
-	CodeImageUnauthorizedSource: {
-		Code:        CodeImageUnauthorizedSource,
-		Title:       "Unauthorized image source",
-		Description: "A container image is pulled from a registry that is not listed in the authorized sources. Using untrusted registries increases supply chain attack risk.",
-		Remediation: "Use images from an authorized registry configured in .plumber.yaml under containerImageMustComeFromAuthorizedSources.authorizedSources, or add the registry to the authorized list.",
-		DocURL:      docsBaseURL + string(CodeImageUnauthorizedSource),
-		ControlName: "containerImageMustComeFromAuthorizedSources",
-	},
 
-	// Branch protection controls
-	CodeBranchUnprotected: {
-		Code:        CodeBranchUnprotected,
-		Title:       "Branch not protected",
-		Description: "A branch that should be protected according to the configuration has no protection rules. Unprotected branches allow direct pushes and force pushes, bypassing code review.",
-		Remediation: "Enable branch protection in GitLab: Settings > Repository > Protected Branches. Add the branch with appropriate access levels for push and merge.",
-		DocURL:      docsBaseURL + string(CodeBranchUnprotected),
-		ControlName: "branchMustBeProtected",
-	},
-	CodeBranchNonCompliant: {
-		Code:        CodeBranchNonCompliant,
-		Title:       "Non-compliant branch protection",
-		Description: "A protected branch does not meet the required protection settings (e.g., force push allowed, access levels too permissive, code owner approval not required).",
-		Remediation: "Update branch protection settings in GitLab: Settings > Repository > Protected Branches. Ensure force push is disabled, access levels meet the minimum, and code owner approval is required per your .plumber.yaml configuration.",
-		DocURL:      docsBaseURL + string(CodeBranchNonCompliant),
-		ControlName: "branchMustBeProtected",
-	},
-
-	// Pipeline origin controls
-	CodeJobHardcoded: {
-		Code:        CodeJobHardcoded,
-		Title:       "Hardcoded job",
-		Description: "A job in the pipeline is defined directly in the CI configuration instead of being sourced from a CI/CD component or include. Hardcoded jobs bypass governance and standardization.",
-		Remediation: "Replace the hardcoded job with a CI/CD component or an include from an approved catalog. Use 'include:' or 'component:' directives in your .gitlab-ci.yml.",
-		DocURL:      docsBaseURL + string(CodeJobHardcoded),
-		ControlName: "pipelineMustNotIncludeHardcodedJobs",
-	},
-	CodeIncludeOutdated: {
-		Code:        CodeIncludeOutdated,
-		Title:       "Outdated include version",
-		Description: "An included CI/CD component or template is not using the latest available version. Outdated versions may miss security patches, bug fixes, or improvements.",
-		Remediation: "Update the include to use the latest version. Check the component/template repository for the latest release and update the version reference in your .gitlab-ci.yml.",
-		DocURL:      docsBaseURL + string(CodeIncludeOutdated),
-		ControlName: "includesMustBeUpToDate",
-	},
-	CodeIncludeForbiddenVersion: {
-		Code:        CodeIncludeForbiddenVersion,
-		Title:       "Forbidden include version",
-		Description: "An included CI/CD component or template uses a version that is explicitly forbidden (e.g., a mutable branch reference like 'main' instead of a tagged version).",
-		Remediation: "Replace the forbidden version with an authorized version format. Use semantic version tags (e.g., '1.2.3' or '~latest') instead of branch names or mutable references as configured in .plumber.yaml.",
-		DocURL:      docsBaseURL + string(CodeIncludeForbiddenVersion),
-		ControlName: "includesMustNotUseForbiddenVersions",
-	},
-
-	// Required includes controls
-	CodeComponentMissing: {
-		Code:        CodeComponentMissing,
-		Title:       "Required component missing",
-		Description: "A CI/CD component required by the configuration is not included in the pipeline. This means a mandatory compliance check or security scan is missing.",
-		Remediation: "Add the required component to your .gitlab-ci.yml using 'include:' with the component path specified in your .plumber.yaml under pipelineMustIncludeComponent.",
-		DocURL:      docsBaseURL + string(CodeComponentMissing),
-		ControlName: "pipelineMustIncludeComponent",
-	},
-	CodeComponentOverridden: {
-		Code:        CodeComponentOverridden,
-		Title:       "Required component overridden",
-		Description: "A required CI/CD component is included but some of its job keys are overridden locally, which may alter the intended behavior of the compliance check.",
-		Remediation: "Remove the local overrides on the component's jobs. If customization is needed, check if the component provides input variables for configuration instead of overriding job keys directly.",
-		DocURL:      docsBaseURL + string(CodeComponentOverridden),
-		ControlName: "pipelineMustIncludeComponent",
-	},
-	CodeTemplateMissing: {
-		Code:        CodeTemplateMissing,
-		Title:       "Required template missing",
-		Description: "A CI/CD template required by the configuration is not included in the pipeline. This means a mandatory workflow step is missing.",
-		Remediation: "Add the required template to your .gitlab-ci.yml using 'include:' with the template path specified in your .plumber.yaml under pipelineMustIncludeTemplate.",
-		DocURL:      docsBaseURL + string(CodeTemplateMissing),
-		ControlName: "pipelineMustIncludeTemplate",
-	},
-	CodeTemplateOverridden: {
-		Code:        CodeTemplateOverridden,
-		Title:       "Required template overridden",
-		Description: "A required CI/CD template is included but some of its job keys are overridden locally, which may alter the intended behavior.",
-		Remediation: "Remove the local overrides on the template's jobs. If customization is needed, check if the template provides variables for configuration instead of overriding job keys directly.",
-		DocURL:      docsBaseURL + string(CodeTemplateOverridden),
-		ControlName: "pipelineMustIncludeTemplate",
-	},
-
-	// Security controls
+	// CI/CD variable controls (2xx)
 	CodeDebugTraceEnabled: {
 		Code:        CodeDebugTraceEnabled,
-		Title:       "Debug trace enabled",
+		Title:       "Pipeline enables CI debug trace",
 		Description: "The pipeline has CI_DEBUG_TRACE or CI_DEBUG_SERVICES enabled, which exposes all secret variables in the job log output. This is a critical security risk in production pipelines.",
 		Remediation: "Remove or set CI_DEBUG_TRACE and CI_DEBUG_SERVICES to 'false' in your .gitlab-ci.yml variables section. These should only be used temporarily for debugging and never committed.",
 		DocURL:      docsBaseURL + string(CodeDebugTraceEnabled),
@@ -196,6 +114,64 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 		DocURL:      docsBaseURL + string(CodeUnsafeVariableExpansion),
 		ControlName: "pipelineMustNotUseUnsafeVariableExpansion",
 	},
+
+	// Pipeline composition controls (4xx)
+	CodeJobHardcoded: {
+		Code:        CodeJobHardcoded,
+		Title:       "Hardcoded job",
+		Description: "A job in the pipeline is defined directly in the CI configuration instead of being sourced from a CI/CD component or include. Hardcoded jobs bypass governance and standardization.",
+		Remediation: "Replace the hardcoded job with a CI/CD component or an include from an approved catalog. Use 'include:' or 'component:' directives in your .gitlab-ci.yml.",
+		DocURL:      docsBaseURL + string(CodeJobHardcoded),
+		ControlName: "pipelineMustNotIncludeHardcodedJobs",
+	},
+	CodeIncludeOutdated: {
+		Code:        CodeIncludeOutdated,
+		Title:       "Outdated template",
+		Description: "An included CI/CD component or template is not using the latest available version. Outdated versions may miss security patches, bug fixes, or improvements.",
+		Remediation: "Update the include to use the latest version. Check the component/template repository for the latest release and update the version reference in your .gitlab-ci.yml.",
+		DocURL:      docsBaseURL + string(CodeIncludeOutdated),
+		ControlName: "includesMustBeUpToDate",
+	},
+	CodeIncludeForbiddenVersion: {
+		Code:        CodeIncludeForbiddenVersion,
+		Title:       "Forbidden include version",
+		Description: "An included CI/CD component or template uses a version that is explicitly forbidden (e.g., a mutable branch reference like 'main' instead of a tagged version).",
+		Remediation: "Replace the forbidden version with an authorized version format. Use semantic version tags (e.g., '1.2.3' or '~latest') instead of branch names or mutable references as configured in .plumber.yaml.",
+		DocURL:      docsBaseURL + string(CodeIncludeForbiddenVersion),
+		ControlName: "includesMustNotUseForbiddenVersions",
+	},
+	CodeTemplateMissing: {
+		Code:        CodeTemplateMissing,
+		Title:       "Missing required template",
+		Description: "A CI/CD template required by the configuration is not included in the pipeline. This means a mandatory workflow step is missing.",
+		Remediation: "Add the required template to your .gitlab-ci.yml using 'include:' with the template path specified in your .plumber.yaml under pipelineMustIncludeTemplate.",
+		DocURL:      docsBaseURL + string(CodeTemplateMissing),
+		ControlName: "pipelineMustIncludeTemplate",
+	},
+	CodeTemplateOverridden: {
+		Code:        CodeTemplateOverridden,
+		Title:       "Forbidden override of required template",
+		Description: "A required CI/CD template is included but some of its job keys are overridden locally, which may alter the intended behavior.",
+		Remediation: "Remove the local overrides on the template's jobs. If customization is needed, check if the template provides variables for configuration instead of overriding job keys directly.",
+		DocURL:      docsBaseURL + string(CodeTemplateOverridden),
+		ControlName: "pipelineMustIncludeTemplate",
+	},
+	CodeComponentMissing: {
+		Code:        CodeComponentMissing,
+		Title:       "Missing required component",
+		Description: "A CI/CD component required by the configuration is not included in the pipeline. This means a mandatory compliance check or security scan is missing.",
+		Remediation: "Add the required component to your .gitlab-ci.yml using 'include:' with the component path specified in your .plumber.yaml under pipelineMustIncludeComponent.",
+		DocURL:      docsBaseURL + string(CodeComponentMissing),
+		ControlName: "pipelineMustIncludeComponent",
+	},
+	CodeComponentOverridden: {
+		Code:        CodeComponentOverridden,
+		Title:       "Forbidden override of required component",
+		Description: "A required CI/CD component is included but some of its job keys are overridden locally, which may alter the intended behavior of the compliance check.",
+		Remediation: "Remove the local overrides on the component's jobs. If customization is needed, check if the component provides input variables for configuration instead of overriding job keys directly.",
+		DocURL:      docsBaseURL + string(CodeComponentOverridden),
+		ControlName: "pipelineMustIncludeComponent",
+	},
 	CodeSecurityJobWeakened: {
 		Code:        CodeSecurityJobWeakened,
 		Title:       "Security job weakened",
@@ -203,6 +179,24 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 		Remediation: "Ensure security jobs run automatically and block the pipeline on failure. Remove allow_failure: true, do not override rules with when: never or when: manual, and do not set when: manual on security jobs.",
 		DocURL:      docsBaseURL + string(CodeSecurityJobWeakened),
 		ControlName: "securityJobsMustNotBeWeakened",
+	},
+
+	// Access and authorization controls (5xx)
+	CodeBranchUnprotected: {
+		Code:        CodeBranchUnprotected,
+		Title:       "Branch protection missing",
+		Description: "A branch that should be protected according to the configuration has no protection rules. Unprotected branches allow direct pushes and force pushes, bypassing code review.",
+		Remediation: "Enable branch protection in GitLab: Settings > Repository > Protected Branches. Add the branch with appropriate access levels for push and merge.",
+		DocURL:      docsBaseURL + string(CodeBranchUnprotected),
+		ControlName: "branchMustBeProtected",
+	},
+	CodeBranchNonCompliant: {
+		Code:        CodeBranchNonCompliant,
+		Title:       "Branch protection configuration not compliant",
+		Description: "A protected branch does not meet the required protection settings (e.g., force push allowed, access levels too permissive, code owner approval not required).",
+		Remediation: "Update branch protection settings in GitLab: Settings > Repository > Protected Branches. Ensure force push is disabled, access levels meet the minimum, and code owner approval is required per your .plumber.yaml configuration.",
+		DocURL:      docsBaseURL + string(CodeBranchNonCompliant),
+		ControlName: "branchMustBeProtected",
 	},
 }
 
