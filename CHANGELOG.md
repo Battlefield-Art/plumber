@@ -1,3 +1,10 @@
+## [0.1.69](https://github.com/getplumber/plumber/compare/v0.1.68...v0.1.69) (2026-03-18)
+
+
+### ✨ Features
+
+* **control:** Add control to check unverified inline script exceution ([cbb416b](https://github.com/getplumber/plumber/commit/cbb416b0c4984be268fd1c8accde589af925578f))
+
 ## [0.1.68](https://github.com/getplumber/plumber/compare/v0.1.67...v0.1.68) (2026-03-17)
 
 
