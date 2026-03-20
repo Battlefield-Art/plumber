@@ -804,10 +804,10 @@ brew install plumber
 To install a specific version:
 
 ```bash
-brew install getplumber/plumber/plumber@0.1.71
+brew install getplumber/plumber/plumber@0.1.72
 ```
 
-> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.1.71/bin/plumber` or run `brew link plumber@0.1.71` to add it to your PATH.
+> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.1.72/bin/plumber` or run `brew link plumber@0.1.72` to add it to your PATH.
 
 ### Mise
 
@@ -891,7 +891,13 @@ Every release binary has a signed [SLSA Level 3](https://slsa.dev/spec/v1.0/leve
 gh attestation verify plumber-linux-amd64 --repo getplumber/plumber
 ```
 
-This confirms the binary was built from the expected source commit, on GitHub Actions, and wasn't tampered with after the build. See [supply chain security docs](docs/supply-chain-security.md) for details.
+For the Docker image, verify without downloading:
+
+```bash
+gh attestation verify oci://docker.io/getplumber/plumber:latest --repo getplumber/plumber
+```
+
+This confirms the artifact was built from the expected source commit, on GitHub Actions, and wasn't tampered with after the build. See [supply chain security docs](docs/supply-chain-security.md) for details.
 
 </details>
 

@@ -139,6 +139,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     needs: release
     if: needs.release.outputs.new_release_published == 'true'
     steps:
@@ -171,6 +173,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
@@ -180,6 +183,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Attest Docker image
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: docker.io/getplumber/plumber
+          subject-digest: ${{ steps.push.outputs.digest }}
 
   homebrew:
     name: Update Homebrew Tap
