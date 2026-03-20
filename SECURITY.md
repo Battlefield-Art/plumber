@@ -46,7 +46,7 @@ Plumber itself is a CI/CD compliance scanner. We practice what we preach:
 
 - All GitHub Actions are pinned by SHA commit hash
 - Workflow permissions follow the principle of least privilege
-- Release artifacts include SLSA Level 3 provenance attestations
+- Release artifacts include SLSA Level 3 provenance attestations via [GitHub's attestation store](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds)
 - Dependencies are monitored with Dependabot
 - Code is analyzed with CodeQL (SAST)
 - Container images are scanned with Grype

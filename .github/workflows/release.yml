@@ -101,7 +101,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-    needs: [release, binaries, provenance]
+      id-token: write
+      attestations: write
+    needs: [release, binaries]
     if: needs.release.outputs.new_release_published == 'true'
     steps:
       - name: Download binary artifacts
@@ -110,17 +112,16 @@ jobs:
           path: dist/
           merge-multiple: true
 
-      - name: Download provenance
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
-        with:
-          name: ${{ needs.provenance.outputs.provenance-name }}
-          path: dist/
-
       - name: Generate checksums
         working-directory: dist
         run: |
           sha256sum plumber-* > checksums.txt
           cat checksums.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: dist/plumber-*
 
       - name: Create release with assets
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
@@ -131,7 +132,6 @@ jobs:
           files: |
             dist/plumber-*
             dist/checksums.txt
-            dist/*.intoto.jsonl
 
   docker:
     name: Build & Push Docker Image
@@ -365,39 +365,3 @@ jobs:
           git add Formula/
           git commit -m "Update to v${VERSION}"
           git push
-
-  hash:
-    name: Compute Artifact Hashes
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    needs: [release, binaries]
-    if: needs.release.outputs.new_release_published == 'true'
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
-        with:
-          path: dist/
-          merge-multiple: true
-
-      - name: Compute SHA256 hashes
-        id: hash
-        working-directory: dist
-        run: |
-          echo "hashes=$(sha256sum plumber-* | base64 -w0)" >> "$GITHUB_OUTPUT"
-
-  provenance:
-    name: SLSA Provenance
-    needs: [release, hash]
-    if: needs.release.outputs.new_release_published == 'true'
-    permissions:
-      actions: read
-      id-token: write
-      contents: write
-    # zizmor: ignore[unpinned-uses] — SLSA generator requires tag reference, not SHA
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
-    with:
-      base64-subjects: "${{ needs.hash.outputs.hashes }}"
-      upload-assets: false

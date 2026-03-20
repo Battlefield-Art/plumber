@@ -882,6 +882,19 @@ sha256sum -c checksums.txt --ignore-missing
 
 </details>
 
+<details>
+<summary><b>Verify build provenance</b></summary>
+
+Every release binary has a signed [SLSA Level 3](https://slsa.dev/spec/v1.0/levels#build-l3) attestation stored in GitHub's attestation store. Verify with the GitHub CLI:
+
+```bash
+gh attestation verify plumber-linux-amd64 --repo getplumber/plumber
+```
+
+This confirms the binary was built from the expected source commit, on GitHub Actions, and wasn't tampered with after the build. See [supply chain security docs](docs/supply-chain-security.md) for details.
+
+</details>
+
 ### Docker
 
 ```bash
