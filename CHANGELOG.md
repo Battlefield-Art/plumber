@@ -1,3 +1,10 @@
+## [0.1.72](https://github.com/getplumber/plumber/compare/v0.1.71...v0.1.72) (2026-03-20)
+
+
+### 🐛 Bug Fixes
+
+* **pipeline:** Attach attestation to container ([e465aa2](https://github.com/getplumber/plumber/commit/e465aa2de339352e53dd933607dfa7f5f8e00102))
+
 ## [0.1.71](https://github.com/getplumber/plumber/compare/v0.1.70...v0.1.71) (2026-03-20)
 
 
