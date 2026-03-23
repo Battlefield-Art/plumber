@@ -1,3 +1,10 @@
+## [0.1.73](https://github.com/getplumber/plumber/compare/v0.1.72...v0.1.73) (2026-03-23)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Enable attestation arrival in artifacts ([8de06af](https://github.com/getplumber/plumber/commit/8de06affa41da3f5b7ced83a192d3bbdbc42d056))
+
 ## [0.1.72](https://github.com/getplumber/plumber/compare/v0.1.71...v0.1.72) (2026-03-20)
 
 
