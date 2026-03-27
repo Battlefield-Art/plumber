@@ -1,3 +1,10 @@
+## [0.1.74](https://github.com/getplumber/plumber/compare/v0.1.73...v0.1.74) (2026-03-27)
+
+
+### ✨ Features
+
+* **cmd:** Add new flag --ci-config-path to allow overriding .gitlab-ci.yml ([150e230](https://github.com/getplumber/plumber/commit/150e2308f39cab64b54e4dba49b24770053ab4a3))
+
 ## [0.1.73](https://github.com/getplumber/plumber/compare/v0.1.72...v0.1.73) (2026-03-23)
 
 
