@@ -832,6 +832,7 @@ To install a specific version:
 ```bash
 brew install getplumber/plumber/plumber@0.2.1
 ```
+
 > **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.2.1/bin/plumber` or run `brew link plumber@0.2.1` to add it to your PATH.
 
 ### Mise
