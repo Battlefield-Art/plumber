@@ -1,3 +1,10 @@
+## [0.1.76](https://github.com/getplumber/plumber/compare/v0.1.75...v0.1.76) (2026-03-31)
+
+
+### ✨ Features
+
+* **control:** Add control to detect overriden variables pipelineMustNotOverrideJobVariables ([bd095da](https://github.com/getplumber/plumber/commit/bd095daaaee9294fb92f1afa4a76c47e9d24fab6))
+
 ## [0.1.75](https://github.com/getplumber/plumber/compare/v0.1.74...v0.1.75) (2026-03-27)
 
 ## [0.2.0](https://github.com/getplumber/plumber/compare/v0.1.74...v0.2.0) (2026-03-27)
