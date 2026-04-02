@@ -1,3 +1,10 @@
+## [0.1.77](https://github.com/getplumber/plumber/compare/v0.1.76...v0.1.77) (2026-04-02)
+
+
+### ✨ Features
+
+* **control:** Add control to detect basic DinD and unsecure DinD ([6a03424](https://github.com/getplumber/plumber/commit/6a034247c60348572dc4a039101ae14b6b49ab82))
+
 ## [0.1.76](https://github.com/getplumber/plumber/compare/v0.1.75...v0.1.76) (2026-03-31)
 
 
