@@ -1,3 +1,16 @@
+## [0.1.82](https://github.com/getplumber/plumber/compare/v0.1.81...v0.1.82) (2026-04-13)
+
+
+### ✨ Features
+
+* **cmd:** Add explain command that explains briefly issues ([88f2b91](https://github.com/getplumber/plumber/commit/88f2b917c5a25c29a9a33f1f9478f83826019cd4))
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Update alpine image to 3.22 and only fail CI when issues have known fixes - no point otherwise ([f5b9edc](https://github.com/getplumber/plumber/commit/f5b9edcf46169d060db0e8da03ad89fea6a48db2))
+* **go:** Update to go 1.26 ([3960953](https://github.com/getplumber/plumber/commit/39609530367dbad02692779d4442f180cb6e707c))
+
 ## [0.1.81](https://github.com/getplumber/plumber/compare/v0.1.80...v0.1.81) (2026-04-03)
 
 ## [0.1.80](https://github.com/getplumber/plumber/compare/v0.1.79...v0.1.80) (2026-04-03)
