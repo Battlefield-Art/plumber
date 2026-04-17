@@ -1,3 +1,10 @@
+## [0.1.84](https://github.com/getplumber/plumber/compare/v0.1.83...v0.1.84) (2026-04-17)
+
+
+### ✨ Features
+
+* **score:** Set scoring go v1 and update some severities ([6402fd9](https://github.com/getplumber/plumber/commit/6402fd9002a8c5ed1f1bdeae8eb2b00091e4b1d1))
+
 ## [0.1.83](https://github.com/getplumber/plumber/compare/v0.1.82...v0.1.83) (2026-04-17)
 
 
