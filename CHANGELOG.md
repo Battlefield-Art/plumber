@@ -1,3 +1,10 @@
+## [0.1.83](https://github.com/getplumber/plumber/compare/v0.1.82...v0.1.83) (2026-04-17)
+
+
+### ✨ Features
+
+* **artifact:** new scoring concept: ([ab7d4b6](https://github.com/getplumber/plumber/commit/ab7d4b6b4f262ed50a7d8af3c3907e1387c2eae4))
+
 ## [0.1.82](https://github.com/getplumber/plumber/compare/v0.1.81...v0.1.82) (2026-04-13)
 
 
