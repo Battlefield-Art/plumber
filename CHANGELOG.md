@@ -1,3 +1,15 @@
+## [0.2.4](https://github.com/getplumber/plumber/compare/v0.2.3...v0.2.4) (2026-04-20)
+
+
+### ✨ Features
+
+* **release:** Update release to use app + update default trustedUrls ([00f97a2](https://github.com/getplumber/plumber/commit/00f97a2dc1147a3a96da3d6ef0b8c5bf5b25df24))
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Replace with app id ([5f880b9](https://github.com/getplumber/plumber/commit/5f880b943711e0aadfa40a0a6253e224c3f63271))
+
 ## [0.2.3](https://github.com/getplumber/plumber/compare/v0.2.2...v0.2.3) (2026-04-20)
 
 ## [0.1.84](https://github.com/getplumber/plumber/compare/v0.1.83...v0.1.84) (2026-04-17)
