@@ -67,22 +67,95 @@ controls:
 
       # Common CI/CD tool images
       - docker.io/docker:*
-      - gcr.io/kaniko-project/*
+      - docker.io/getplumber/plumber:*
+      - getplumber/plumber:*
 
       # GitLab registry patterns
       - $CI_REGISTRY_IMAGE:*
       - $CI_REGISTRY_IMAGE/*
+      - $CI_REGISTRY/*
+      - ${CI_REGISTRY}/*
+      - ${CI_REGISTRY_IMAGE}:*
+      - ${CI_REGISTRY_IMAGE}/*
 
-      # Plumber
-      - getplumber/plumber:*
-      - docker.io/getplumber/plumber:*
+      # GitLab Dependency Proxy
+      - ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/*
 
-      # Security products
+      # GitLab official registries
       - registry.gitlab.com/security-products/*
+      - registry.gitlab.com/gitlab-org/*
+      - registry.gitlab.com/pipeline-components/*
 
-      # Add your organization's trusted registries below:
-      # - your-registry.example.com/*
-      # - ghcr.io/your-org/*
+      # Do NOT use host-wide patterns such as ghcr.io/*, gcr.io/*, quay.io/*, mcr.microsoft.com/*,
+      # nvcr.io/* — anyone can publish images on those registries; wildcards would trust all of them.
+      # Prefer org-scoped patterns instead, e.g. ghcr.io/my-org/*, quay.io/prometheus/*
+
+      # Docker Hub — well-known publishers (DevOps / CI tooling)
+      # Each entry below corresponds to a Docker Hub Verified Publisher,
+      # the upstream project's own namespace, or an officially recognised
+      # community publisher for that tool. See docs/trusted-registries.md
+      # for verification notes.
+      - docker.io/curlimages/*       # curl docker team (curl/curl-container)
+      - docker.io/alpine/*           # Alpine Linux maintainers (alpinelinux org)
+      - docker.io/golangci/*         # golangci-lint upstream
+      - docker.io/koalaman/*         # ShellCheck author (Vidar Holen)
+      - docker.io/hadolint/*         # hadolint upstream
+      - docker.io/semgrep/*          # Semgrep, Inc.
+      - docker.io/sonarsource/*      # SonarSource verified publisher
+      - docker.io/cypress/*          # Cypress.io verified publisher
+      - docker.io/gittools/*         # GitTools (GitVersion) upstream
+      - docker.io/renovate/*         # Renovate Bot (Mend.io) verified publisher
+      - docker.io/gitlab/*           # GitLab verified publisher
+      - docker.io/lycheeverse/*      # lychee link checker upstream
+      - docker.io/hugomods/*         # HugoMods Hugo container project
+      - docker.io/fsfe/*             # Free Software Foundation Europe (REUSE)
+      - docker.io/hashicorp/*        # HashiCorp (IBM) verified publisher
+      - docker.io/cimg/*             # CircleCI convenience images
+      - docker.io/circleci/*         # CircleCI legacy convenience images
+
+      # Docker Hub — cloud vendor official images
+      - docker.io/amazon/*           # Amazon Web Services
+      - docker.io/google/*           # Google
+      - docker.io/nvidia/*           # NVIDIA verified publisher
+      - docker.io/bitnami/*          # Bitnami / VMware (Broadcom) verified publisher
+
+      # Docker Hub — OS / distro official images
+      - docker.io/redhat/*           # Red Hat
+      - docker.io/opensuse/*         # openSUSE Project
+      - docker.io/gentoo/*           # Gentoo Linux maintainers
+      - docker.io/nixos/*            # NixOS Foundation
+      - docker.io/rustlang/*         # Rust Programming Language official
+
+      # Microsoft Container Registry — official Microsoft products
+      - mcr.microsoft.com/dotnet/*       # .NET official images
+      - mcr.microsoft.com/playwright/*   # Playwright (Microsoft) browser images
+      - mcr.microsoft.com/playwright     # tag-only ref form (no path suffix)
+
+      # Quay.io — well-known projects with their own organisation
+      - quay.io/buildah/*                       # Containers project (Buildah)
+      - quay.io/podman/*                        # Containers project (Podman)
+      - quay.io/containers/*                    # Containers project umbrella org
+      - quay.io/centos/*                        # CentOS Project (CentOS Stream)
+      - quay.io/pypa/*                          # Python Packaging Authority (manylinux)
+      - quay.io/gnome_infrastructure/*          # GNOME Infrastructure team
+
+      # GitHub Container Registry — well-known upstream organisations
+      # ghcr.io/<org>/* is scoped to a single GitHub organisation, so each
+      # entry must be the actual org that publishes the upstream tool.
+      - ghcr.io/astral-sh/*          # Astral (uv, ruff)
+      - ghcr.io/renovatebot/*        # Renovate Bot upstream
+      - ghcr.io/containerbase/*      # containerbase (Renovate base images)
+      - ghcr.io/canonical/*          # Canonical (snapcraft-rocks etc.)
+      - ghcr.io/graalvm/*            # Oracle GraalVM team
+      - ghcr.io/terraform-linters/*  # tflint upstream organisation
+      - ghcr.io/prefix-dev/*         # prefix.dev (pixi)
+
+      # Google Container Registry — Google-owned projects
+      - gcr.io/kaniko-project/*                 # Kaniko (Google Cloud Build)
+      - gcr.io/go-containerregistry/*           # google/go-containerregistry (crane, gcrane)
+      - gcr.io/google.com/cloudsdktool/*        # Google Cloud SDK (gcloud) official
+
+
 
   # ===========================================
   # Branch must be protected
