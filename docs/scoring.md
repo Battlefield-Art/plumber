@@ -2,8 +2,6 @@
 
 This document describes how Plumber computes the **letter score** (A–E), **points** (0–100), and **Critical malus**, as implemented in `control/scoring.go`. It matches the active profile id `scoring-v1` (`PlumberScoreProfileID`).
 
-For broader product notes (mixed languages, design history), see [`../scoring.md`](../scoring.md) in the repository root.
-
 ---
 
 ## Language: score vs points
