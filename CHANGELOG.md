@@ -1,3 +1,10 @@
+## [0.2.5](https://github.com/getplumber/plumber/compare/v0.2.4...v0.2.5) (2026-04-20)
+
+
+### ✨ Features
+
+* **scoring:** Update scoring badge url to point to our doc and update scoring doc to including letter descriptions ([58bad14](https://github.com/getplumber/plumber/commit/58bad14d7e655124eb510f3c96493ce2e551475a))
+
 ## [0.2.4](https://github.com/getplumber/plumber/compare/v0.2.3...v0.2.4) (2026-04-20)
 
 
