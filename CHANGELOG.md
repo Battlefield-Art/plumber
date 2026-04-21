@@ -1,3 +1,10 @@
+## [0.2.6](https://github.com/getplumber/plumber/compare/v0.2.5...v0.2.6) (2026-04-21)
+
+
+### ✨ Features
+
+* **cli:** Bump versions ([4e37488](https://github.com/getplumber/plumber/commit/4e37488ea17f7ee78fcb5abbdce455bf9f190756))
+
 ## [0.2.5](https://github.com/getplumber/plumber/compare/v0.2.4...v0.2.5) (2026-04-20)
 
 
