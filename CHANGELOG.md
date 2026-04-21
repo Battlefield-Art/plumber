@@ -1,3 +1,10 @@
+## [0.2.7](https://github.com/getplumber/plumber/compare/v0.2.6...v0.2.7) (2026-04-21)
+
+
+### 🐛 Bug Fixes
+
+* **mr:** Mr badge must take to doc ([f99986b](https://github.com/getplumber/plumber/commit/f99986b910cc433b52372b91204914b7c37e9ce5))
+
 ## [0.2.6](https://github.com/getplumber/plumber/compare/v0.2.5...v0.2.6) (2026-04-21)
 
 
