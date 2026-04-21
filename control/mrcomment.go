@@ -140,8 +140,10 @@ func generateMRComment(result *AnalysisResult, compliance, threshold float64, sc
 	badgeURL := ComplianceBadgeURL(compliance, threshold)
 	if scoreMode && score != nil {
 		badgeURL = ScoreBadgeURL(score.Score)
+		fmt.Fprintf(&b, "[![Plumber](%s)](%s)\n\n", badgeURL, PlumberScoreDocURL)
+	} else {
+		fmt.Fprintf(&b, "![Plumber](%s)\n\n", badgeURL)
 	}
-	fmt.Fprintf(&b, "![Plumber](%s)\n\n", badgeURL)
 
 	b.WriteString("*If this merge request is merged, the expected pipeline compliance will be as shown above.*\n\n")
 

@@ -863,6 +863,7 @@ include:
 - Lists all controls with individual compliance percentages
 - Details specific issues found with job names and image references
 - With `--score-point`, includes a **Plumber Score** block (points + letter) in the comment; with `--score` only, a short letter **score** line (badge shows the letter whenever either flag is set)
+- When the badge shows the **letter score** (`--score` or `--score-point`), clicking it opens the [scoring documentation](https://github.com/getplumber/plumber/blob/main/docs/scoring.md)
 - Automatically updates on each pipeline run (doesn't create duplicate comments)
 
 > ⚠️ **Token requirement:** The `api` scope is required (not `read_api`) to create/update MR comments.
@@ -904,10 +905,10 @@ brew install plumber
 To install a specific version:
 
 ```bash
-brew install getplumber/plumber/plumber@0.2.6
+brew install getplumber/plumber/plumber@0.2.7
 ```
 
-> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.2.6/bin/plumber` or run `brew link plumber@0.2.6` to add it to your PATH.
+> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.2.7/bin/plumber` or run `brew link plumber@0.2.7` to add it to your PATH.
 
 ### Mise
 
