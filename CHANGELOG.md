@@ -1,3 +1,11 @@
+## [0.2.8](https://github.com/getplumber/plumber/compare/v0.2.7...v0.2.8) (2026-04-22)
+
+
+### 🐛 Bug Fixes
+
+* **gitlab:** handle scalar include in GitlabCIConf unmarshalling ([a5888cf](https://github.com/getplumber/plumber/commit/a5888cf1b39c5280c1b04fcc311fda26b917b1b7))
+* **tests:** Add more exhaustive tests for unmarshaling error on inclusion ([a3c0bf1](https://github.com/getplumber/plumber/commit/a3c0bf1ff2e47bd7dffabf37aae7e21dd90775b9))
+
 ## [0.2.7](https://github.com/getplumber/plumber/compare/v0.2.6...v0.2.7) (2026-04-21)
 
 
