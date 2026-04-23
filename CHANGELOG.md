@@ -1,3 +1,10 @@
+## [0.2.9](https://github.com/getplumber/plumber/compare/v0.2.8...v0.2.9) (2026-04-23)
+
+
+### ✨ Features
+
+* **scoring:** Change issues severities and dampen score loss ([8af879a](https://github.com/getplumber/plumber/commit/8af879a71ca3c68e248d76df67bd6c7266d69b75))
+
 ## [0.2.8](https://github.com/getplumber/plumber/compare/v0.2.7...v0.2.8) (2026-04-22)
 
 
