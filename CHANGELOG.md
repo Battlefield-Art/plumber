@@ -1,3 +1,10 @@
+## [0.2.11](https://github.com/getplumber/plumber/compare/v0.2.10...v0.2.11) (2026-04-24)
+
+
+### 🐛 Bug Fixes
+
+* **conf:** Trust sha pinned versions of plumber ([090f8c7](https://github.com/getplumber/plumber/commit/090f8c71c7266b91534cca79db1eb50747bb6133))
+
 ## [0.2.10](https://github.com/getplumber/plumber/compare/v0.2.9...v0.2.10) (2026-04-24)
 
 ## [0.2.9](https://github.com/getplumber/plumber/compare/v0.2.8...v0.2.9) (2026-04-23)
