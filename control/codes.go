@@ -179,7 +179,7 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	},
 	CodeTemplateMissing: {
 		Code:        CodeTemplateMissing,
-		Severity:    SeverityMedium,
+		Severity:    SeverityHigh,
 		Title:       "Missing required template",
 		Description: "A CI/CD template required by the configuration is not included in the pipeline. This means a mandatory workflow step is missing.",
 		Remediation: "Add the required template to your .gitlab-ci.yml using 'include:' with the template path specified in your .plumber.yaml under pipelineMustIncludeTemplate.",
@@ -197,7 +197,7 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	},
 	CodeComponentMissing: {
 		Code:        CodeComponentMissing,
-		Severity:    SeverityMedium,
+		Severity:    SeverityHigh,
 		Title:       "Missing required component",
 		Description: "A CI/CD component required by the configuration is not included in the pipeline. This means a mandatory compliance check or security scan is missing.",
 		Remediation: "Add the required component to your .gitlab-ci.yml using 'include:' with the component path specified in your .plumber.yaml under pipelineMustIncludeComponent.",
@@ -215,7 +215,7 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	},
 	CodeSecurityJobWeakened: {
 		Code:        CodeSecurityJobWeakened,
-		Severity:    SeverityMedium,
+		Severity:    SeverityCritical,
 		Title:       "Security job weakened",
 		Description: "A security job in the pipeline has been weakened by setting allow_failure to true, overriding rules with when: never or when: manual, or setting when to manual. This can cause critical security scans to be skipped or require manual intervention.",
 		Remediation: "Ensure security jobs run automatically and block the pipeline on failure. Remove allow_failure: true, do not override rules with when: never or when: manual, and do not set when: manual on security jobs.",
@@ -254,7 +254,7 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	// Access and authorization controls (5xx)
 	CodeBranchUnprotected: {
 		Code:        CodeBranchUnprotected,
-		Severity:    SeverityHigh,
+		Severity:    SeverityCritical,
 		Title:       "Branch protection missing",
 		Description: "A branch that should be protected according to the configuration has no protection rules. Unprotected branches allow direct pushes and force pushes, bypassing code review.",
 		Remediation: "Enable branch protection in GitLab: Settings > Repository > Protected Branches. Add the branch with appropriate access levels for push and merge.",
@@ -263,7 +263,7 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 	},
 	CodeBranchNonCompliant: {
 		Code:        CodeBranchNonCompliant,
-		Severity:    SeverityMedium,
+		Severity:    SeverityHigh,
 		Title:       "Branch protection configuration not compliant",
 		Description: "A protected branch does not meet the required protection settings (e.g., force push allowed, access levels too permissive, code owner approval not required).",
 		Remediation: "Update branch protection settings in GitLab: Settings > Repository > Protected Branches. Ensure force push is disabled, access levels meet the minimum, and code owner approval is required per your .plumber.yaml configuration.",
