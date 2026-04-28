@@ -1,3 +1,10 @@
+## [0.2.21](https://github.com/getplumber/plumber/compare/v0.2.20...v0.2.21) (2026-04-28)
+
+
+### ✨ Features
+
+* **controls:** Change severities ([c213692](https://github.com/getplumber/plumber/commit/c21369274c39deec3b8d9e501261fc6703aa9033))
+
 ## [0.2.20](https://github.com/getplumber/plumber/compare/v0.2.19...v0.2.20) (2026-04-28)
 
 
