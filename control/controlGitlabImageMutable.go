@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const ControlTypeGitlabImageForbiddenTagsVersion = "0.3.0"
+const ControlTypeGitlabImageForbiddenTagsVersion = "0.4.0"
 
 // GitlabImageForbiddenTagsConf holds the configuration for forbidden tag detection
 type GitlabImageForbiddenTagsConf struct {
@@ -21,8 +21,8 @@ type GitlabImageForbiddenTagsConf struct {
 	// ForbiddenTags is a list of tags considered forbidden (e.g., latest, dev)
 	ForbiddenTags []string `json:"forbiddenTags"`
 
-	// MustBePinnedByDigest when true, ALL images must use immutable digest references.
-	// Takes precedence over the forbidden tags list.
+	// MustBePinnedByDigest when true, every image must use an immutable digest reference (ISSUE-103 when not).
+	// Forbidden tag rules still apply when tags are configured (ISSUE-102 can appear alongside ISSUE-103).
 	MustBePinnedByDigest bool `json:"mustBePinnedByDigest"`
 }
 
@@ -149,39 +149,37 @@ func (p *GitlabImageForbiddenTagsConf) Run(pipelineImageData *collector.GitlabPi
 
 	// Loop over all images
 	for _, image := range pipelineImageData.Images {
+		pinned := isImagePinnedByDigest(image.Link)
 
-		// If mustBePinnedByDigest is enabled, check digest pinning first (takes precedence)
 		if p.MustBePinnedByDigest {
-			if isImagePinnedByDigest(image.Link) {
+			if pinned {
 				result.Metrics.PinnedByDigest++
-				continue
+			} else {
+				result.Issues = append(result.Issues, GitlabPipelineImageIssueTag{
+					Code:   CodeImageNotPinnedByDigest,
+					DocURL: CodeImageNotPinnedByDigest.DocURL(),
+					Link:   image.Link,
+					Tag:    image.Tag,
+					Job:    image.Job,
+				})
+				result.Metrics.NotPinnedByDigest++
 			}
-
-			// Not pinned by digest — flag it
-			issue := GitlabPipelineImageIssueTag{
-				Code:   CodeImageNotPinnedByDigest,
-				DocURL: CodeImageNotPinnedByDigest.DocURL(),
-				Link:   image.Link,
-				Tag:    image.Tag,
-				Job:    image.Job,
-			}
-			result.Issues = append(result.Issues, issue)
-			result.Metrics.NotPinnedByDigest++
-			continue
 		}
 
-		// Standard mode: check tag against forbidden patterns
-		isForbiddenTag := gitlab.CheckItemMatchToPatterns(image.Tag, p.ForbiddenTags)
-
-		if isForbiddenTag {
-			issue := GitlabPipelineImageIssueTag{
+		if len(p.ForbiddenTags) == 0 {
+			continue
+		}
+		// In digest mode, only evaluate forbidden tags when the image is not digest-pinned
+		// (avoids ISSUE-102 on references that are already immutable via digest).
+		evaluateForbidden := !p.MustBePinnedByDigest || !pinned
+		if evaluateForbidden && gitlab.CheckItemMatchToPatterns(image.Tag, p.ForbiddenTags) {
+			result.Issues = append(result.Issues, GitlabPipelineImageIssueTag{
 				Code:   CodeImageForbiddenTag,
 				DocURL: CodeImageForbiddenTag.DocURL(),
 				Link:   image.Link,
 				Tag:    image.Tag,
 				Job:    image.Job,
-			}
-			result.Issues = append(result.Issues, issue)
+			})
 			result.Metrics.UsingForbiddenTags++
 		}
 	}

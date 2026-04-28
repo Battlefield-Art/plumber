@@ -332,9 +332,7 @@ Plumber includes 14 compliance controls. Each can be enabled/disabled and custom
 
 Detects container images using mutable tags that are expected to change unexpectedly.
 
-When `containerImagesMustBePinnedByDigest` is set to `true`, this control operates in strict mode:
-**all** images must be pinned by digest (e.g., `alpine@sha256:...`). This takes precedence over the
-forbidden tags list even standard version tags like `alpine:3.19` or `node:20` will be flagged.
+When `containerImagesMustBePinnedByDigest` is set to `true`, this control requires **all** images to be pinned by digest (e.g., `alpine@sha256:...`); unpinned images are reported as ISSUE-103. If you also configure `tags`, forbidden tag matches (ISSUE-102) are evaluated for images that are **not** digest-pinned, so an image like `golangci/golangci-lint:latest` can produce both ISSUE-103 and ISSUE-102. References that are already digest-pinned are not checked against the forbidden tag list. Standard version tags such as `alpine:3.19` or `node:20` are still flagged for digest pinning when strict mode is on, but they only trigger a forbidden-tag finding if they match a configured pattern.
 
 ```yaml
 containerImageMustNotUseForbiddenTags:
@@ -346,7 +344,7 @@ containerImageMustNotUseForbiddenTags:
     - staging
     - main
     - master
-  # When true, ALL images must be pinned by digest (takes precedence over tags list)
+  # When true, ALL images must be pinned by digest; forbidden tag rules still apply when tags are set
   containerImagesMustBePinnedByDigest: false
 ```
 
@@ -905,10 +903,10 @@ brew install plumber
 To install a specific version:
 
 ```bash
-brew install getplumber/plumber/plumber@0.2.9
+brew install getplumber/plumber/plumber@0.2.20
 ```
 
-> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.2.9/bin/plumber` or run `brew link plumber@0.2.9` to add it to your PATH.
+> **Note:** Versioned formulas are keg-only. Use the full path for example `/usr/local/opt/plumber@0.2.20/bin/plumber` or run `brew link plumber@0.2.20` to add it to your PATH.
 
 ### Mise
 

@@ -308,14 +308,18 @@ func writeIssueDetails(b *strings.Builder, result *AnalysisResult) {
 	// Forbidden tags / digest pinning
 	if r := result.ImageForbiddenTagsResult; r != nil && !r.Skipped && len(r.Issues) > 0 {
 		if r.MustBePinnedByDigest {
-			b.WriteString("**Container images must be pinned by digest:**\n")
-			for _, issue := range r.Issues {
-				fmt.Fprintf(b, "- `%s` Job `%s`: image `%s` is not pinned by digest ([docs](%s))\n", issue.Code, issue.Job, issue.Link, issue.DocURL)
-			}
+			b.WriteString("**Container images (digest pinning and forbidden tags):**\n")
 		} else {
 			b.WriteString("**Container images must not use forbidden tags:**\n")
-			for _, issue := range r.Issues {
+		}
+		for _, issue := range r.Issues {
+			switch issue.Code {
+			case CodeImageNotPinnedByDigest:
+				fmt.Fprintf(b, "- `%s` Job `%s`: image `%s` is not pinned by digest ([docs](%s))\n", issue.Code, issue.Job, issue.Link, issue.DocURL)
+			case CodeImageForbiddenTag:
 				fmt.Fprintf(b, "- `%s` Job `%s`: image `%s` uses forbidden tag `%s` ([docs](%s))\n", issue.Code, issue.Job, issue.Link, issue.Tag, issue.DocURL)
+			default:
+				fmt.Fprintf(b, "- `%s` Job `%s`: image `%s` ([docs](%s))\n", issue.Code, issue.Job, issue.Link, issue.DocURL)
 			}
 		}
 		b.WriteString("\n")

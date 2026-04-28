@@ -1,6 +1,7 @@
 package control
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -116,6 +117,68 @@ func TestForbiddenTagsWithMustBePinnedByDigestEnabled(t *testing.T) {
 	}
 	if len(result.Issues) != 2 {
 		t.Fatalf("expected 2 issues, got %d", len(result.Issues))
+	}
+}
+
+func TestDigestPinningAndForbiddenTagBothReported(t *testing.T) {
+	conf := &GitlabImageForbiddenTagsConf{
+		Enabled:              true,
+		ForbiddenTags:        []string{"latest"},
+		MustBePinnedByDigest: true,
+	}
+
+	data := &collector.GitlabPipelineImageData{
+		CiValid:   true,
+		CiMissing: false,
+		Images: []collector.GitlabPipelineImageInfo{
+			{
+				Link: "docker.io/golangci/golangci-lint:latest",
+				Tag:  "latest",
+				Job:  "lint",
+			},
+		},
+	}
+
+	result := conf.Run(data)
+	if len(result.Issues) != 2 {
+		t.Fatalf("expected 2 issues (digest + forbidden tag), got %d", len(result.Issues))
+	}
+	codes := []ErrorCode{result.Issues[0].Code, result.Issues[1].Code}
+	if !slices.Contains(codes, CodeImageNotPinnedByDigest) || !slices.Contains(codes, CodeImageForbiddenTag) {
+		t.Fatalf("expected ISSUE-103 and ISSUE-102, got codes %#v", codes)
+	}
+	if result.Metrics.NotPinnedByDigest != 1 {
+		t.Fatalf("expected notPinnedByDigest 1, got %d", result.Metrics.NotPinnedByDigest)
+	}
+	if result.Metrics.UsingForbiddenTags != 1 {
+		t.Fatalf("expected usingForbiddenTags 1, got %d", result.Metrics.UsingForbiddenTags)
+	}
+}
+
+func TestDigestModePinnedImageWithLatestTagNoForbiddenIssue(t *testing.T) {
+	conf := &GitlabImageForbiddenTagsConf{
+		Enabled:              true,
+		ForbiddenTags:        []string{"latest"},
+		MustBePinnedByDigest: true,
+	}
+	sha := strings.Repeat("a", 64)
+	data := &collector.GitlabPipelineImageData{
+		CiValid:   true,
+		CiMissing: false,
+		Images: []collector.GitlabPipelineImageInfo{
+			{
+				Link: "docker.io/library/node:latest@sha256:" + sha,
+				Tag:  "latest",
+				Job:  "build",
+			},
+		},
+	}
+	result := conf.Run(data)
+	if len(result.Issues) != 0 {
+		t.Fatalf("expected no issues when digest-pinned, got %#v", result.Issues)
+	}
+	if result.Metrics.PinnedByDigest != 1 || result.Metrics.UsingForbiddenTags != 0 {
+		t.Fatalf("metrics: pinned=%d forbidden=%d", result.Metrics.PinnedByDigest, result.Metrics.UsingForbiddenTags)
 	}
 }
 

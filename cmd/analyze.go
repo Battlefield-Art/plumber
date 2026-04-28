@@ -919,15 +919,23 @@ func outputText(result *control.AnalysisResult, threshold, compliance float64, c
 		if result.ImageForbiddenTagsResult.Skipped {
 			fmt.Printf("  %sStatus: SKIPPED (disabled in configuration)%s\n", colorDim, colorReset)
 		} else if result.ImageForbiddenTagsResult.MustBePinnedByDigest {
-			// Digest pinning mode
+			// Digest pinning mode (may also emit forbidden-tag issues when tags are configured)
 			fmt.Printf("  Total Images: %d\n", result.ImageForbiddenTagsResult.Metrics.Total)
 			fmt.Printf("  Pinned By Digest: %d\n", result.ImageForbiddenTagsResult.Metrics.PinnedByDigest)
 			fmt.Printf("  Not Pinned By Digest: %d\n", result.ImageForbiddenTagsResult.Metrics.NotPinnedByDigest)
+			fmt.Printf("  Using Forbidden Tags: %d\n", result.ImageForbiddenTagsResult.Metrics.UsingForbiddenTags)
 
 			if len(result.ImageForbiddenTagsResult.Issues) > 0 {
-				fmt.Printf("\n  %sImages Not Pinned By Digest Found:%s\n", colorYellow, colorReset)
+				fmt.Printf("\n  %sIssues Found:%s\n", colorYellow, colorReset)
 				for _, issue := range result.ImageForbiddenTagsResult.Issues {
-					fmt.Printf("    %s [%s] Job '%s' uses image without digest pinning: %s\n", severityTag(issue.Code), issue.Code, issue.Job, issue.Link)
+					switch issue.Code {
+					case control.CodeImageNotPinnedByDigest:
+						fmt.Printf("    %s [%s] Job '%s' uses image without digest pinning: %s\n", severityTag(issue.Code), issue.Code, issue.Job, issue.Link)
+					case control.CodeImageForbiddenTag:
+						fmt.Printf("    %s [%s] Job '%s' uses forbidden image tag \"%s\" (image: %s)\n", severityTag(issue.Code), issue.Code, issue.Job, issue.Tag, issue.Link)
+					default:
+						fmt.Printf("    %s [%s] Job '%s' image: %s\n", severityTag(issue.Code), issue.Code, issue.Job, issue.Link)
+					}
 					fmt.Printf("      %s↳ docs: %s%s\n", colorDim, issue.DocURL, colorReset)
 				}
 			}
