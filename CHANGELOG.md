@@ -1,3 +1,10 @@
+## [0.2.20](https://github.com/getplumber/plumber/compare/v0.2.19...v0.2.20) (2026-04-28)
+
+
+### ✨ Features
+
+* **controls:** ALlow issues 102 and 103 to trigger at the same time ([fdd4616](https://github.com/getplumber/plumber/commit/fdd461672f64e563281dd74e26879517ba002a84))
+
 ## [0.2.19](https://github.com/getplumber/plumber/compare/v0.2.18...v0.2.19) (2026-04-24)
 
 ## [0.2.18](https://github.com/getplumber/plumber/compare/v0.2.17...v0.2.18) (2026-04-24)
