@@ -1,3 +1,10 @@
+## [0.2.22](https://github.com/getplumber/plumber/compare/v0.2.21...v0.2.22) (2026-05-01)
+
+
+### ✨ Features
+
+* **scoring:** per-code caps and rebalanced weights (scoring-v3) ([a613467](https://github.com/getplumber/plumber/commit/a613467444fe5f68228fdfcd8cb4cc263c1b6b7e))
+
 ## [0.2.21](https://github.com/getplumber/plumber/compare/v0.2.20...v0.2.21) (2026-04-28)
 
 
