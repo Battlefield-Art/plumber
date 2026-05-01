@@ -351,8 +351,8 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	var scoreResult *control.PlumberScoreResult
 	if scoreMode {
-		counts := control.AggregateSeverityCounts(result)
-		s := control.ComputePlumberScore(counts)
+		codeCounts := control.AggregateIssueCodeCounts(result)
+		s := control.ComputePlumberScore(codeCounts)
 		scoreResult = &s
 	}
 
@@ -1525,6 +1525,7 @@ func outputText(result *control.AnalysisResult, threshold, compliance float64, c
 
 // scoreBreakdownWidths are inner text widths (padding applied after; borders use w+2 dashes per column).
 const (
+	sbWCode = 11
 	sbWSev  = 10
 	sbWCnt  = 5
 	sbWWgt  = 6
@@ -1549,7 +1550,7 @@ func padRunesLeft(s string, w int) string {
 }
 
 func scoreBreakdownBorderTop() string {
-	parts := []int{sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
+	parts := []int{sbWCode, sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
 	var segs []string
 	for _, w := range parts {
 		segs = append(segs, strings.Repeat("─", w+2))
@@ -1558,7 +1559,7 @@ func scoreBreakdownBorderTop() string {
 }
 
 func scoreBreakdownBorderMid() string {
-	parts := []int{sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
+	parts := []int{sbWCode, sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
 	var segs []string
 	for _, w := range parts {
 		segs = append(segs, strings.Repeat("─", w+2))
@@ -1567,16 +1568,17 @@ func scoreBreakdownBorderMid() string {
 }
 
 func scoreBreakdownBorderMidFooter() string {
-	parts := []int{sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
+	parts := []int{sbWCode, sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
 	var segs []string
 	for _, w := range parts {
 		segs = append(segs, strings.Repeat("─", w+2))
 	}
-	return "├" + strings.Join(segs[:4], "┴") + "┼" + segs[4] + "┤"
+	// Merge the first five columns into a single "Total loss" cell, leaving the Loss column.
+	return "├" + strings.Join(segs[:5], "┴") + "┼" + segs[5] + "┤"
 }
 
 func scoreBreakdownBorderBottom() string {
-	parts := []int{sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
+	parts := []int{sbWCode, sbWSev, sbWCnt, sbWWgt, sbWCap, sbWLoss}
 	var segs []string
 	for _, w := range parts {
 		segs = append(segs, strings.Repeat("─", w+2))
@@ -1603,9 +1605,10 @@ func printScoreBreakdown(score *control.PlumberScoreResult) {
 	fmt.Printf("  %sProfile:%s %s\n\n", colorDim, colorReset, score.ProfileID)
 
 	var totalLoss float64
-	if len(score.Losses) > 0 {
+	if len(score.CodeLosses) > 0 {
 		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderTop(), colorReset)
-		fmt.Printf("  %s│ %s │ %s │ %s │ %s │ %s │%s\n", colorDim,
+		fmt.Printf("  %s│ %s │ %s │ %s │ %s │ %s │ %s │%s\n", colorDim,
+			padRunesRight("Code", sbWCode),
 			padRunesRight("Severity", sbWSev),
 			padRunesLeft("Count", sbWCnt),
 			padRunesLeft("Weight", sbWWgt),
@@ -1614,14 +1617,15 @@ func printScoreBreakdown(score *control.PlumberScoreResult) {
 			colorReset)
 		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderMid(), colorReset)
 
-		for _, l := range score.Losses {
+		for _, l := range score.CodeLosses {
 			capPlain := "inf"
 			if l.Severity != control.SeverityCritical {
 				capPlain = fmt.Sprintf("%.0f", l.Cap)
 			}
 			sc := scoreBreakdownSevColor(l.Severity)
 			lossStr := fmt.Sprintf("-%.1f", l.CappedLoss)
-			fmt.Printf("  %s│ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │%s\n", colorDim,
+			fmt.Printf("  %s│ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │%s\n", colorDim,
+				colorDim, padRunesRight(string(l.Code), sbWCode), colorReset,
 				sc, padRunesRight(string(l.Severity), sbWSev), colorReset,
 				colorDim, padRunesLeft(fmt.Sprintf("%d", l.Count), sbWCnt), colorReset,
 				colorDim, padRunesLeft(fmt.Sprintf("%.0f", l.Weight), sbWWgt), colorReset,
@@ -1632,7 +1636,8 @@ func printScoreBreakdown(score *control.PlumberScoreResult) {
 		}
 		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderMidFooter(), colorReset)
 
-		mergedW := sbWSev + 3 + sbWCnt + 3 + sbWWgt + 3 + sbWCap // " │ " between four columns
+		// Merge first five columns ("Code", "Severity", "Count", "Weight", "Cap") for the Total row.
+		mergedW := sbWCode + 3 + sbWSev + 3 + sbWCnt + 3 + sbWWgt + 3 + sbWCap // " │ " between five columns
 		tl := "Total loss"
 		tlPad := mergedW - utf8.RuneCountInString(tl)
 		if tlPad < 0 {

@@ -6,7 +6,7 @@ import (
 )
 
 // PlumberScoreProfileID identifies the scoring rules version (see docs/scoring.md).
-const PlumberScoreProfileID = "scoring-v2"
+const PlumberScoreProfileID = "scoring-v3"
 
 // PlumberScoreDocURL is the canonical user-facing explanation of the Plumber letter score.
 const PlumberScoreDocURL = "https://github.com/getplumber/plumber/blob/main/docs/scoring.md"
@@ -19,8 +19,10 @@ type SeverityCounts struct {
 	Low      int `json:"low"`
 }
 
-// SeverityLoss is points lost for one severity bucket after weight, log growth, and cap.
-type SeverityLoss struct {
+// CodeLoss is the points lost for a single issue code after weight, log growth, and per-severity cap.
+// scoring-v3 caps loss per (code), so distinct types at the same severity each contribute their own bucket.
+type CodeLoss struct {
+	Code         ErrorCode     `json:"code"`
 	Severity     IssueSeverity `json:"severity"`
 	Count        int           `json:"count"`
 	Weight       float64       `json:"weight"`
@@ -29,23 +31,34 @@ type SeverityLoss struct {
 	CappedLoss   float64       `json:"cappedLoss"`
 }
 
+// SeverityLoss is a rollup per severity bucket: sum of capped losses across all codes in that severity.
+// In scoring-v3 the cap is applied per code, so this rollup can exceed any single per-code cap.
+type SeverityLoss struct {
+	Severity   IssueSeverity `json:"severity"`
+	Count      int           `json:"count"`
+	CappedLoss float64       `json:"cappedLoss"`
+}
+
 // PlumberScoreResult is the official result: letter Score (A–E) derived from numeric Points (0–100).
 type PlumberScoreResult struct {
 	ProfileID string `json:"profileId"`
 
 	Counts SeverityCounts `json:"counts"`
 
-	// RawPoints is 100 minus summed capped severity losses (before Critical malus).
+	// RawPoints is 100 minus summed capped per-code losses (before Critical malus).
 	RawPoints float64 `json:"rawPoints"`
 	// FinalPoints applies Critical category malus (max points in E band when any Critical exists).
 	FinalPoints float64 `json:"finalPoints"`
-	// Score is the letter A–E from final points (what people mean by “how did we score?”).
+	// Score is the letter A–E from final points (what people mean by "how did we score?").
 	Score string `json:"score"`
 
 	CriticalMalusApplied bool    `json:"criticalMalusApplied"`
 	CriticalMalusMax     float64 `json:"criticalMalusMax,omitempty"` // max points when malus applies (30)
 
+	// Losses is a per-severity rollup of capped per-code losses.
 	Losses []SeverityLoss `json:"losses"`
+	// CodeLosses is the per-code breakdown that drives the score in scoring-v3.
+	CodeLosses []CodeLoss `json:"codeLosses"`
 }
 
 // forEachIssueCode invokes fn for every issue code from enabled (non-skipped) controls.
@@ -152,6 +165,7 @@ func SeverityCountsFromIssueCodes(codes []ErrorCode) SeverityCounts {
 }
 
 // AggregateSeverityCounts walks analysis issues and counts occurrences per severity.
+// Kept for callers that only need totals per severity (banners, summary tables).
 func AggregateSeverityCounts(result *AnalysisResult) SeverityCounts {
 	var c SeverityCounts
 	forEachIssueCode(result, func(code ErrorCode) {
@@ -171,6 +185,16 @@ func AggregateSeverityCounts(result *AnalysisResult) SeverityCounts {
 	return c
 }
 
+// AggregateIssueCodeCounts walks analysis issues and counts occurrences per ErrorCode.
+// This is the input expected by ComputePlumberScore in scoring-v3 (per-code caps).
+func AggregateIssueCodeCounts(result *AnalysisResult) map[ErrorCode]int {
+	out := map[ErrorCode]int{}
+	forEachIssueCode(result, func(code ErrorCode) {
+		out[code]++
+	})
+	return out
+}
+
 // CriticalIssueCodesSorted returns unique Critical-level issue codes present in the analysis, sorted.
 func CriticalIssueCodesSorted(result *AnalysisResult) []string {
 	seen := make(map[ErrorCode]struct{})
@@ -188,68 +212,130 @@ func CriticalIssueCodesSorted(result *AnalysisResult) []string {
 	return out
 }
 
-// ComputePlumberScore applies the scoring-v2 rules (see docs/scoring.md).
-//
-// For each severity bucket with count n > 0:
-//
-//	loss = w × (1 + 0.5·log2(n))   (capped at the per-bucket cap)
-//
-// Raw points are 100 minus the sum of capped losses. When at least one
-// Critical issue is present, final points are capped at 30 (Critical malus),
-// which forces the letter score into the E band. The A–E letter is then
-// read from final points using the thresholds in scoreLetterFromPoints.
-func ComputePlumberScore(counts SeverityCounts) PlumberScoreResult {
-	const (
-		w_crit = 25.0
-		w_high = 20.0
-		w_med  = 8.0
-		w_low  = 3.0
+// severitySpec is the weight and per-code cap for one severity bucket.
+type severitySpec struct {
+	weight float64
+	cap    float64
+}
 
-		cap_high = 60.0
-		cap_med  = 20.0
-		cap_low  = 10.0
+// scoreSeveritySpecs returns the active scoring-v3 weights and per-code caps.
+//
+//nolint:gochecknoglobals // tied to PlumberScoreProfileID; bumped together when rules change.
+func scoreSeveritySpecs() map[IssueSeverity]severitySpec {
+	const (
+		wCrit = 25.0
+		wHigh = 15.0
+		wMed  = 6.0
+		wLow  = 3.0
+
+		capHigh = 60.0
+		capMed  = 20.0
+		capLow  = 10.0
 	)
+	return map[IssueSeverity]severitySpec{
+		SeverityCritical: {wCrit, math.Inf(1)},
+		SeverityHigh:     {wHigh, capHigh},
+		SeverityMedium:   {wMed, capMed},
+		SeverityLow:      {wLow, capLow},
+	}
+}
+
+// ComputePlumberScore applies the scoring-v3 rules (see docs/scoring.md).
+//
+// For each issue code with count n > 0:
+//
+//	loss = w × (1 + 0.5·log2(n))   (capped at the per-severity cap)
+//
+// Each ErrorCode is treated as its own bucket: distinct codes at the same
+// severity each consume their own per-code cap, so accumulating different
+// types of issues keeps reducing the score even after one code is capped.
+//
+// Raw points are 100 minus the sum of capped per-code losses. When at least
+// one Critical issue is present, final points are capped at 30 (Critical
+// malus), forcing the letter score into the E band. The A–E letter is read
+// from final points using the thresholds in scoreLetterFromPoints.
+func ComputePlumberScore(codeCounts map[ErrorCode]int) PlumberScoreResult {
+	specs := scoreSeveritySpecs()
 
 	out := PlumberScoreResult{
-		ProfileID: PlumberScoreProfileID,
-		Counts:    counts,
-		Losses:    make([]SeverityLoss, 0, 4),
+		ProfileID:  PlumberScoreProfileID,
+		Losses:     make([]SeverityLoss, 0, 4),
+		CodeLosses: make([]CodeLoss, 0, len(codeCounts)),
 	}
 
-	losses := []struct {
-		sev    IssueSeverity
-		n      int
-		weight float64
-		cap    float64
-	}{
-		{SeverityCritical, counts.Critical, w_crit, math.Inf(1)},
-		{SeverityHigh, counts.High, w_high, cap_high},
-		{SeverityMedium, counts.Medium, w_med, cap_med},
-		{SeverityLow, counts.Low, w_low, cap_low},
+	codes := make([]ErrorCode, 0, len(codeCounts))
+	for c, n := range codeCounts {
+		if n > 0 {
+			codes = append(codes, c)
+		}
 	}
+	sort.Slice(codes, func(i, j int) bool { return string(codes[i]) < string(codes[j]) })
+
+	type sevAgg struct {
+		count int
+		loss  float64
+	}
+	sevTotals := map[IssueSeverity]*sevAgg{}
 
 	var totalLoss float64
-	for _, row := range losses {
-		if row.n <= 0 {
-			continue
+	for _, c := range codes {
+		n := codeCounts[c]
+		sev := SeverityForCode(c)
+		spec, ok := specs[sev]
+		if !ok {
+			// Unknown severity defaults to Medium, matching SeverityForCode fallbacks elsewhere.
+			sev = SeverityMedium
+			spec = specs[SeverityMedium]
 		}
-		uncapped := row.weight * (1.0 + 0.5*math.Log2(float64(row.n)))
+
+		uncapped := spec.weight * (1.0 + 0.5*math.Log2(float64(n)))
 		capped := uncapped
-		if !math.IsInf(row.cap, 1) {
-			capped = math.Min(uncapped, row.cap)
+		if !math.IsInf(spec.cap, 1) {
+			capped = math.Min(uncapped, spec.cap)
 		}
-		sl := SeverityLoss{
-			Severity:     row.sev,
-			Count:        row.n,
-			Weight:       row.weight,
+
+		cl := CodeLoss{
+			Code:         c,
+			Severity:     sev,
+			Count:        n,
+			Weight:       spec.weight,
 			UncappedLoss: uncapped,
 			CappedLoss:   capped,
 		}
-		if !math.IsInf(row.cap, 1) {
-			sl.Cap = row.cap
+		if !math.IsInf(spec.cap, 1) {
+			cl.Cap = spec.cap
 		}
-		out.Losses = append(out.Losses, sl)
+		out.CodeLosses = append(out.CodeLosses, cl)
 		totalLoss += capped
+
+		agg := sevTotals[sev]
+		if agg == nil {
+			agg = &sevAgg{}
+			sevTotals[sev] = agg
+		}
+		agg.count += n
+		agg.loss += capped
+
+		switch sev {
+		case SeverityCritical:
+			out.Counts.Critical += n
+		case SeverityHigh:
+			out.Counts.High += n
+		case SeverityMedium:
+			out.Counts.Medium += n
+		case SeverityLow:
+			out.Counts.Low += n
+		}
+	}
+
+	for _, sev := range []IssueSeverity{SeverityCritical, SeverityHigh, SeverityMedium, SeverityLow} {
+		if agg, ok := sevTotals[sev]; ok && agg.count > 0 {
+			out.Losses = append(out.Losses, SeverityLoss{
+				Severity:   sev,
+				Count:      agg.count,
+				CappedLoss: agg.loss,
+			})
+		}
 	}
 
 	raw := 100.0 - totalLoss
@@ -259,7 +345,7 @@ func ComputePlumberScore(counts SeverityCounts) PlumberScoreResult {
 	out.RawPoints = raw
 
 	final := raw
-	if counts.Critical > 0 {
+	if out.Counts.Critical > 0 {
 		const maxPointsWithCritical = 30.0 // E band: points < 31; malus caps at 30
 		out.CriticalMalusApplied = true
 		out.CriticalMalusMax = maxPointsWithCritical

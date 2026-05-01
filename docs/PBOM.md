@@ -96,7 +96,7 @@ The native Plumber PBOM format provides a detailed, pipeline-specific inventory 
 | `containerImages` | array | All container images used in the pipeline |
 | `includes` | array | All includes (components, templates, local, remote, project) |
 | `summary` | object | Aggregate statistics |
-| `plumberScore` | object | Optional. Present when `plumber analyze` is run with `--score` and/or `--score-point`. Letter score (A–E), points (0–100), and severity counts (see below). |
+| `plumberScore` | object | Optional. Present when `plumber analyze` is run with `--score` and/or `--score-point`. Letter score (A–E), points (0–100), and severity counts (see below; per-code detail is exposed in the JSON `--output` only). |
 
 ### `project` Object
 
@@ -225,7 +225,7 @@ Present only when analysis is run with `--score` and/or `--score-point`. Field m
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `profileId` | string | Scoring profile identifier (e.g. `scoring-v2`) |
+| `profileId` | string | Scoring profile identifier (e.g. `scoring-v3`) |
 | `rawPoints` | number | Points (0–100) after severity losses, before Critical malus |
 | `finalPoints` | number | Points (0–100) after Critical malus when applicable |
 | `score` | string | Letter score `A`–`E` derived from final points (set when either `--score` or `--score-point` is used) |
