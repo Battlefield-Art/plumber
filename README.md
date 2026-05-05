@@ -28,6 +28,7 @@
 
 <p align="center">
   <a href="https://getplumber.io">Website</a> •
+  <a href="https://r2devops.notion.site/Public-Roadmap-357385fc9ef58064bd14d603ba21104d">Roadmap</a> •
   <a href="https://discord.gg/932xkSU24f">Discord</a> •
   <a href="https://github.com/getplumber/plumber/issues">Issues</a>
 </p>
