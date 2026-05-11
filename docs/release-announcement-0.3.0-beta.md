@@ -1,4 +1,6 @@
-# Plumber v0.3.0-beta — GitHub Actions support
+# Plumber v0.3.0-beta.2 — GitHub Actions support
+
+> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.2 (pre-release, opted out of the "latest" badge — newcomers landing on the repo still get v0.2.22).
 
 
 ---
@@ -13,34 +15,52 @@ If you want to scan a GitHub Actions project too, this release lets you.
 
 ## 1. Install
 
-Beta is not on Homebrew. Pick a direct download for your platform:
+Beta is **not** on Homebrew, mise, or Docker Hub — those channels follow the latest stable (v0.2.22) and will resume with the v0.3.0 final. Three short steps: download, verify, install. Run them in a fresh empty directory so the checksum check has nothing else in scope:
+
+```bash
+mkdir -p ~/plumber-beta && cd ~/plumber-beta
+```
+
+### Step 1: Download your platform binary + the checksums file
+
+Pick the one line that matches your platform; download `checksums.txt` either way.
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta/plumber-darwin-arm64
-chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
-
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-darwin-arm64
 # macOS (Intel)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta/plumber-darwin-amd64
-chmod +x plumber-darwin-amd64 && sudo mv plumber-darwin-amd64 /usr/local/bin/plumber
-
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-darwin-amd64
 # Linux (amd64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta/plumber-linux-amd64
-chmod +x plumber-linux-amd64 && sudo mv plumber-linux-amd64 /usr/local/bin/plumber
-
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-linux-amd64
 # Linux (arm64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta/plumber-linux-arm64
-chmod +x plumber-linux-arm64 && sudo mv plumber-linux-arm64 /usr/local/bin/plumber
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-linux-arm64
+# Windows (PowerShell)
+Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
 
-# Docker
-docker pull getplumber/plumber:0.3.0-beta
+# Checksums (all platforms)
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/checksums.txt
 ```
 
-Verify:
+### Step 2: Verify integrity (recommended)
 
 ```bash
-plumber version       # expect: v0.3.0-beta
+shasum -a 256 -c checksums.txt --ignore-missing
+# Expected output: plumber-<your-platform>: OK
 ```
+
+If the line you downloaded doesn't print `OK`, **stop and re-download** — don't install a binary whose hash doesn't match the release.
+
+> **SLSA attestations are deliberately not produced for beta builds** — they're a CI-pipeline artifact, and the beta is built outside the release pipeline. `gh attestation verify` will fail against the beta binaries; that's expected. SLSA L3 provenance resumes with the v0.3.0 stable release. For the beta, the `checksums.txt` above is the integrity story.
+
+### Step 3: Install and verify the version
+
+```bash
+# Replace plumber-darwin-arm64 with the binary you downloaded
+chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
+plumber version                # expect: plumber version 0.3.0-beta.2
+```
+
+For Windows, just put `plumber-windows-amd64.exe` somewhere on your `PATH` and rename it to `plumber.exe`.
 
 ---
 
@@ -116,29 +136,29 @@ You'll need:
 
 Two ways. Pick the one that fits.
 
-**Option 1 — interactive wizard** (best if you want to be walked through it):
+**Option 1 — generate the full commented template, then trim** (recommended; fastest path to a usable config):
 
 ```bash
 cd ~/path/to/your/github/project
+plumber config generate -o .plumber.yaml
+```
+
+This writes the official template with both `gitlab:` and `github:` sections fully populated and commented. Open it, glance at the comments, delete the section you don't need (or keep both for a shared config), tweak any value you care about. You're ready in under a minute.
+
+**Option 2 — interactive wizard** (better if you want to be walked through each decision):
+
+```bash
 plumber config init -o .plumber.yaml
 ```
 
-The wizard auto-detects GitHub from your git remote and pre-checks the right provider on the first question. It walks you through the GitHub-specific controls: third-party action SHA pinning, dangerous triggers, workflow permissions, security-job patterns, branch protection, etc.
-
-**Option 2 — generate the full commented template, then trim** (best if you want a reference of everything available):
-
-```bash
-plumber config generate -o .plumber.yaml --force
-```
-
-This writes the official template with both `gitlab:` and `github:` sections fully populated and commented. Keep both sections if your team works in both ecosystems, or delete the one you don't need.
+The wizard auto-detects GitHub from your git remote and pre-checks the right provider on the first question. It walks you through the GitHub-specific controls one by one: third-party action SHA pinning, dangerous triggers, workflow permissions, security-job patterns, branch protection, etc. Slower but you make a deliberate choice on each control.
 
 #### Step 2: Authenticate (recommended)
 
 ```bash
-gh auth login                        # easiest, uses your gh CLI credential
+gh auth login                        # uses your gh CLI credential
 # OR
-export GH_TOKEN=ghp_…                # personal access token
+export GH_TOKEN=ghp_…                # PAT scopes — fine-grained: Contents:Read, Metadata:Read, Administration:Read · classic: repo
 ```
 
 Local-clone analysis works without auth but the repo-level controls (branch protection) silently abstain — the postflight output flags that case clearly.
