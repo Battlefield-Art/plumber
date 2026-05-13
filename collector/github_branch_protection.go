@@ -35,6 +35,32 @@ type BranchFetchOptions struct {
 	// targeted path covers the typical config and avoids the
 	// pagination foot-gun.
 	Listing bool
+
+	// OnProgress, when non-nil, is invoked at user-meaningful
+	// checkpoints during the fetch: each listing page (with a
+	// running branches-seen count) and each per-branch protection-
+	// detail call. The caller is expected to forward these to its
+	// progress spinner as label updates at the same global slot;
+	// the messages are short single-line strings already shaped for
+	// terminal display. Used by the CLI to keep the bar's label
+	// alive during the otherwise-silent "Resolving branch
+	// protection" phase on large repos (grafana/grafana has 772
+	// branches across 8 listing pages, ~10s of API time).
+	OnProgress func(message string)
+
+	// InScope, when non-nil, gates the slow protection-detail calls
+	// during the listing pagination: branches for which InScope
+	// returns false are still added to the IR (Protected flag
+	// preserved from the listing so ISSUE-501 still has the data it
+	// needs) but the classic /protection + Rulesets endpoints are
+	// skipped for them. Saves hundreds of API calls on repos where
+	// the listing returns many protected branches that do not match
+	// any of the user's configured namePatterns (grafana's hundreds
+	// of `release-X.Y.Z` branches when the config asks for
+	// `release/*`, for example). The rego rule applies the same
+	// scope check at evaluation time; this just avoids paying for
+	// data the rule is going to discard.
+	InScope func(name string) bool
 }
 
 // maxBranchListingPages caps the number of /branches?page=N requests
@@ -109,6 +135,9 @@ func FetchGitHubBranchProtection(host, owner, repo string, opts BranchFetchOptio
 		if name == "" || seen[name] {
 			continue
 		}
+		if opts.OnProgress != nil {
+			opts.OnProgress(fmt.Sprintf("Resolving protection for %s", name))
+		}
 		entry, ferr := fetchBranchByName(rest, owner, repo, name)
 		if ferr != nil {
 			if isUnauthorized(ferr) {
@@ -149,7 +178,7 @@ func FetchGitHubBranchProtection(host, owner, repo string, opts BranchFetchOptio
 		return out, nil
 	}
 
-	listed, err := listBranchesPaginated(rest, owner, repo)
+	listed, err := listBranchesPaginated(rest, owner, repo, opts.OnProgress)
 	if err != nil {
 		// Listing failure on top of a successful targeted phase:
 		// degrade quietly. Wildcard patterns will simply have no
@@ -167,7 +196,14 @@ func FetchGitHubBranchProtection(host, owner, repo string, opts BranchFetchOptio
 			continue
 		}
 		entry := ir.Branch{Name: b.Name, Protected: b.Protected}
-		if b.Protected {
+		// Only pay for protection-detail calls on branches the user
+		// asked about. Out-of-scope protected branches stay in the
+		// IR with Protected=true but no detail data; the rego rule
+		// abstains on them anyway via its own scope check.
+		if b.Protected && (opts.InScope == nil || opts.InScope(b.Name)) {
+			if opts.OnProgress != nil {
+				opts.OnProgress(fmt.Sprintf("Resolving protection for %s", b.Name))
+			}
 			// Same two-source merge as fetchBranchByName: classic
 			// Branch Protection + Rulesets effective-rules. Stricter
 			// wins; ProtectionDetailsKnown turns true if either
@@ -404,11 +440,17 @@ func applyEffectiveRules(b *ir.Branch, rules []remoteBranchRule) {
 // time until either the API returns a short page (signalling the
 // last page) or maxBranchListingPages is hit. Errors short-circuit
 // and return whatever was collected up to that point alongside the
-// error — the caller decides whether to degrade or propagate.
-func listBranchesPaginated(rest *api.RESTClient, owner, repo string) ([]remoteBranchEntry, error) {
+// error; the caller decides whether to degrade or propagate.
+// onProgress, when non-nil, receives a short label after each page
+// so the CLI's progress spinner can keep the user informed during
+// long pagination runs (grafana-class repos can take 5-15s here).
+func listBranchesPaginated(rest *api.RESTClient, owner, repo string, onProgress func(message string)) ([]remoteBranchEntry, error) {
 	const perPage = 100
 	var out []remoteBranchEntry
 	for page := 1; page <= maxBranchListingPages; page++ {
+		if onProgress != nil {
+			onProgress(fmt.Sprintf("Listing branches (page %d, %d collected)", page, len(out)))
+		}
 		endpoint := fmt.Sprintf("repos/%s/%s/branches?per_page=%d&page=%d", owner, repo, perPage, page)
 		var batch []remoteBranchEntry
 		if err := rest.Get(endpoint, &batch); err != nil {

@@ -182,15 +182,48 @@ func wrapProgress(fn ProgressFunc, grandTotal int) ProgressFunc {
 	}
 }
 
+// wrapProgressRemote is the remote-mode counterpart of wrapProgress.
+// The remote scan already consumed slots 1..(1+N) for the listing
+// and per-file fetch phase (N = pipeline.WorkflowFileCount), so the
+// enrichment phase that follows occupies slots (2+N)..(1+N+M). The
+// inner counter from enrichActionsWithAPIMetadata is offset by
+// (1+N), the total is set to the pipeline-wide grand total returned
+// by TotalProgressStepsForPipeline so the bar keeps climbing
+// smoothly into the trailing caller-owned slots.
+func wrapProgressRemote(fn ProgressFunc, pipeline *ir.NormalizedPipeline) ProgressFunc {
+	if fn == nil || pipeline == nil {
+		return nil
+	}
+	offset := 1 + pipeline.WorkflowFileCount
+	grandTotal := TotalProgressStepsForPipeline(pipeline)
+	return func(done, _ int, message string) {
+		fn(offset+done, grandTotal, message)
+	}
+}
+
 // TotalProgressStepsForPipeline returns the grand total the caller
-// (RunGitHubAnalysis) should use when emitting its own progress
-// update for the policy-evaluation phase, so it keeps the bar in
-// sync with what the collector reported.
+// (RunGitHubAnalysis / RunGitHubAnalysisRemote) should use when
+// emitting its own progress updates for the post-scan phases, so the
+// bar stays in sync with what the collector already reported.
+//
+// Layout in slots, both modes:
+//
+//	1                    "Scanning" (local) or "Listing" (remote)
+//	2..(1+N)             per-file fetch ticks (remote only;
+//	                     WorkflowFileCount is 0 in local mode)
+//	(2+N)..(1+N+M)       per-action enrichment ticks (M = unique refs)
+//	(2+N+M)              "Resolving branch protection"
+//	(3+N+M)              "Evaluating policies"
+//	(4+N+M)              "Analysis complete"
+//
+// Total = N + M + 4. WorkflowFileCount is populated by
+// ScanGitHubWorkflowsRemote; local scans leave it at zero so the
+// formula collapses to M + 4 there.
 func TotalProgressStepsForPipeline(pipeline *ir.NormalizedPipeline) int {
 	if pipeline == nil {
-		return 3
+		return 4
 	}
-	return countUniqueActionRefs(pipeline) + 3
+	return pipeline.WorkflowFileCount + countUniqueActionRefs(pipeline) + 4
 }
 
 // ProgressFunc is the signature callers use to observe the progress
