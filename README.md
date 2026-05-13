@@ -1083,7 +1083,18 @@ Issue code: ISSUE-302.
 
 Same intent as the GitLab control: GitHub Actions lets you neutralize a security scan by setting `continue-on-error: true` (mapped to the same IR field as GitLab's `allow_failure: true`), or by gating it behind `if: false` / manual-only triggers. The pipeline still looks compliant, but no scan is enforced. Maps to [OWASP CICD-SEC-4](https://owasp.org/www-project-top-10-ci-cd-security-risks/) (Poisoned Pipeline Execution).
 
-GitHub job names are namespaced as `{workflow}/{job}`, so the patterns use leading + trailing wildcards: a bare `codeql` would never match `myworkflow/codeql`. The defaults cover GitHub-native scanners (CodeQL, TruffleHog, Gitleaks, OSV-Scanner, Dependency-Review) plus generic fallbacks.
+The job name plumber matches against is built from two pieces: the workflow filename with its `.yml`/`.yaml` extension stripped, and the job id from the YAML, joined with a slash. So `.github/workflows/codeql-analysis.yml` containing `jobs.analyze` is matched as `codeql-analysis/analyze`; `.github/workflows/workflow.yml` containing `jobs.my-sast` is matched as `workflow/my-sast`. The namespace exists so two workflow files defining a job with the same id do not collide.
+
+Patterns can target whichever part of that name is stable for your repo:
+
+| Pattern shape | Matches |
+|---|---|
+| `*<token>*` | Token anywhere in the name. The defaults use this for resilience to unknown workflow files. |
+| `<workflow>/*` | Every job in one workflow file. |
+| `*/<jobid>` | Specific job id, any workflow. |
+| `<workflow>/<jobid>` | Exact match, no wildcard. |
+
+The defaults below ship wildcard-wrapped because plumber does not know your repo's workflow-file convention. If your security jobs live in a known layout you can drop the wildcards for tighter matching. They cover GitHub-native scanners (CodeQL, TruffleHog, Gitleaks, OSV-Scanner, Dependency-Review) plus generic fallbacks.
 
 ```yaml
 github:

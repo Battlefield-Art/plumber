@@ -1,6 +1,6 @@
-# Plumber v0.3.0-beta.2 — GitHub Actions support
+# Plumber v0.3.0-beta.3: GitHub Actions support
 
-> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.2 (pre-release, opted out of the "latest" badge — newcomers landing on the repo still get v0.2.22).
+> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.3 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
 
 
 ---
@@ -10,6 +10,14 @@
 Plumber now scans GitHub Actions workflows with the same engine, same `.plumber.yaml`, and same CLI you already use for GitLab. **Your existing GitLab usage is unchanged** — same flags, same output, same exit codes. The only thing you'll notice if you stay on GitLab is a one-line deprecation warning suggesting you upgrade the `.plumber.yaml` schema (optional).
 
 If you want to scan a GitHub Actions project too, this release lets you.
+
+### What changed since beta.2
+
+- `branchMustBeProtected` (GitHub) now reads Repository **and** Organization-level Rulesets alongside classic Branch Protection. Rules from any source are unioned, stricter wins. A code-owner rule defined only in a Ruleset is now seen.
+- Fixed a duplicate-branch bug where GitHub's silent default-branch redirect on stale lookups (for example `/branches/master` returning main's payload after a master to main rename) caused main to land in the IR twice and falsely trigger the "skipped on N branches" postflight.
+- Fixed issue [#158](https://github.com/getplumber/plumber/issues/158): a control omitted from `.plumber.yaml` is now treated as skipped on the v0.3.0 path, matching v0.2.x. Its findings no longer leak into the score.
+- `dockerInDockerResult.detail` reports both insecure conditions when present (TLS-empty + DOCKER_HOST on port 2375), matching v0.2.x wording.
+- Binary now self-reports the right version. beta.2 was stamped as `0.3.0-beta.1` due to a release-time ldflags issue.
 
 ---
 
@@ -27,18 +35,18 @@ Pick the one line that matches your platform; download `checksums.txt` either wa
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-darwin-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-darwin-arm64
 # macOS (Intel)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-darwin-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-darwin-amd64
 # Linux (amd64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-linux-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-linux-amd64
 # Linux (arm64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-linux-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-linux-arm64
 # Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
+Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
 
 # Checksums (all platforms)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.2/checksums.txt
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/checksums.txt
 ```
 
 ### Step 2: Verify integrity (recommended)
@@ -57,7 +65,7 @@ If the line you downloaded doesn't print `OK`, **stop and re-download** — don'
 ```bash
 # Replace plumber-darwin-arm64 with the binary you downloaded
 chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
-plumber version                # expect: plumber version 0.3.0-beta.2
+plumber version                # expect: plumber version 0.3.0-beta.3
 ```
 
 For Windows, just put `plumber-windows-amd64.exe` somewhere on your `PATH` and rename it to `plumber.exe`.
@@ -189,6 +197,13 @@ Same per-control output as Track B, no local clone needed. Works on GitHub Enter
 ## 3. Token scope note (GitHub branch protection)
 
 For `branchMustBeProtected` to evaluate the full rule set (force-push + code-owner-approval), the token needs **`Administration: Read`** (fine-grained PAT) or **`repo`** scope (classic PAT). Without it, the rule silently abstains and a `partialControls` block in the JSON output makes the abstention explicit — no false 100% claims. `gh auth login` with a user account that has admin on the repo works without any extra scope work.
+
+Plumber reads **both** GitHub's Branch Protection mechanisms and merges them, stricter wins:
+
+- **Classic Branch Protection** (the older *Settings → Branches → Branch protection rule* flow).
+- **Repository Rulesets** and any **Organization-level Rulesets** the repo inherits (the newer *Settings → Rules → Rulesets* flow, GA 2023). Multiple rulesets covering the same branch are fine: the effective set is the union; disabled / evaluate-mode rulesets are skipped automatically.
+
+So a code-owner-approval rule lives in either mechanism (or both) and Plumber finds it. `force-push allowed` only flips to "blocked" when at least one source disables it.
 
 ---
 

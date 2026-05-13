@@ -584,13 +584,34 @@ github:
     # project-specific prefixes still match.
     securityJobsMustNotBeWeakened:
       enabled: true
-      # GitHub Actions job names are namespaced as `{workflow}/{job}`,
-      # so every pattern below uses leading + trailing wildcards: a
-      # bare `codeql` would never match `myworkflow/codeql`. The
-      # canonical scanner names (codeql, trufflehog, gitleaks,
-      # osv-scanner, dependency-review) appear as `*name*` substrings;
-      # the trailing entries cover ad-hoc names like
-      # `myorg-sast-bandit` that match the wildcard suffix patterns.
+      # How patterns are matched
+      # ────────────────────────
+      # Each pattern is a glob (`*` matches any substring) compared
+      # against the job name plumber builds for every job in your
+      # workflows. That name is:
+      #
+      #     <workflow filename, .yml/.yaml stripped>/<job id in YAML>
+      #
+      # Examples:
+      #   .github/workflows/codeql-analysis.yml + jobs.analyze
+      #       -> codeql-analysis/analyze
+      #   .github/workflows/ci.yml             + jobs.lint
+      #       -> ci/lint
+      #   .github/workflows/workflow.yml       + jobs.my-sast
+      #       -> workflow/my-sast
+      #
+      # The namespace exists so two workflow files defining a job
+      # with the same id do not collide. Patterns can target whichever
+      # part of that name is stable for your repo:
+      #   "*<token>*"           token anywhere in the name (resilient)
+      #   "<workflow>/*"        every job in one workflow file
+      #   "*/<jobid>"           specific job id, any workflow
+      #   "<workflow>/<jobid>"  exact match, no wildcard
+      #
+      # The defaults below ship wildcard-wrapped because plumber does
+      # not know your repo's workflow-file convention. If your jobs
+      # follow a known layout you can drop the wildcards for tighter
+      # matching.
       securityJobPatterns:
         - "*codeql*"
         - "*dependency-review*"
@@ -605,6 +626,17 @@ github:
         - "*-security-*"
         - "*-audit"
         - "*-audit-*"
+        # Real-world slash-form examples (commented; uncomment / adapt
+        # to your repo for a tighter match than the wildcards above).
+        # Format reminder: <workflow-filename-without-extension>/<job-id>.
+        #
+        # - codeql-analysis/analyze              # GitHub's default CodeQL template
+        # - dependency-review/dependency-review  # GitHub's default Dependency Review template
+        # - security/gitleaks                    # gitleaks job in security.yml
+        # - security/trufflehog                  # trufflehog job in security.yml
+        # - security/*                           # every job in security.yml
+        # - "*/sast"                             # any job named "sast", any workflow
+        # - ci/semgrep-sast                      # exact match, no wildcard
       allowFailureMustBeFalse:
         enabled: true
       rulesMustNotBeRedefined:

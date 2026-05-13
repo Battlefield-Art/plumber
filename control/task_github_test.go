@@ -53,6 +53,7 @@ jobs:
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if !result.CiValid {
 		t.Error("expected CiValid=true (jobs discovered)")

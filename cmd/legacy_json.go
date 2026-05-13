@@ -847,10 +847,19 @@ func buildUnverifiedScriptsBlock(c legacyCommon, result *control.AnalysisResult,
 }
 
 func buildJobVariablesOverrideBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	// v0.2.x parity: when the user supplied no protected-variable
+	// list (control absent from .plumber.yaml, hence Skipped), there
+	// is nothing to compare against — report 0 variables checked
+	// instead of the project-authored count, matching the legacy
+	// JSON consumers key on.
+	totalChecked := 0
+	if !c.Skipped {
+		totalChecked = _countProjectAuthoredVariables(result)
+	}
 	return map[string]any{
 		"issues": projectFindings(findings, "job"),
 		"metrics": map[string]any{
-			"totalVariablesChecked": _countProjectAuthoredVariables(result),
+			"totalVariablesChecked": totalChecked,
 			"overriddenFound":       len(findings),
 		},
 		"compliance": c.Compliance,
