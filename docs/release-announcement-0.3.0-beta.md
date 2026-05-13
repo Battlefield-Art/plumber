@@ -1,6 +1,6 @@
-# Plumber v0.3.0-beta.3: GitHub Actions support
+# Plumber v0.3.0-beta.4: GitHub Actions support
 
-> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.3 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
+> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.4 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
 
 
 ---
@@ -13,11 +13,13 @@ If you want to scan a GitHub Actions project too, this release lets you.
 
 ### What changed since beta.2
 
-- `branchMustBeProtected` (GitHub) now reads Repository **and** Organization-level Rulesets alongside classic Branch Protection. Rules from any source are unioned, stricter wins. A code-owner rule defined only in a Ruleset is now seen.
+- Branch-protection scan no longer goes silent on large repos. The progress bar reports per-page during the listing pagination and per-branch during the protection-detail loop, so a scan against something like `grafana/grafana` (774 branches across 8 listing pages) now cycles `Listing branches (page 8, 700 collected)` and `Resolving protection for <name>` live instead of pausing at 100% with no signal.
+- Branch-protection scan also skips the slow detail calls for branches that do not match your configured `namePatterns`. On a typical config (`main`, `release/*`, etc.) plus a repo that has hundreds of unrelated protected branches (release tags, dependabot, version branches), the work drops from hundreds of API round-trips to just the ones you asked about. The findings are unchanged; only the wasted calls are gone.
+- `branchMustBeProtected` (GitHub) reads Repository **and** Organization-level Rulesets alongside classic Branch Protection. Rules from any source are unioned, stricter wins. A code-owner rule defined only in a Ruleset is now seen.
 - Fixed a duplicate-branch bug where GitHub's silent default-branch redirect on stale lookups (for example `/branches/master` returning main's payload after a master to main rename) caused main to land in the IR twice and falsely trigger the "skipped on N branches" postflight.
-- Fixed issue [#158](https://github.com/getplumber/plumber/issues/158): a control omitted from `.plumber.yaml` is now treated as skipped on the v0.3.0 path, matching v0.2.x. Its findings no longer leak into the score.
+- Fixed issue [#158](https://github.com/getplumber/plumber/issues/158): a control omitted from `.plumber.yaml` is treated as skipped on the v0.3.0 path, matching v0.2.x. Its findings no longer leak into the score.
 - `dockerInDockerResult.detail` reports both insecure conditions when present (TLS-empty + DOCKER_HOST on port 2375), matching v0.2.x wording.
-- Binary now self-reports the right version. beta.2 was stamped as `0.3.0-beta.1` due to a release-time ldflags issue.
+- Binary self-reports the right version. beta.2 was stamped as `0.3.0-beta.1` due to a release-time ldflags issue.
 
 ---
 
@@ -35,18 +37,18 @@ Pick the one line that matches your platform; download `checksums.txt` either wa
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-darwin-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-darwin-arm64
 # macOS (Intel)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-darwin-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-darwin-amd64
 # Linux (amd64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-linux-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-linux-amd64
 # Linux (arm64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-linux-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-linux-arm64
 # Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
+Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
 
 # Checksums (all platforms)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.3/checksums.txt
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/checksums.txt
 ```
 
 ### Step 2: Verify integrity (recommended)
@@ -65,7 +67,7 @@ If the line you downloaded doesn't print `OK`, **stop and re-download** — don'
 ```bash
 # Replace plumber-darwin-arm64 with the binary you downloaded
 chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
-plumber version                # expect: plumber version 0.3.0-beta.3
+plumber version                # expect: plumber version 0.3.0-beta.4
 ```
 
 For Windows, just put `plumber-windows-amd64.exe` somewhere on your `PATH` and rename it to `plumber.exe`.
