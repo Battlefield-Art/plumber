@@ -979,7 +979,7 @@ Consider using [Kaniko](https://github.com/GoogleContainerTools/kaniko) or [Buil
 
 #### GitHub Actions controls
 
-Nine controls ship default-on for GitHub. Four are cross-provider (`branchMustBeProtected`, `containerImageMustNotUseForbiddenTags`, `pipelineMustNotUseDockerInDocker`, `securityJobsMustNotBeWeakened`) — same control name as GitLab, GitHub-specific values; configure them under `github.controls.*`.
+Ten controls ship on GitHub. Four are cross-provider (`branchMustBeProtected`, `containerImageMustNotUseForbiddenTags`, `pipelineMustNotUseDockerInDocker`, `securityJobsMustNotBeWeakened`); same control name as GitLab, GitHub-specific values, configure them under `github.controls.*`. Nine of the ten are default-on; `workflowMustIncludeRequiredActions` is opt-in (no findings until you populate `requiredGroups`).
 
 <details>
 <summary><b>1. Actions must be pinned by commit SHA</b></summary>
@@ -1185,6 +1185,41 @@ Issue code: ISSUE-304.
 
 </details>
 
+<details>
+<summary><b>10. Workflows must include required actions</b></summary>
+
+GitHub counterpart of GitLab's `pipelineMustIncludeComponent` / `pipelineMustIncludeTemplate`. Asserts that every workflow file under `.github/workflows/` collectively references a set of required actions or reusable workflows. Useful for enforcing organisation-wide security scans, compliance jobs, or shared release pipelines.
+
+The control covers both ways GitHub lets you reference external code, transparently:
+
+- Step-level action: `steps: [{ uses: myorg/sast-scan@v2 }]`
+- Job-level reusable workflow: `jobs.security.uses: myorg/policy/.github/workflows/scan.yml@v2`
+
+Each required entry is an `owner/repo[/path]` string. Matching is ref-agnostic, so bumping a pinned SHA does not invalidate the policy. A slash-guard prevents accidental prefix collisions: `myorg/sast-scan` matches `myorg/sast-scan@<anything>` and `myorg/sast-scan/sub@<anything>`, but not `myorg/sast-scan-fork@<anything>`.
+
+Two ways to define requirements (use one, not both), same shape as the GitLab side:
+
+```yaml
+github:
+  controls:
+    workflowMustIncludeRequiredActions:
+      enabled: true
+      # Option 1, expression syntax (AND tighter than OR):
+      # required: myorg/sast-scan AND myorg/dependency-review
+      # required: (myorg/sast-scan AND myorg/secret-scan) OR myorg/full-security-suite
+      #
+      # Option 2, "OR of ANDs" array syntax:
+      requiredGroups:
+        - ["myorg/sast-scan", "myorg/dependency-review"]
+        - ["myorg/full-security-suite"]
+```
+
+The policy is satisfied when ANY group is fully present. One ISSUE-416 finding is emitted per missing required entry per group, so the report points the user at exactly which slot is empty. Disabled by default; opt in once your org has settled on the action set every repo is expected to wire up.
+
+Issue code: ISSUE-416.
+
+</details>
+
 > **What's not yet shipping on GitHub:** ~40 additional GitHub policies live in `policies/*.rego` (action-supply-chain enrichment, dependabot cooldown, OIDC trusted publishing, release-artefact signing, security policy, etc.) but are gated behind the dev bench until each clears the ship-ready bar (substantive rule + ≥3 fixtures + docs). Track promotion in [`configuration/registry.go`](configuration/registry.go) → `benchedControls`.
 
 ### Selective Control Execution
@@ -1239,7 +1274,7 @@ Controls not selected are reported as **skipped** in the output. The `--controls
 </details>
 
 <details>
-<summary><b>Valid control names — GitHub (9)</b></summary>
+<summary><b>Valid control names, GitHub (10)</b></summary>
 
 | Control Name | Cross-provider? |
 |-------------|---|
@@ -1249,6 +1284,7 @@ Controls not selected are reported as **skipped** in the output. The `--controls
 | `pipelineMustNotUseDockerInDocker` | ✓ shared with GitLab |
 | `reusableWorkflowsMustNotInheritSecrets` | GitHub-only |
 | `securityJobsMustNotBeWeakened` | ✓ shared with GitLab |
+| `workflowMustIncludeRequiredActions` | GitHub-only |
 | `workflowMustNotInjectUserInputInScripts` | GitHub-only |
 | `workflowMustNotUseDangerousTriggers` | GitHub-only |
 | `workflowsMustDeclarePermissions` | GitHub-only |

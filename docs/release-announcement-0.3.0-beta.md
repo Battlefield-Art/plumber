@@ -1,6 +1,6 @@
-# Plumber v0.3.0-beta.4: GitHub Actions support
+# Plumber v0.3.0-beta.5: GitHub Actions support
 
-> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.4 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
+> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.5 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
 
 
 ---
@@ -13,6 +13,8 @@ If you want to scan a GitHub Actions project too, this release lets you.
 
 ### What changed since beta.2
 
+- New GitHub control `workflowMustIncludeRequiredActions` (ISSUE-416): fail the scan when a workflow is missing a required action or reusable workflow. Same DNF shape as GitLab's `pipelineMustIncludeComponent` (outer list is OR, inner list is AND), and a single required entry resolves against both step-level `uses:` (actions) and job-level `uses:` (reusable workflow calls). Ref-agnostic with a slash-guard so `org/sast-scan` is not accidentally satisfied by `org/sast-scan-fork`. Opt-in, off by default.
+- Restored the v0.2.22 `Total Includes` denominator. A bug in the v0.3 helper excluded origin types that should have counted, so a project with 8 real includes was reported as 1 (and "Using Authorized Versions" collapsed to 0 alongside it). Affects both `includesMustBeUpToDate` and `includesMustNotUseForbiddenVersions`. Findings and per-control compliance were already correct, only the totals were wrong.
 - Branch-protection scan no longer goes silent on large repos. The progress bar reports per-page during the listing pagination and per-branch during the protection-detail loop, so a scan against something like `grafana/grafana` (774 branches across 8 listing pages) now cycles `Listing branches (page 8, 700 collected)` and `Resolving protection for <name>` live instead of pausing at 100% with no signal.
 - Branch-protection scan also skips the slow detail calls for branches that do not match your configured `namePatterns`. On a typical config (`main`, `release/*`, etc.) plus a repo that has hundreds of unrelated protected branches (release tags, dependabot, version branches), the work drops from hundreds of API round-trips to just the ones you asked about. The findings are unchanged; only the wasted calls are gone.
 - `branchMustBeProtected` (GitHub) reads Repository **and** Organization-level Rulesets alongside classic Branch Protection. Rules from any source are unioned, stricter wins. A code-owner rule defined only in a Ruleset is now seen.
@@ -37,18 +39,18 @@ Pick the one line that matches your platform; download `checksums.txt` either wa
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-darwin-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-darwin-arm64
 # macOS (Intel)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-darwin-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-darwin-amd64
 # Linux (amd64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-linux-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-linux-amd64
 # Linux (arm64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-linux-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-linux-arm64
 # Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
+Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
 
 # Checksums (all platforms)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.4/checksums.txt
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/checksums.txt
 ```
 
 ### Step 2: Verify integrity (recommended)
@@ -67,7 +69,7 @@ If the line you downloaded doesn't print `OK`, **stop and re-download** — don'
 ```bash
 # Replace plumber-darwin-arm64 with the binary you downloaded
 chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
-plumber version                # expect: plumber version 0.3.0-beta.4
+plumber version                # expect: plumber version 0.3.0-beta.5
 ```
 
 For Windows, just put `plumber-windows-amd64.exe` somewhere on your `PATH` and rename it to `plumber.exe`.
@@ -179,7 +181,7 @@ Local-clone analysis works without auth but the repo-level controls (branch prot
 plumber analyze --output report.json --pbom pbom.json --pbom-cyclonedx sbom.json
 ```
 
-**Expected:** per-control compliance percentages for the 9 GitHub controls (SHA pinning, dangerous triggers, permissions, template injection, reusable-workflow secrets, security-job weakening, container images, DinD, branch protection). Three artifacts on disk: `report.json` (per-control results), `pbom.json` (container images + every `uses: owner/repo@<sha>` action reference), `sbom.json` (CycloneDX 1.5 — ingestible by Grype / Trivy / Dependency-Track).
+**Expected:** per-control compliance percentages for the 10 GitHub controls (SHA pinning, dangerous triggers, permissions, template injection, reusable-workflow secrets, security-job weakening, container images, DinD, branch protection, required actions / reusable workflows). Three artifacts on disk: `report.json` (per-control results), `pbom.json` (container images + every `uses: owner/repo@<sha>` action reference), `sbom.json` (CycloneDX 1.5 — ingestible by Grype / Trivy / Dependency-Track).
 
 ---
 

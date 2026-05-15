@@ -127,6 +127,8 @@ const (
 	CodeDangerousTriggers ErrorCode = "ISSUE-414"
 	// ISSUE-415: pull_request_target workflow explicitly checks out the PR head (tj-actions pattern)
 	CodePullRequestTargetWithHeadCheckout ErrorCode = "ISSUE-415"
+	// ISSUE-416: Required action or reusable workflow is not referenced anywhere in the project's workflows
+	CodeRequiredActionMissing ErrorCode = "ISSUE-416"
 )
 
 // Issue codes for workflow-hygiene controls (6xx)
@@ -730,6 +732,15 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 		Remediation: "Either switch to the standard `pull_request` event (runs in the fork's context, no base-repo secrets), or remove the explicit `ref:` input so `actions/checkout` falls back to the base repository's SHA. If cross-context code must be examined, split the job: a small pull_request_target job gathers metadata, then hands off to a separate pull_request workflow that executes the fork code.",
 		DocURL:      docsBaseURL + string(CodePullRequestTargetWithHeadCheckout),
 		ControlName: "pullRequestTargetMustNotCheckoutHead",
+	},
+	CodeRequiredActionMissing: {
+		Code:        CodeRequiredActionMissing,
+		Severity:    SeverityHigh,
+		Title:       "Required action or reusable workflow is missing",
+		Description: "A GitHub action or reusable workflow declared as required in `workflowMustIncludeRequiredActions.requiredGroups` is not referenced by any job or step in the project's `.github/workflows/` files. The missing reference means a mandatory security scan, compliance check, or organization-wide workflow is not actually running on this repository.",
+		Remediation: "Add a `uses: <owner>/<repo>[@<ref>]` step that references the required action, or a `jobs.<name>.uses: <owner>/<repo>/.github/workflows/<file>.yml@<ref>` job that calls the required reusable workflow. The exact path declared in `.plumber.yaml` under `workflowMustIncludeRequiredActions` is matched ref-agnostically, so any pinned ref works.",
+		DocURL:      docsBaseURL + string(CodeRequiredActionMissing),
+		ControlName: "workflowMustIncludeRequiredActions",
 	},
 	CodeExcessivePermissions: {
 		Code:        CodeExcessivePermissions,

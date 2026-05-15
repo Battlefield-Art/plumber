@@ -84,6 +84,7 @@ var controlsMeta = map[string]ControlMeta{
 	"workflowMustNotUseDangerousTriggers":                 {Providers: []string{ProviderGitHub}},
 	"workflowMustNotUseKnownMisfeatures":                  {Providers: []string{ProviderGitHub}},
 	"workflowMustNotWriteUntrustedContentToGitHubEnv":     {Providers: []string{ProviderGitHub}},
+	"workflowMustIncludeRequiredActions":                  {Providers: []string{ProviderGitHub}},
 	"workflowMustPinPackageInstalls":                      {Providers: []string{ProviderGitHub}},
 	"workflowsMustDeclareConcurrency":                     {Providers: []string{ProviderGitHub}},
 	"workflowsMustDeclarePermissions":                     {Providers: []string{ProviderGitHub}},

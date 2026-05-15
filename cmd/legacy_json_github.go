@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/getplumber/plumber/configuration"
 	"github.com/getplumber/plumber/control"
@@ -47,6 +48,8 @@ func buildLegacyResultGitHub(e control.ControlEntry, result *control.AnalysisRes
 		return "dangerousTriggersResult", buildDangerousTriggersBlock(common, result, findings)
 	case "workflowsMustDeclarePermissions":
 		return "permissionsResult", buildPermissionsBlock(common, result, findings)
+	case "workflowMustIncludeRequiredActions":
+		return "requiredActionsResult", buildRequiredActionsBlock(common, pc.ControlsFor("github").WorkflowMustIncludeRequiredActions, result, findings)
 	}
 	return "", nil
 }
@@ -368,4 +371,100 @@ func buildPermissionsBlock(c legacyCommon, result *control.AnalysisResult, findi
 		"ciMissing":  c.CiMissing,
 		"skipped":    c.Skipped,
 	}
+}
+
+// buildRequiredActionsBlock builds the ISSUE-416 result block. Per-group requirement
+// satisfaction shape mirrors the GitLab requiredComponentsResult /
+// requiredTemplatesResult blocks so any consumer that already
+// scripts the GitLab side gets the same fields back. Each
+// `requirementGroups[i]` is one AND group; `present` shows which
+// required entries the scan found referenced in the workflows;
+// `missing` lists the gaps the user must add. `satisfiedGroups`
+// counts groups whose every entry resolved, matching the
+// `anySatisfiedGroup` boolean. Compliance follows the catalog's
+// binary rule (100 when no finding, 0 otherwise).
+func buildRequiredActionsBlock(c legacyCommon, cfg *configuration.RequiredActionsControlConfig, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	var groups [][]string
+	if cfg != nil && !c.Skipped {
+		groups, _ = cfg.GetResolvedRequiredGroups()
+	}
+	requirementGroups, satisfied := _resolveRequiredActionGroups(groups, result)
+	return map[string]any{
+		"requirementGroups": requirementGroups,
+		"issues":            projectFindings(findings, "job"),
+		"metrics": map[string]any{
+			"totalGroups":       len(requirementGroups),
+			"satisfiedGroups":   satisfied,
+			"anySatisfiedGroup": len(requirementGroups) > 0 && satisfied > 0,
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
+}
+
+// _resolveRequiredActionGroups walks the configured DNF and returns
+// the per-group present/missing breakdown plus the satisfied-group
+// count. Same ref-agnostic, slash-guarded match as required_actions.rego
+// so the JSON view and the rule never disagree on what counts as
+// "present".
+func _resolveRequiredActionGroups(groups [][]string, result *control.AnalysisResult) ([]map[string]any, int) {
+	out := make([]map[string]any, 0, len(groups))
+	satisfied := 0
+	for _, group := range groups {
+		present := make([]string, 0, len(group))
+		missing := make([]string, 0, len(group))
+		for _, req := range group {
+			if _requiredActionReferenced(req, result) {
+				present = append(present, req)
+			} else {
+				missing = append(missing, req)
+			}
+		}
+		allPresent := len(missing) == 0 && len(group) > 0
+		if allPresent {
+			satisfied++
+		}
+		out = append(out, map[string]any{
+			"required":     group,
+			"present":      present,
+			"missing":      missing,
+			"satisfied":    allPresent,
+		})
+	}
+	return out, satisfied
+}
+
+func _requiredActionReferenced(required string, result *control.AnalysisResult) bool {
+	if result == nil || result.GitHubPipeline == nil {
+		return false
+	}
+	for i := range result.GitHubPipeline.Jobs {
+		job := &result.GitHubPipeline.Jobs[i]
+		if job.ReusableWorkflowUses != "" && _actionRefMatches(job.ReusableWorkflowUses, required) {
+			return true
+		}
+		for k := range job.Uses {
+			if _actionRefMatches(job.Uses[k].Uses, required) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func _actionRefMatches(reference, required string) bool {
+	if reference == "" || required == "" {
+		return false
+	}
+	normalized := reference
+	if idx := strings.Index(normalized, "@"); idx >= 0 {
+		normalized = normalized[:idx]
+	}
+	if normalized == required {
+		return true
+	}
+	return strings.HasPrefix(normalized, required+"/")
 }

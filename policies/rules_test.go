@@ -3162,3 +3162,174 @@ func TestIssue107_DockerfileUnpinnedBase(t *testing.T) {
 		t.Fatalf("expected 1 ISSUE-107 (alpine:3.20 unpinned), got %d", hits)
 	}
 }
+
+// TestIssue416_RequiredActionMissing covers the GitHub counterpart
+// of ISSUE-408: one finding per missing required action / reusable
+// workflow per DNF group. Verifies (a) step-level uses, (b) job-
+// level reusable workflow uses, (c) ref-agnostic match,
+// (d) slash-guard against accidental prefix collisions, and
+// (e) the outer-OR satisfaction short-circuit.
+func TestIssue416_RequiredActionMissing(t *testing.T) {
+	engine := opaengine.New()
+	if err := engine.LoadFromFS(policies.FS); err != nil {
+		t.Fatalf("load embedded policies: %v", err)
+	}
+
+	cfg := map[string]any{
+		"workflowMustIncludeRequiredActions": map[string]any{
+			"requiredGroups": []any{
+				[]any{"myorg/sast-scan", "myorg/policy/.github/workflows/policy.yml"},
+				[]any{"myorg/full-security"},
+			},
+		},
+	}
+
+	t.Run("missing entries from every group surface as findings", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{
+					Name: "ci/lint",
+					Uses: []ir.Action{{Uses: "actions/checkout@v4"}},
+				},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		hits := map[string]bool{}
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" {
+				hits[f.Job] = true
+			}
+		}
+		for _, want := range []string{"myorg/sast-scan", "myorg/policy/.github/workflows/policy.yml", "myorg/full-security"} {
+			if !hits[want] {
+				t.Errorf("expected ISSUE-416 finding for %q; got hits=%v", want, hits)
+			}
+		}
+	})
+
+	t.Run("step-level uses with pinned SHA satisfies ref-agnostic match", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{
+					Name: "ci/security",
+					Uses: []ir.Action{
+						{Uses: "myorg/sast-scan@abc1234567890abc1234567890abc1234567890a"},
+					},
+				},
+				{
+					Name:                 "ci/policy-call",
+					ReusableWorkflowUses: "myorg/policy/.github/workflows/policy.yml@v1",
+				},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" {
+				t.Errorf("unexpected ISSUE-416 finding when first group fully satisfied: %+v", f)
+			}
+		}
+	})
+
+	t.Run("sub-action under required owner/repo counts as present", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{
+					Name: "ci/scan",
+					Uses: []ir.Action{
+						{Uses: "myorg/sast-scan/composite@v2"},
+					},
+				},
+				{
+					Name:                 "ci/policy-call",
+					ReusableWorkflowUses: "myorg/policy/.github/workflows/policy.yml@v1",
+				},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" {
+				t.Errorf("sub-action should satisfy the required owner/repo prefix, got finding %+v", f)
+			}
+		}
+	})
+
+	t.Run("slash-guard rejects accidental prefix collisions", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{
+					Name: "ci/lookalike",
+					Uses: []ir.Action{
+						{Uses: "myorg/sast-scan-fork@v1"},
+					},
+				},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		matched := false
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" && f.Job == "myorg/sast-scan" {
+				matched = true
+			}
+		}
+		if !matched {
+			t.Errorf("expected myorg/sast-scan to be flagged missing despite a lookalike fork ref, got findings %+v", findings)
+		}
+	})
+
+	t.Run("any satisfied group short-circuits the whole policy", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{
+					Name: "ci/full",
+					Uses: []ir.Action{
+						{Uses: "myorg/full-security@v3"},
+					},
+				},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" {
+				t.Errorf("second group satisfied; first-group misses should not fire: %+v", f)
+			}
+		}
+	})
+
+	t.Run("empty config keeps the policy silent", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{
+				{Name: "ci/lint", Uses: []ir.Action{{Uses: "actions/checkout@v4"}}},
+			},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, map[string]any{})
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-416" {
+				t.Errorf("policy must abstain when no requiredGroups is configured, got %+v", f)
+			}
+		}
+	})
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/getplumber/plumber/configuration"
 	"github.com/getplumber/plumber/control"
 	opaengine "github.com/getplumber/plumber/internal/engine/opa"
+	"github.com/getplumber/plumber/internal/ir"
 	"github.com/getplumber/plumber/utils"
 )
 
@@ -487,6 +488,18 @@ func buildGitLabControlStats(controlName string, result *control.AnalysisResult,
 			{"DinD Services Found", fmt.Sprintf("%d", _countDinDServices(result))},
 			{"Insecure Daemon Config", fmt.Sprintf("%d", findingsCount)},
 		}
+	case "workflowMustIncludeRequiredActions":
+		var resolved [][]string
+		if pc != nil && pc.ControlsFor("github").WorkflowMustIncludeRequiredActions != nil {
+			if g, err := pc.ControlsFor("github").WorkflowMustIncludeRequiredActions.GetResolvedRequiredGroups(); err == nil {
+				resolved = g
+			}
+		}
+		satisfied := countSatisfiedRequiredActionGroups(resolved, result)
+		return []statLine{
+			{"Requirement Groups", fmt.Sprintf("%d", len(resolved))},
+			{"Satisfied Groups", fmt.Sprintf("%d", satisfied)},
+		}
 	case "branchMustBeProtected":
 		total, toProtect, protected, unprotected := _branchProtectionCounts(result, pc)
 		nonCompliant := 0
@@ -532,13 +545,13 @@ func _countScriptLines(result *control.AnalysisResult) int {
 	return total
 }
 
-// _externalIncludeCount returns the number of external origins
-// (component / template / local / remote / project) excluding the
-// project itself, matching the v0.2.x "Total Includes" denominator.
-// Walks origin.Origins directly so we can skip both the FromPlumber
-// component (which Plumber injects implicitly when used) and the
-// project's own pseudo-origin even when OriginProject stays at 0 in
-// the metrics summary.
+// _externalIncludeCount returns the number of include origins, matching
+// the v0.2.22 "Total Includes" denominator. The project's own jobs
+// surface as `hardcoded` and are excluded; everything else is an
+// include (component / template / local / remote / project, with
+// `project` being an external `include: project:` reference, not the
+// root .gitlab-ci.yml). FromPlumber origins are real includes too and
+// stay counted.
 func _externalIncludeCount(result *control.AnalysisResult) int {
 	if result == nil || result.PipelineOriginData == nil {
 		return 0
@@ -546,14 +559,7 @@ func _externalIncludeCount(result *control.AnalysisResult) int {
 	count := 0
 	for i := range result.PipelineOriginData.Origins {
 		o := &result.PipelineOriginData.Origins[i]
-		if o.FromPlumber {
-			continue
-		}
-		// Skip the project's own root origin: the .gitlab-ci.yml is
-		// not an "include" in the user-facing sense. The origin type
-		// surfaces as either "project" or "hardcoded" depending on
-		// the collector path.
-		if o.OriginType == "" || o.OriginType == "project" || o.OriginType == "hardcoded" {
+		if o.OriginType == "" || o.OriginType == "hardcoded" {
 			continue
 		}
 		count++
@@ -823,6 +829,68 @@ func countSatisfiedGroups(groups [][]string, result *control.AnalysisResult, kin
 		}
 	}
 	return satisfied
+}
+
+// countSatisfiedRequiredActionGroups is the GitHub equivalent of
+// countSatisfiedGroups: each AND group is satisfied when every
+// required `owner/repo[/path]` entry is referenced by at least one
+// step-level `uses:` or job-level reusable-workflow `uses:` in the
+// pipeline IR. Matching is ref-agnostic with a slash guard so
+// `org/repo` matches `org/repo@v1` and `org/repo/sub@v1`, but not
+// `org/repo-other@v1`.
+func countSatisfiedRequiredActionGroups(groups [][]string, result *control.AnalysisResult) int {
+	if result == nil || result.GitHubPipeline == nil || len(groups) == 0 {
+		return 0
+	}
+	satisfied := 0
+	for _, group := range groups {
+		if len(group) == 0 {
+			continue
+		}
+		all := true
+		for _, required := range group {
+			if !requiredActionReferenced(required, result.GitHubPipeline) {
+				all = false
+				break
+			}
+		}
+		if all {
+			satisfied++
+		}
+	}
+	return satisfied
+}
+
+func requiredActionReferenced(required string, pipeline *ir.NormalizedPipeline) bool {
+	if pipeline == nil || required == "" {
+		return false
+	}
+	for i := range pipeline.Jobs {
+		job := &pipeline.Jobs[i]
+		if job.ReusableWorkflowUses != "" && actionRefMatches(job.ReusableWorkflowUses, required) {
+			return true
+		}
+		for k := range job.Uses {
+			if actionRefMatches(job.Uses[k].Uses, required) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func actionRefMatches(reference, required string) bool {
+	if reference == "" || required == "" {
+		return false
+	}
+	normalized := reference
+	if idx := strings.Index(normalized, "@"); idx >= 0 {
+		normalized = normalized[:idx]
+	}
+	if normalized == required {
+		return true
+	}
+	return strings.HasPrefix(normalized, required+"/")
 }
 
 func originGroupMatch(required string, data *collector.GitlabPipelineOriginData, kindFilter string) bool {

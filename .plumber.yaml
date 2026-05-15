@@ -702,3 +702,59 @@ github:
       allowForcePush: false
       codeOwnerApprovalRequired: true
 
+    # ============================================================================
+    # Workflows must include required actions
+    # ============================================================================
+    # Asserts that every workflow file under .github/workflows/
+    # collectively references a set of required actions or reusable
+    # workflows. The GitHub counterpart of
+    # pipelineMustIncludeComponent / pipelineMustIncludeTemplate on
+    # the GitLab side.
+    #
+    # GitHub has two ways to "include" something external; the
+    # control treats both the same so you do not have to declare
+    # which is which:
+    #
+    #   Step-level action:
+    #     steps:
+    #       - uses: myorg/sast-scan@v2
+    #
+    #   Job-level reusable workflow call:
+    #     jobs:
+    #       security:
+    #         uses: myorg/policy/.github/workflows/scan.yml@v2
+    #
+    # Each required entry is an `owner/repo[/path]` string. Matching
+    # is ref-agnostic so bumping a pinned SHA does not invalidate
+    # the policy. A slash-guard prevents accidental prefix
+    # collisions: `myorg/sast-scan` matches
+    # `myorg/sast-scan@<anything>` and
+    # `myorg/sast-scan/sub@<anything>`, but NOT
+    # `myorg/sast-scan-fork@<anything>`.
+    #
+    # Two ways to define requirements (use one, not both):
+    #
+    # Option 1, Expression syntax ('required'):
+    #   A natural boolean expression using AND, OR, and parentheses.
+    #   AND binds tighter than OR, so "a AND b OR c" means
+    #   "(a AND b) OR c".
+    #
+    #   required: myorg/sast-scan AND myorg/dependency-review
+    #   required: (myorg/sast-scan AND myorg/secret-scan) OR myorg/full-security-suite
+    #
+    # Option 2, Array syntax ('requiredGroups'):
+    #   A list of groups using "OR of ANDs" logic:
+    #     - Each inner array = items that must ALL be present (AND)
+    #     - Outer array = only ONE group needs to be satisfied (OR)
+    #
+    #   requiredGroups:
+    #     - ["myorg/sast-scan", "myorg/dependency-review"]
+    #     - ["myorg/full-security-suite"]
+    #
+    # Disabled by default; opt in once your organization has settled
+    # on the action set every repo is expected to wire up.
+    workflowMustIncludeRequiredActions:
+      enabled: false
+      # required: myorg/sast-scan AND myorg/policy/.github/workflows/scan.yml
+      requiredGroups: []
+
