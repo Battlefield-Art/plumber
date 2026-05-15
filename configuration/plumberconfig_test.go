@@ -334,6 +334,7 @@ func TestValidControlNames(t *testing.T) {
 		"pipelineMustNotUseUnsafeVariableExpansion",
 		"reusableWorkflowsMustNotInheritSecrets",
 		"securityJobsMustNotBeWeakened",
+		"workflowMustIncludeRequiredActions",
 		"workflowMustNotInjectUserInputInScripts",
 		"workflowMustNotUseDangerousTriggers",
 		"workflowsMustDeclarePermissions",
