@@ -123,8 +123,6 @@ var benchedControls = map[string]map[string]struct{}{
 		"actionPinsMustNotBeStale":              {},
 		"actionRefsMustExistUpstream":           {},
 		"actionRefsMustNotCollide":              {},
-		"actionsMustNotBeArchived":              {},
-		"actionsMustNotCarryKnownCVEs":          {},
 		"actionsMustNotDuplicateRunnerBuiltins": {},
 
 		// Repo-artifact / setup-side controls (need fixture coverage).
@@ -149,7 +147,6 @@ var benchedControls = map[string]map[string]struct{}{
 		"workflowMustNotContainObfuscation":               {},
 		"workflowMustNotExportEntireGitHubContext":        {},
 		"workflowMustNotExportEntireSecretsContext":       {},
-		"workflowMustNotGrantPermissionsWriteAll":         {},
 		"workflowMustNotIndexSecretsDynamically":          {},
 		"workflowMustNotInjectVarsInScripts":              {},
 		"workflowMustNotReEnableInsecureCommands":         {},
@@ -168,7 +165,6 @@ var benchedControls = map[string]map[string]struct{}{
 		"includesMustNotUseForbiddenVersions":         {},
 		"pipelineMustIncludeComponent":                {},
 		"pipelineMustIncludeTemplate":                 {},
-		"pipelineMustNotEnableDebugTrace":             {},
 		"pipelineMustNotExecuteUnverifiedScripts":     {},
 		"pipelineMustNotIncludeHardcodedJobs":         {},
 		"pipelineMustNotOverrideJobVariables":         {},

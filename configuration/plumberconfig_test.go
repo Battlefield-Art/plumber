@@ -319,6 +319,8 @@ func TestValidControlNames(t *testing.T) {
 
 	expected := []string{
 		"actionsMustBePinnedByCommitSha",
+		"actionsMustNotBeArchived",
+		"actionsMustNotCarryKnownCVEs",
 		"branchMustBeProtected",
 		"containerImageMustComeFromAuthorizedSources",
 		"containerImageMustNotUseForbiddenTags",
@@ -335,6 +337,7 @@ func TestValidControlNames(t *testing.T) {
 		"reusableWorkflowsMustNotInheritSecrets",
 		"securityJobsMustNotBeWeakened",
 		"workflowMustIncludeRequiredActions",
+		"workflowMustNotGrantPermissionsWriteAll",
 		"workflowMustNotInjectUserInputInScripts",
 		"workflowMustNotUseDangerousTriggers",
 		"workflowsMustDeclarePermissions",

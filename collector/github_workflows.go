@@ -384,6 +384,7 @@ type ghWorkflowHeader struct {
 	On          any            `yaml:"on"`
 	Permissions any            `yaml:"permissions"`
 	Concurrency any            `yaml:"concurrency"`
+	Env         any            `yaml:"env"`
 	Jobs        map[string]any `yaml:"jobs"`
 }
 
@@ -404,6 +405,7 @@ func parseGitHubWorkflowJobs(data []byte, namespace, originFile string) ([]ir.Jo
 	}
 
 	workflowPerms := normalizeGitHubPermissions(wf.Permissions)
+	workflowEnv := normalizeGitHubEnv(wf.Env)
 	triggers := extractGitHubTriggers(wf.On)
 	jobLines := scanGitHubJobLines(data)
 	usesLines := scanGitHubUsesLines(data)
@@ -449,16 +451,29 @@ func parseGitHubWorkflowJobs(data []byte, namespace, originFile string) ([]ir.Jo
 		if scripts := extractGitHubRunScripts(section["steps"]); len(scripts) > 0 {
 			job.Scripts = scripts
 		}
-		// Aggregate job-level `env:` with every step-level `env:` into
-		// a single Variables map. The semantics differ at runtime
-		// (step-level envs only apply to their own step), but the
-		// rego policies pattern-match over template expressions in
-		// value strings — not over runtime scope — so folding them
+		// Aggregate workflow-level + job-level `env:` with every
+		// step-level `env:` into a single Variables map. The runtime
+		// semantics differ (workflow env is inherited by every job;
+		// job env extends that; step env applies to one step), but
+		// the rego policies pattern-match over template expressions
+		// in value strings — not over runtime scope — so folding them
 		// together gives a complete surface to scan. Later entries
-		// overwrite earlier ones on collisions; that is acceptable
-		// because the patterns we look for are present or absent
-		// regardless of which binding wins the collision.
-		envVars := normalizeGitHubEnv(section["env"])
+		// overwrite earlier ones on collisions, mirroring GitHub's
+		// runtime precedence (step > job > workflow); the policies we
+		// care about flag patterns regardless of which binding wins.
+		var envVars map[string]string
+		for k, v := range workflowEnv {
+			if envVars == nil {
+				envVars = map[string]string{}
+			}
+			envVars[k] = v
+		}
+		for k, v := range normalizeGitHubEnv(section["env"]) {
+			if envVars == nil {
+				envVars = map[string]string{}
+			}
+			envVars[k] = v
+		}
 		for k, v := range extractGitHubStepEnvs(section["steps"]) {
 			if envVars == nil {
 				envVars = map[string]string{}

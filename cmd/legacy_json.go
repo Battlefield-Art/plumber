@@ -39,7 +39,12 @@ func _minAccessLevelGitlab(levels []gitlab.BranchProtectionAccessLevel) int {
 // Returned map keys match the legacy JSON field names
 // (imageForbiddenTagsResult, imageAuthorizedSourcesResult, …) so the
 // caller can splice them straight into the output struct.
-func legacyResultsByName(result *control.AnalysisResult, pc *configuration.PlumberConfig, provider string) map[string]any {
+// legacyResultsByName builds the JSON blocks. The includeOnly / skip
+// slices come from the `--controls` / `--skip-controls` flags and are
+// applied via control.MarkSkippedByFilter so the per-block `skipped:`
+// field tracks both the YAML enabled flag AND the CLI filter. Pass
+// nil/empty when no filter is active.
+func legacyResultsByName(result *control.AnalysisResult, pc *configuration.PlumberConfig, provider string, includeOnly, skip []string) map[string]any {
 	if result == nil || pc == nil {
 		return nil
 	}
@@ -48,7 +53,9 @@ func legacyResultsByName(result *control.AnalysisResult, pc *configuration.Plumb
 
 	switch provider {
 	case "github":
-		for _, e := range control.GitHubControls(pc) {
+		entries := control.GitHubControls(pc)
+		control.MarkSkippedByFilter(entries, includeOnly, skip)
+		for _, e := range entries {
 			fs := findingsByControl[e.ControlName]
 			key, block := buildLegacyResultGitHub(e, result, pc, fs)
 			if key == "" {
@@ -57,7 +64,9 @@ func legacyResultsByName(result *control.AnalysisResult, pc *configuration.Plumb
 			out[key] = block
 		}
 	default:
-		for _, e := range control.GitLabControls(pc) {
+		entries := control.GitLabControls(pc)
+		control.MarkSkippedByFilter(entries, includeOnly, skip)
+		for _, e := range entries {
 			fs := findingsByControl[e.ControlName]
 			key, block := buildLegacyResult(e, result, pc, fs)
 			if key == "" {

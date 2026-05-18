@@ -271,6 +271,26 @@ func buildGitHubControlStats(controlName string, stats *control.GitHubAnalysisSt
 			{"With permissions block", fmt.Sprintf("%d", withPerms)},
 			{"Missing permissions block", fmt.Sprintf("%d", stats.WorkflowsMissingPermissions)},
 		}
+	case "workflowMustNotGrantPermissionsWriteAll":
+		return []statLine{
+			{"Jobs Checked", fmt.Sprintf("%d", stats.JobsTotal)},
+			{"Jobs With write-all", fmt.Sprintf("%d", stats.JobsWithWriteAll)},
+		}
+	case "actionsMustNotBeArchived":
+		return []statLine{
+			{"Action Refs Checked", fmt.Sprintf("%d", stats.ActionRefsTotal+stats.ActionRefsExempt)},
+			{"Archived Refs Found", fmt.Sprintf("%d", stats.ActionRefsArchived)},
+		}
+	case "actionsMustNotCarryKnownCVEs":
+		return []statLine{
+			{"Action Refs Checked", fmt.Sprintf("%d", stats.ActionRefsTotal+stats.ActionRefsExempt)},
+			{"Refs With Advisories", fmt.Sprintf("%d", stats.ActionRefsVulnerable)},
+		}
+	case "pipelineMustNotEnableDebugTrace":
+		return []statLine{
+			{"Variables Checked", fmt.Sprintf("%d", stats.VariableBindingsTotal)},
+			{"Forbidden Found", fmt.Sprintf("%d", stats.DebugTraceFound)},
+		}
 	case "branchMustBeProtected":
 		unprotectedMatched := stats.BranchesMatched - stats.BranchesProtected
 		if unprotectedMatched < 0 {
@@ -424,8 +444,19 @@ func buildGitLabControlStats(controlName string, result *control.AnalysisResult,
 		// the pipeline globals — not the size of the forbidden list.
 		// On a 27-job pipeline this lands around 50–60 because
 		// imported security templates each carry their own set.
+		// GitHub workflows don't have GitLab's globals/Origins
+		// machinery — the merged workflow/job/step `env:` lives on
+		// each Job.Variables — so sum those for the GitHub path.
+		var checked int
+		if result != nil && result.GitHubPipeline != nil {
+			for _, j := range result.GitHubPipeline.Jobs {
+				checked += len(j.Variables)
+			}
+		} else {
+			checked = _countAllVariableBindings(result)
+		}
 		return []statLine{
-			{"Variables Checked", fmt.Sprintf("%d", _countAllVariableBindings(result))},
+			{"Variables Checked", fmt.Sprintf("%d", checked)},
 			{"Forbidden Found", fmt.Sprintf("%d", findingsCount)},
 		}
 	case "pipelineMustNotOverrideJobVariables":
@@ -499,6 +530,29 @@ func buildGitLabControlStats(controlName string, result *control.AnalysisResult,
 		return []statLine{
 			{"Requirement Groups", fmt.Sprintf("%d", len(resolved))},
 			{"Satisfied Groups", fmt.Sprintf("%d", satisfied)},
+		}
+	case "workflowMustNotGrantPermissionsWriteAll":
+		return []statLine{
+			{"Jobs Checked", fmt.Sprintf("%d", jobTotal)},
+			{"Jobs With write-all", fmt.Sprintf("%d", findingsCount)},
+		}
+	case "actionsMustNotBeArchived":
+		actionRefs := 0
+		if result != nil && result.GitHubStats != nil {
+			actionRefs = result.GitHubStats.ActionRefsTotal
+		}
+		return []statLine{
+			{"Action Refs Checked", fmt.Sprintf("%d", actionRefs)},
+			{"Archived Refs Found", fmt.Sprintf("%d", findingsCount)},
+		}
+	case "actionsMustNotCarryKnownCVEs":
+		actionRefs := 0
+		if result != nil && result.GitHubStats != nil {
+			actionRefs = result.GitHubStats.ActionRefsTotal
+		}
+		return []statLine{
+			{"Action Refs Checked", fmt.Sprintf("%d", actionRefs)},
+			{"Refs With Advisories", fmt.Sprintf("%d", findingsCount)},
 		}
 	case "branchMustBeProtected":
 		total, toProtect, protected, unprotected := _branchProtectionCounts(result, pc)

@@ -193,6 +193,26 @@ func GitHubControls(pc *configuration.PlumberConfig) []ControlEntry {
 		ControlName: "workflowMustIncludeRequiredActions",
 		Skipped:     c.WorkflowMustIncludeRequiredActions == nil || !c.WorkflowMustIncludeRequiredActions.IsEnabled(),
 	})
+	entries = append(entries, ControlEntry{
+		DisplayName: "Workflow must not grant write-all permissions",
+		ControlName: "workflowMustNotGrantPermissionsWriteAll",
+		Skipped:     c.WorkflowMustNotGrantPermissionsWriteAll == nil || !c.WorkflowMustNotGrantPermissionsWriteAll.IsEnabled(),
+	})
+	entries = append(entries, ControlEntry{
+		DisplayName: "Actions must not reference archived repositories",
+		ControlName: "actionsMustNotBeArchived",
+		Skipped:     c.ActionsMustNotBeArchived == nil || !c.ActionsMustNotBeArchived.IsEnabled(),
+	})
+	entries = append(entries, ControlEntry{
+		DisplayName: "Actions must not carry known CVEs",
+		ControlName: "actionsMustNotCarryKnownCVEs",
+		Skipped:     c.ActionsMustNotCarryKnownCVEs == nil || !c.ActionsMustNotCarryKnownCVEs.IsEnabled(),
+	})
+	entries = append(entries, ControlEntry{
+		DisplayName: "Pipeline must not enable debug trace",
+		ControlName: "pipelineMustNotEnableDebugTrace",
+		Skipped:     c.PipelineMustNotEnableDebugTrace == nil || !c.PipelineMustNotEnableDebugTrace.IsEnabled(),
+	})
 	return entries
 }
 
@@ -297,6 +317,15 @@ func DisabledControlNames(c *configuration.ControlsConfig) map[string]bool {
 	}
 	if cfg := c.WorkflowMustIncludeRequiredActions; cfg == nil || !cfg.IsEnabled() {
 		out["workflowMustIncludeRequiredActions"] = true
+	}
+	if cfg := c.WorkflowMustNotGrantPermissionsWriteAll; cfg == nil || !cfg.IsEnabled() {
+		out["workflowMustNotGrantPermissionsWriteAll"] = true
+	}
+	if cfg := c.ActionsMustNotBeArchived; cfg == nil || !cfg.IsEnabled() {
+		out["actionsMustNotBeArchived"] = true
+	}
+	if cfg := c.ActionsMustNotCarryKnownCVEs; cfg == nil || !cfg.IsEnabled() {
+		out["actionsMustNotCarryKnownCVEs"] = true
 	}
 	return out
 }

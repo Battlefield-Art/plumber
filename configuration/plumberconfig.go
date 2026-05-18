@@ -72,6 +72,15 @@ var validControlSchema = map[string][]string{
 	"reusableWorkflowsMustNotInheritSecrets": {
 		"enabled",
 	},
+	"workflowMustNotGrantPermissionsWriteAll": {
+		"enabled",
+	},
+	"actionsMustNotBeArchived": {
+		"enabled",
+	},
+	"actionsMustNotCarryKnownCVEs": {
+		"enabled",
+	},
 	"workflowMustIncludeRequiredActions": {
 		"enabled", "required", "requiredGroups",
 	},
@@ -241,6 +250,28 @@ type ControlsConfig struct {
 	// ReusableWorkflowsMustNotInheritSecrets control configuration (GitHub Actions only).
 	// Config-free; toggle via `enabled`.
 	ReusableWorkflowsMustNotInheritSecrets *EnabledOnlyControlConfig `yaml:"reusableWorkflowsMustNotInheritSecrets,omitempty"`
+
+	// WorkflowMustNotGrantPermissionsWriteAll control configuration (GitHub
+	// Actions only). Flags workflows or jobs whose effective `permissions:`
+	// block is the literal `write-all` shortcut, which grants every scope
+	// (contents, packages, deployments, …) write access on GITHUB_TOKEN.
+	// Stricter scope-level audits (per-scope write grants) are out of scope
+	// here; they get their own rule later. Config-free; toggle via `enabled`.
+	WorkflowMustNotGrantPermissionsWriteAll *EnabledOnlyControlConfig `yaml:"workflowMustNotGrantPermissionsWriteAll,omitempty"`
+
+	// ActionsMustNotBeArchived control configuration (GitHub Actions only).
+	// Flags `uses: owner/repo@ref` references whose upstream repository is
+	// archived on GitHub. Driven by per-action API metadata enriched at
+	// collect time. Config-free; toggle via `enabled`.
+	ActionsMustNotBeArchived *EnabledOnlyControlConfig `yaml:"actionsMustNotBeArchived,omitempty"`
+
+	// ActionsMustNotCarryKnownCVEs control configuration (GitHub Actions
+	// only). Flags `uses: owner/repo@ref` references whose upstream
+	// repository carries at least one published advisory in GitHub's
+	// Advisory Database under the `actions` ecosystem. Driven by per-
+	// action API metadata enriched at collect time. Config-free; toggle
+	// via `enabled`.
+	ActionsMustNotCarryKnownCVEs *EnabledOnlyControlConfig `yaml:"actionsMustNotCarryKnownCVEs,omitempty"`
 
 	// WorkflowMustIncludeRequiredActions control configuration (GitHub
 	// Actions only). The GitHub counterpart of

@@ -30,11 +30,13 @@ deny contains finding if {
 	action.metadata
 	count(action.metadata.advisories) > 0
 	finding := {
-		"code":     "ISSUE-114",
-		"severity": "critical",
-		"message":  sprintf("job %q references %q — published advisories: %s", [job.name, action.uses, _format_advisories(action.metadata.advisories)]),
-		"job":      job.name,
-		"line":     object.get(action, "line", 0),
+		"code":       "ISSUE-114",
+		"severity":   "critical",
+		"message":    sprintf("job %q references %q — published advisories: %s", [job.name, action.uses, _format_advisories(action.metadata.advisories)]),
+		"job":        job.name,
+		"uses":       action.uses,
+		"advisories": action.metadata.advisories,
+		"line":       object.get(action, "line", 0),
 	}
 }
 

@@ -758,3 +758,98 @@ github:
       # required: myorg/sast-scan AND myorg/policy/.github/workflows/scan.yml
       requiredGroups: []
 
+    # ===========================================
+    # Workflow must not grant write-all permissions
+    # ===========================================
+    # Flags workflows and jobs whose effective `permissions:` block is the
+    # literal `write-all` shortcut. write-all gives GITHUB_TOKEN every
+    # scope (contents, packages, deployments, id-token, …) at the same
+    # time, so any compromise in the workflow — a malicious dependency,
+    # a script-injection bug, a third-party action turning evil — gets
+    # to do anything the repo allows: push to main, publish releases,
+    # mint OIDC tokens for cloud accounts, mark deployments succeeded.
+    #
+    # Workflow-level `permissions: write-all` is propagated to every
+    # job by the GitHub Actions runner; the rule reads the per-job
+    # effective permissions, so a workflow-level grant is caught the
+    # same way as a job-level one.
+    #
+    # Stricter scope-level audits (e.g. flagging `contents: write` on
+    # jobs that should be read-only) are handled by other rules; this
+    # one is about the blanket shortcut. Pair with
+    # `workflowsMustDeclarePermissions` (catches the "no block at all"
+    # case, which defaults to write-all on many repos) for the full
+    # least-privilege story.
+    workflowMustNotGrantPermissionsWriteAll:
+      enabled: true
+
+    # ===========================================
+    # Actions must not reference archived repositories
+    # ===========================================
+    # Flags `uses: owner/repo@ref` references whose upstream repository
+    # is archived on GitHub. Archived repos no longer receive
+    # maintenance: open vulnerabilities stay open, dependency bumps
+    # stop, runtime compatibility regressions accumulate. Pinning by
+    # SHA does not save the caller — the last maintainer (or someone
+    # who later acquires the namespace) can still push new code under
+    # the original repository name.
+    #
+    # Driven by per-action GitHub API metadata. Without an authenticated
+    # token the metadata is not fetched and the rule stays silent on
+    # those refs (degraded contract, no false positives). With a token,
+    # one cached API call per unique action ref enriches every caller.
+    #
+    # Config-free; toggle via `enabled`.
+    actionsMustNotBeArchived:
+      enabled: true
+
+    # ===========================================
+    # Actions must not carry known CVEs
+    # ===========================================
+    # Cross-references every `uses: owner/repo@ref` against the GitHub
+    # Advisory Database under the `actions` ecosystem. A positive hit
+    # means at least one published advisory targets the action's
+    # repository. This is the rule that catches the published-CVE
+    # supply-chain class — tj-actions/changed-files (CVE-2025-30066),
+    # reviewdog/action-setup (March 2025), unpatched versions of
+    # `actions/artifact`.
+    #
+    # Caveat: Plumber does not today evaluate the advisory's
+    # `vulnerable_version_range` semver expression against the pinned
+    # ref, so a finding means "at least one advisory exists for this
+    # action", not "the pinned ref is definitely affected". The
+    # advisory page lists the affected range and the fixed-in version;
+    # upgrading past the fixed-in version + re-pinning the SHA resolves
+    # the finding on the next scan.
+    #
+    # Same authenticated-token requirement and cached-per-ref API path
+    # as `actionsMustNotBeArchived`. Config-free; toggle via `enabled`.
+    actionsMustNotCarryKnownCVEs:
+      enabled: true
+
+    # ===========================================
+    # Pipeline must not enable debug trace
+    # ===========================================
+    # GitHub-side parallel of the GitLab `pipelineMustNotEnableDebugTrace`
+    # control. Flags workflows or jobs that set the GitHub Actions
+    # debug-trace toggles to a truthy value (`true`, `1`, `yes`).
+    #
+    # When `ACTIONS_STEP_DEBUG=true` or `ACTIONS_RUNNER_DEBUG=true`,
+    # the runner prints every environment variable (including masked
+    # secrets) and every internal action SDK call into the job log.
+    # The masking layer is bypassed for the dump itself, so any
+    # secret consumed by the workflow lands in plaintext in the run
+    # log and is then visible to anyone with `actions: read` on the
+    # repository, plus indefinitely on log artefacts.
+    #
+    # Variable names are matched case-insensitively. Truthy values are
+    # `true` / `1` / `yes` (case-insensitive, trimmed). The rule walks
+    # every `env:` block the GitHub collector merged into the job
+    # (workflow-level, job-level, step-level), so a debug toggle
+    # declared anywhere in the workflow file triggers the finding.
+    pipelineMustNotEnableDebugTrace:
+      enabled: true
+      forbiddenVariables:
+        - ACTIONS_STEP_DEBUG
+        - ACTIONS_RUNNER_DEBUG
+

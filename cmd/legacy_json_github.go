@@ -50,6 +50,14 @@ func buildLegacyResultGitHub(e control.ControlEntry, result *control.AnalysisRes
 		return "permissionsResult", buildPermissionsBlock(common, result, findings)
 	case "workflowMustIncludeRequiredActions":
 		return "requiredActionsResult", buildRequiredActionsBlock(common, pc.ControlsFor("github").WorkflowMustIncludeRequiredActions, result, findings)
+	case "workflowMustNotGrantPermissionsWriteAll":
+		return "excessivePermissionsResult", buildExcessivePermissionsBlock(common, result, findings)
+	case "actionsMustNotBeArchived":
+		return "archivedActionsResult", buildArchivedActionsBlock(common, result, findings)
+	case "actionsMustNotCarryKnownCVEs":
+		return "knownVulnerableActionsResult", buildKnownVulnerableActionsBlock(common, result, findings)
+	case "pipelineMustNotEnableDebugTrace":
+		return "debugTraceResult", buildDebugTraceBlockGitHub(common, result, findings)
 	}
 	return "", nil
 }
@@ -467,4 +475,98 @@ func _actionRefMatches(reference, required string) bool {
 		return true
 	}
 	return strings.HasPrefix(normalized, required+"/")
+}
+
+// buildExcessivePermissionsBlock — ISSUE-509. Denominator is total
+// jobs (workflow-level permissions: write-all gets propagated to each
+// job by the collector, so the per-job denominator gives the right
+// "X jobs of Y" ratio whether the offending grant lives at workflow
+// or job scope). Numerator is the finding count, which the rego
+// emits one-per-job that resolves to write-all.
+func buildExcessivePermissionsBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	s := statsOf(result)
+	return map[string]any{
+		"issues": projectFindings(findings, "job"),
+		"metrics": map[string]any{
+			"jobsTotal":        s.JobsTotal,
+			"jobsWithWriteAll": len(findings),
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
+}
+
+// buildArchivedActionsBlock — ISSUE-108. Denominator is the number
+// of action refs scanned (same denominator the action-pinning block
+// uses), so a "X of Y" ratio is meaningful even when the GitHub API
+// metadata enrichment hit a quota and some refs went unresolved.
+// Numerator is the finding count, one per (job, archived-action) pair.
+func buildArchivedActionsBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	s := statsOf(result)
+	return map[string]any{
+		"issues": projectFindings(findings, "job"),
+		"metrics": map[string]any{
+			"actionRefsTotal":    s.ActionRefsTotal,
+			"actionRefsArchived": len(findings),
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
+}
+
+// buildDebugTraceBlockGitHub — ISSUE-203 on the GitHub path. The
+// GitLab equivalent (buildDebugTraceBlock) leans on
+// _countAllVariableBindings, which walks GitLab-only `Origins`
+// metadata. GitHub jobs carry their merged `env:` block directly in
+// `Job.Variables`, so the denominator here is the sum of those map
+// sizes across the IR. Numerator is the finding count; the rego
+// emits one finding per (job, debug-variable) pair that resolves to
+// a truthy value.
+func buildDebugTraceBlockGitHub(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	total := 0
+	if result != nil && result.GitHubPipeline != nil {
+		for _, j := range result.GitHubPipeline.Jobs {
+			total += len(j.Variables)
+		}
+	}
+	return map[string]any{
+		"issues": projectFindings(findings, "job"),
+		"metrics": map[string]any{
+			"totalVariablesChecked": total,
+			"forbiddenFound":        len(findings),
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
+}
+
+// buildKnownVulnerableActionsBlock — ISSUE-114. Same denominator as
+// the archived-actions block (total action refs); numerator counts
+// every (job, vulnerable-action) pair the rego flagged. The list of
+// GHSA IDs per finding is preserved inside `issues[*].advisories` —
+// downstream consumers (dashboards) typically aggregate on the IDs to
+// dedupe across multiple callers of the same compromised action.
+func buildKnownVulnerableActionsBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	s := statsOf(result)
+	return map[string]any{
+		"issues": projectFindings(findings, "job"),
+		"metrics": map[string]any{
+			"actionRefsTotal":      s.ActionRefsTotal,
+			"actionRefsVulnerable": len(findings),
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
 }

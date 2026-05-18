@@ -57,7 +57,7 @@ CycloneDX was chosen because Plumber's primary use case is pipeline security, an
 | GitLab CI components | `gitlab.com/components/sast` | **No** |
 | GitLab templates | `Security/SAST.gitlab-ci.yml` | **No** |
 | Remote/local includes | Custom YAML files | **No** |
-| GitHub Actions | `actions/checkout@<sha>` | **Limited.** GitHub's own [security advisories database](https://github.com/advisories) tracks Action-specific CVEs — Plumber's `actionsMustNotCarryKnownCVEs` control (currently benched, ships next) checks every `uses:` against that DB at analysis time. Generic CVE scanners do not. |
+| GitHub Actions | `actions/checkout@<sha>` | **Limited.** GitHub's own [security advisories database](https://github.com/advisories) tracks Action-specific CVEs. Plumber's `actionsMustNotCarryKnownCVEs` control (default-on) checks every `uses:` against that DB at analysis time and stamps each affected include with `hasCve: true` plus its `advisories: [GHSA-…]` list. Generic CVE scanners do not. |
 | GitHub reusable workflows | `myorg/shared/.github/workflows/x.yml` | **No** |
 
 **Why?** GitLab CI templates and components are configuration files, not software packages. No vulnerability database (NVD, OSV, etc.) tracks CVEs for them. Docker image PURLs provide metadata-level lookups only, not the full vulnerability surface of the image contents.
@@ -190,6 +190,9 @@ Each entry represents a CI/CD include dependency. Fields vary by include type: o
 | `nested` | bool | GitLab only: `true` when this include was pulled in by another include. |
 | `overridden` | bool | GitLab only: `true` when one or more of the include's jobs were overridden locally with forbidden CI/CD keywords. |
 | `overriddenJobs` | array | GitLab only: details of which jobs are overridden and with which keywords. Only present when `overridden` is `true`. JSON uses camelCase (`overriddenJobs`, `overriddenKeys`), not snake_case. |
+| `archived` | bool | GitHub `action` only. `true` when the action's upstream repository is archived (ISSUE-108 finding). Omitted when the GitHub API metadata enrichment did not resolve (no token, offline, non-GitHub action). |
+| `hasCve` | bool | GitHub `action` only. `true` when the action's upstream repository carries at least one published advisory in the GitHub Advisory Database under the `actions` ecosystem (ISSUE-114 finding). Same omitted-when-unresolved contract as `archived`. |
+| `advisories` | string[] | GitHub `action` only. GHSA IDs that triggered `hasCve`. Empty/omitted when `hasCve` is unset or false. |
 
 Each entry in `overriddenJobs[]`:
 
@@ -417,6 +420,9 @@ CycloneDX components carry Plumber-specific metadata as properties:
 | `plumber:nested` | includes | GitLab only. `"true"` if nested include |
 | `plumber:overridden` | includes | GitLab only. `"true"` if the include's jobs are overridden with forbidden keywords |
 | `plumber:overridden-job` | includes | GitLab only. `"jobName:key1,key2"` — one property per overridden job with its forbidden keys |
+| `plumber:archived` | includes | GitHub `action` only. `"true"` / `"false"` — upstream repository archived state (ISSUE-108). |
+| `plumber:has-cve` | includes | GitHub `action` only. `"true"` / `"false"` — at least one published advisory targets the action repository (ISSUE-114). |
+| `plumber:advisories` | includes | GitHub `action` only. Comma-separated list of GHSA IDs that triggered `plumber:has-cve`. |
 | `plumber:gitlab-url` | metadata.component | **GitLab only.** GitLab instance URL |
 | `plumber:project-id` | metadata.component | **GitLab only.** GitLab project ID |
 | `plumber:provider` | metadata.component | **GitHub only.** Always `"github"` — distinguishes the GitHub PBOM lineage from the historical GitLab one |

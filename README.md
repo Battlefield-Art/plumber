@@ -979,7 +979,7 @@ Consider using [Kaniko](https://github.com/GoogleContainerTools/kaniko) or [Buil
 
 #### GitHub Actions controls
 
-Ten controls ship on GitHub. Four are cross-provider (`branchMustBeProtected`, `containerImageMustNotUseForbiddenTags`, `pipelineMustNotUseDockerInDocker`, `securityJobsMustNotBeWeakened`); same control name as GitLab, GitHub-specific values, configure them under `github.controls.*`. Nine of the ten are default-on; `workflowMustIncludeRequiredActions` is opt-in (no findings until you populate `requiredGroups`).
+Fourteen controls ship on GitHub. Five are cross-provider (`branchMustBeProtected`, `containerImageMustNotUseForbiddenTags`, `pipelineMustNotEnableDebugTrace`, `pipelineMustNotUseDockerInDocker`, `securityJobsMustNotBeWeakened`); same control name as GitLab, GitHub-specific values, configure them under `github.controls.*`. Thirteen of the fourteen are default-on; `workflowMustIncludeRequiredActions` is opt-in (no findings until you populate `requiredGroups`).
 
 <details>
 <summary><b>1. Actions must be pinned by commit SHA</b></summary>
@@ -1220,7 +1220,95 @@ Issue code: ISSUE-416.
 
 </details>
 
-> **What's not yet shipping on GitHub:** ~40 additional GitHub policies live in `policies/*.rego` (action-supply-chain enrichment, dependabot cooldown, OIDC trusted publishing, release-artefact signing, security policy, etc.) but are gated behind the dev bench until each clears the ship-ready bar (substantive rule + ≥3 fixtures + docs). Track promotion in [`configuration/registry.go`](configuration/registry.go) → `benchedControls`.
+<details>
+<summary><b>11. Workflow must not grant write-all permissions</b></summary>
+
+Flags workflows and jobs whose effective `permissions:` block is the literal `write-all` shortcut. `write-all` grants `GITHUB_TOKEN` every scope at once (contents, packages, deployments, id-token, …), so any compromise inside the workflow — a malicious dependency, a script-injection bug, a third-party action turning evil — gets to do anything the repo allows: push to default branch, publish releases, mint OIDC tokens for cloud accounts, mark deployments succeeded.
+
+Workflow-level `permissions: write-all` is propagated to every job by the runner, so the rule reads each job's effective permissions and catches both the workflow-level and the job-level shortcut the same way.
+
+This control pairs with `workflowsMustDeclarePermissions`, which catches the related "no `permissions:` block at all" case (many repos default to write-all when no block is declared). Together they enforce the least-privilege baseline regardless of how a workflow chose to declare (or omit) its token scope.
+
+```yaml
+github:
+  controls:
+    workflowMustNotGrantPermissionsWriteAll:
+      enabled: true
+```
+
+Stricter scope-level audits (e.g. flagging `contents: write` on jobs that should be read-only) are handled by other rules; this one is about the blanket shortcut. Default-on, no parameters.
+
+Issue code: ISSUE-509.
+
+</details>
+
+<details>
+<summary><b>12. Actions must not reference archived repositories</b></summary>
+
+Flags `uses: owner/repo@ref` references whose upstream GitHub repository is archived. Archived repos no longer receive maintenance, so open vulnerabilities stay open and runtime compatibility regressions accumulate; pinning by SHA does not save the caller because the last maintainer (or someone who later acquires the namespace) can still push new code under the same repository name.
+
+Driven by per-action GitHub API metadata: the collector queries each unique `uses:` ref once and caches the result, so cost is one API call per distinct action regardless of how many workflows reference it. Without an authenticated token the metadata is not fetched and the rule stays silent on those refs (degraded contract, no false positives).
+
+```yaml
+github:
+  controls:
+    actionsMustNotBeArchived:
+      enabled: true
+```
+
+Default-on, no parameters. The PBOM tags each archived include with `archived: true` (JSON) / `plumber:archived` (CycloneDX) so downstream dashboards can dedupe across multiple callers of the same abandoned action.
+
+Issue code: ISSUE-108.
+
+</details>
+
+<details>
+<summary><b>13. Actions must not carry known CVEs</b></summary>
+
+Cross-references every `uses: owner/repo@ref` against the GitHub Advisory Database under the `actions` ecosystem. A positive hit means at least one published advisory targets the action's repository. This is the rule that catches the published-CVE supply-chain class: tj-actions/changed-files (CVE-2025-30066), reviewdog/action-setup (March 2025), unpatched versions of `actions/artifact`.
+
+**Caveat:** Plumber does not today evaluate the advisory's `vulnerable_version_range` semver expression against the pinned ref, so a finding means "at least one advisory exists for this action", not "the pinned ref is definitely affected". The advisory page lists the affected range and the fixed-in version; upgrading past the fixed-in version and re-pinning the SHA resolves the finding on the next scan.
+
+Same authenticated-token requirement and one-API-call-per-ref caching path as `actionsMustNotBeArchived`.
+
+```yaml
+github:
+  controls:
+    actionsMustNotCarryKnownCVEs:
+      enabled: true
+```
+
+Default-on, no parameters. The PBOM tags each affected include with `hasCve: true` plus an `advisories: [GHSA-…, …]` list (JSON) / `plumber:has-cve` plus `plumber:advisories` properties (CycloneDX), so downstream consumers can pivot on the GHSA IDs across the inventory.
+
+Issue code: ISSUE-114.
+
+</details>
+
+<details>
+<summary><b>14. Pipeline must not enable debug trace</b></summary>
+
+GitHub side of the cross-provider `pipelineMustNotEnableDebugTrace` rule (the GitLab side catches `CI_DEBUG_TRACE` / `CI_DEBUG_SERVICES`). Flags workflows or jobs that set `ACTIONS_STEP_DEBUG` or `ACTIONS_RUNNER_DEBUG` to a truthy value (`true`, `1`, `yes` — case-insensitive, trimmed).
+
+When either debug toggle is on, the runner prints every environment variable (including masked secrets) and every internal action SDK call into the job log. The masking layer is bypassed for the dump itself, so any secret consumed by the workflow lands in plaintext in the run log and remains visible to anyone with `actions: read` plus indefinitely on log artefacts.
+
+Variable name matching is case-insensitive. The rule walks the merged `env:` block the GitHub collector folds together from workflow-level, job-level, and step-level scopes, so a debug toggle declared anywhere in the workflow file fires the finding.
+
+```yaml
+github:
+  controls:
+    pipelineMustNotEnableDebugTrace:
+      enabled: true
+      forbiddenVariables:
+        - ACTIONS_STEP_DEBUG
+        - ACTIONS_RUNNER_DEBUG
+        # Add other diagnostic-toggle variables your org wants caught
+```
+
+Default-on with the two GitHub-native debug variables pre-populated; extend the list if your runner image honours additional diagnostic toggles. Issue code: ISSUE-203 (shared with the GitLab side; the message names the GitHub variable when triggered there).
+
+</details>
+
+> **What's not yet shipping on GitHub:** ~36 additional GitHub policies live in `policies/*.rego` (action-supply-chain enrichment, dependabot cooldown, OIDC trusted publishing, release-artefact signing, security policy, etc.) but are gated behind the dev bench until each clears the ship-ready bar (substantive rule + ≥3 fixtures + docs). Track promotion in [`configuration/registry.go`](configuration/registry.go) → `benchedControls`.
 
 ### Selective Control Execution
 
@@ -1274,17 +1362,21 @@ Controls not selected are reported as **skipped** in the output. The `--controls
 </details>
 
 <details>
-<summary><b>Valid control names, GitHub (10)</b></summary>
+<summary><b>Valid control names, GitHub (14)</b></summary>
 
 | Control Name | Cross-provider? |
 |-------------|---|
 | `actionsMustBePinnedByCommitSha` | GitHub-only |
+| `actionsMustNotBeArchived` | GitHub-only |
+| `actionsMustNotCarryKnownCVEs` | GitHub-only |
 | `branchMustBeProtected` | ✓ shared with GitLab |
 | `containerImageMustNotUseForbiddenTags` | ✓ shared with GitLab |
+| `pipelineMustNotEnableDebugTrace` | ✓ shared with GitLab |
 | `pipelineMustNotUseDockerInDocker` | ✓ shared with GitLab |
 | `reusableWorkflowsMustNotInheritSecrets` | GitHub-only |
 | `securityJobsMustNotBeWeakened` | ✓ shared with GitLab |
 | `workflowMustIncludeRequiredActions` | GitHub-only |
+| `workflowMustNotGrantPermissionsWriteAll` | GitHub-only |
 | `workflowMustNotInjectUserInputInScripts` | GitHub-only |
 | `workflowMustNotUseDangerousTriggers` | GitHub-only |
 | `workflowsMustDeclarePermissions` | GitHub-only |

@@ -1,6 +1,6 @@
-# Plumber v0.3.0-beta.5: GitHub Actions support
+# Plumber v0.3.0-beta.6: GitHub Actions support
 
-> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.5 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
+> Live: https://github.com/getplumber/plumber/releases/tag/v0.3.0-beta.6 (pre-release, opted out of the "latest" badge, so newcomers landing on the repo still get v0.2.22).
 
 
 ---
@@ -10,6 +10,15 @@
 Plumber now scans GitHub Actions workflows with the same engine, same `.plumber.yaml`, and same CLI you already use for GitLab. **Your existing GitLab usage is unchanged** — same flags, same output, same exit codes. The only thing you'll notice if you stay on GitLab is a one-line deprecation warning suggesting you upgrade the `.plumber.yaml` schema (optional).
 
 If you want to scan a GitHub Actions project too, this release lets you.
+
+### What changed since beta.5
+
+- Four new GitHub controls ship default-on, taking the catalog from 11 to 14 (13 default-on + 1 opt-in `workflowMustIncludeRequiredActions`):
+  - **`actionsMustNotBeArchived`** (ISSUE-108, High): flags `uses: owner/repo@ref` pointing at an archived GitHub repository. Driven by per-action GitHub API metadata, one cached call per unique ref. PBOM tags each affected include with `archived: true` / CycloneDX `plumber:archived`. Caught 13 real findings on `grafana/grafana` in matrix testing.
+  - **`actionsMustNotCarryKnownCVEs`** (ISSUE-114, Critical): cross-references every action against the GitHub Advisory Database under the `actions` ecosystem. Same metadata path as the archived check. PBOM exposes `hasCve: true` plus `advisories: [GHSA-…]`; CycloneDX gets matching `plumber:has-cve` and `plumber:advisories` properties.
+  - **`pipelineMustNotEnableDebugTrace`** on the GitHub side (ISSUE-203, Critical): the GitLab control's GitHub twin. Catches truthy `ACTIONS_STEP_DEBUG` / `ACTIONS_RUNNER_DEBUG` in any merged `env:` block (workflow, job, or step). Case-insensitive; extend `forbiddenVariables` for other diagnostic toggles.
+  - **`workflowMustNotGrantPermissionsWriteAll`** (ISSUE-509, High): flags `permissions: write-all` at workflow or job level. Pairs with `workflowsMustDeclarePermissions` (which catches the "no block at all" case) to close the least-privilege loop.
+- `--skip-controls` now sets `skipped: true` in the JSON per-control blocks. Previously the flag only affected the terminal display, leaving downstream dashboards that read the JSON to mislabel a skipped control as "evaluated, passed". Findings, compliance, and `passed` were already correct. Affects every shipping control on both providers, not just the new ones.
 
 ### What changed since beta.2
 
@@ -39,18 +48,18 @@ Pick the one line that matches your platform; download `checksums.txt` either wa
 
 ```bash
 # macOS (Apple Silicon)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-darwin-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/plumber-darwin-arm64
 # macOS (Intel)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-darwin-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/plumber-darwin-amd64
 # Linux (amd64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-linux-amd64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/plumber-linux-amd64
 # Linux (arm64)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-linux-arm64
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/plumber-linux-arm64
 # Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
+Invoke-WebRequest -Uri https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/plumber-windows-amd64.exe -OutFile plumber-windows-amd64.exe
 
 # Checksums (all platforms)
-curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.5/checksums.txt
+curl -LO https://github.com/getplumber/plumber/releases/download/v0.3.0-beta.6/checksums.txt
 ```
 
 ### Step 2: Verify integrity (recommended)
@@ -69,7 +78,7 @@ If the line you downloaded doesn't print `OK`, **stop and re-download** — don'
 ```bash
 # Replace plumber-darwin-arm64 with the binary you downloaded
 chmod +x plumber-darwin-arm64 && sudo mv plumber-darwin-arm64 /usr/local/bin/plumber
-plumber version                # expect: plumber version 0.3.0-beta.5
+plumber version                # expect: plumber version 0.3.0-beta.6
 ```
 
 For Windows, just put `plumber-windows-amd64.exe` somewhere on your `PATH` and rename it to `plumber.exe`.
@@ -181,7 +190,7 @@ Local-clone analysis works without auth but the repo-level controls (branch prot
 plumber analyze --output report.json --pbom pbom.json --pbom-cyclonedx sbom.json
 ```
 
-**Expected:** per-control compliance percentages for the 10 GitHub controls (SHA pinning, dangerous triggers, permissions, template injection, reusable-workflow secrets, security-job weakening, container images, DinD, branch protection, required actions / reusable workflows). Three artifacts on disk: `report.json` (per-control results), `pbom.json` (container images + every `uses: owner/repo@<sha>` action reference), `sbom.json` (CycloneDX 1.5 — ingestible by Grype / Trivy / Dependency-Track).
+**Expected:** per-control compliance percentages for the 14 GitHub controls (SHA pinning, archived-repo refs, known-CVE actions, dangerous triggers, write-all permission grants, debug-trace toggles, declared-permissions presence, template injection, reusable-workflow secrets, security-job weakening, container images, DinD, branch protection, required actions / reusable workflows). Three artifacts on disk: `report.json` (per-control results, with the new `archivedActionsResult`, `knownVulnerableActionsResult`, `excessivePermissionsResult`, and `debugTraceResult` blocks among them), `pbom.json` (container images + every `uses: owner/repo@<sha>` action reference, with `archived` / `hasCve` / `advisories` fields on affected entries), `sbom.json` (CycloneDX 1.5 — ingestible by Grype / Trivy / Dependency-Track, with `plumber:archived` / `plumber:has-cve` / `plumber:advisories` properties on affected components).
 
 ---
 
@@ -214,7 +223,7 @@ So a code-owner-approval rule lives in either mechanism (or both) and Plumber fi
 ## 4. What I'm looking for
 
 - **GitLab regression**: anything that worked before but doesn't now.
-- **GitHub findings sanity**: do the 9 controls report things you'd expect for your repo? Anything noisy or obviously wrong?
+- **GitHub findings sanity**: do the 14 controls report things you'd expect for your repo? In particular for this beta, the four new ones: `actionsMustNotBeArchived` should be silent unless you depend on abandoned action repos; `actionsMustNotCarryKnownCVEs` should be silent unless you pin a version inside a published advisory window; `pipelineMustNotEnableDebugTrace` should only fire on `ACTIONS_STEP_DEBUG` / `ACTIONS_RUNNER_DEBUG`; `workflowMustNotGrantPermissionsWriteAll` should only fire when a workflow or job literally declares `permissions: write-all`. Anything noisy or obviously wrong?
 - **Wizard UX**: was `plumber config init` clear? Anything confusing or missing?
 - **CLI ergonomics**: any flag or message that felt unfamiliar coming from the GitLab-only flow?
 - **Output artifacts**: `report.json` / `pbom.json` / `sbom.json` — does the shape match what you'd want to script against?

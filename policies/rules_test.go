@@ -1681,6 +1681,60 @@ func TestIssue203_TruthyAndCaseInsensitive(t *testing.T) {
 	}
 }
 
+// TestIssue203_GitHubDebugVariables covers the GitHub side of the
+// shared `pipelineMustNotEnableDebugTrace` rule. The GitHub collector
+// folds workflow / job / step-level `env:` blocks into the per-job
+// Variables map, so the same rule that catches `CI_DEBUG_TRACE` on
+// GitLab catches `ACTIONS_STEP_DEBUG` / `ACTIONS_RUNNER_DEBUG` on
+// GitHub. Verifies positive (truthy), negative (off), and disabled-
+// when-no-cfg behaviour for the GitHub provider.
+func TestIssue203_GitHubDebugVariables(t *testing.T) {
+	engine := opaengine.New()
+	if err := engine.LoadFromFS(policies.FS); err != nil {
+		t.Fatalf("load embedded policies: %v", err)
+	}
+	cfg := map[string]any{
+		"debugTrace": map[string]any{
+			"forbiddenVariables": []string{"ACTIONS_STEP_DEBUG", "ACTIONS_RUNNER_DEBUG"},
+		},
+	}
+	pipeline := &ir.NormalizedPipeline{
+		Provider: ir.ProviderGitHub,
+		Jobs: []ir.Job{
+			{Name: "build/step-debug", Variables: map[string]string{"ACTIONS_STEP_DEBUG": "true"}},
+			{Name: "build/runner-debug", Variables: map[string]string{"actions_runner_debug": "1"}},
+			{Name: "build/off", Variables: map[string]string{"ACTIONS_STEP_DEBUG": "false"}},
+			{Name: "build/no-vars"},
+		},
+	}
+	findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+	if err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+	hits := []string{}
+	for _, f := range findings {
+		if f.Code == "ISSUE-203" {
+			hits = append(hits, f.Job)
+		}
+	}
+	sort.Strings(hits)
+	want := []string{"build/runner-debug", "build/step-debug"}
+	if !stringSlicesEqual(hits, want) {
+		t.Fatalf("expected %v, got %v", want, hits)
+	}
+
+	// Without cfg the GitHub side stays silent too (same skip as GitLab).
+	noCfg, err := engine.Evaluate(context.Background(), pipeline, nil)
+	if err != nil {
+		t.Fatalf("evaluate (no cfg): %v", err)
+	}
+	for _, f := range noCfg {
+		if f.Code == "ISSUE-203" {
+			t.Fatalf("ISSUE-203 must abstain when cfg is missing; got %+v", f)
+		}
+	}
+}
+
 // TestIssue101_VarNotationAndUnknownRegistry locks in two legacy
 // parity guarantees:
 //   - `${VAR}` and `$VAR` notations normalize to the same form before
@@ -2906,46 +2960,184 @@ func TestIssue113_RefConfusion(t *testing.T) {
 	}
 }
 
-// TestIssue114_KnownVulnerableAction same hand-built approach —
-// stub the Advisories slice directly on the IR.
+// TestIssue114_KnownVulnerableAction stubs the Advisories slice
+// directly on the IR so the test does not require GitHub API access.
+// Covers the single-advisory positive, the no-advisory negative, the
+// multi-advisory case (URL for each ID), and the missing-metadata
+// negative (silent abstain, no false positive).
 func TestIssue114_KnownVulnerableAction(t *testing.T) {
 	engine := opaengine.New()
 	if err := engine.LoadFromFS(policies.FS); err != nil {
 		t.Fatalf("load embedded policies: %v", err)
 	}
 
-	pipeline := &ir.NormalizedPipeline{
-		Provider: ir.ProviderGitHub,
-		Jobs: []ir.Job{
-			{
+	t.Run("single advisory fires once with clickable URL", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
 				Name: "build",
 				Uses: []ir.Action{
 					{Uses: "tj-actions/changed-files@v45", Metadata: &ir.ActionMetadata{RefKind: "tag", RefExists: true, Advisories: []string{"GHSA-mrrh-fwg8-r2c3"}}},
 					{Uses: "actions/checkout@v4", Metadata: &ir.ActionMetadata{RefKind: "tag", RefExists: true}},
 				},
-			},
-		},
-	}
-	findings, err := engine.Evaluate(context.Background(), pipeline, nil)
-	if err != nil {
-		t.Fatalf("evaluate: %v", err)
-	}
-	hits := 0
-	for _, f := range findings {
-		if f.Code != "ISSUE-114" {
-			continue
+			}},
 		}
-		hits++
-		// The message must carry the advisory URL so the
-		// terminal renderer turns it into a clickable link.
-		wantLink := "https://github.com/advisories/GHSA-mrrh-fwg8-r2c3"
-		if !strings.Contains(f.Message, wantLink) {
-			t.Fatalf("ISSUE-114 message missing advisory URL\n  got: %s\n  want substring: %s", f.Message, wantLink)
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
 		}
+		hits := 0
+		for _, f := range findings {
+			if f.Code != "ISSUE-114" {
+				continue
+			}
+			hits++
+			wantLink := "https://github.com/advisories/GHSA-mrrh-fwg8-r2c3"
+			if !strings.Contains(f.Message, wantLink) {
+				t.Fatalf("ISSUE-114 message missing advisory URL\n  got: %s\n  want substring: %s", f.Message, wantLink)
+			}
+		}
+		if hits != 1 {
+			t.Fatalf("expected 1 ISSUE-114 finding, got %d", hits)
+		}
+	})
+
+	t.Run("multi-advisory lists every GHSA URL", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
+				Name: "build",
+				Uses: []ir.Action{
+					{Uses: "vendor/action@v1", Metadata: &ir.ActionMetadata{Advisories: []string{"GHSA-aaaa-bbbb-cccc", "GHSA-dddd-eeee-ffff"}}},
+				},
+			}},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		hits := 0
+		for _, f := range findings {
+			if f.Code != "ISSUE-114" {
+				continue
+			}
+			hits++
+			for _, want := range []string{
+				"https://github.com/advisories/GHSA-aaaa-bbbb-cccc",
+				"https://github.com/advisories/GHSA-dddd-eeee-ffff",
+			} {
+				if !strings.Contains(f.Message, want) {
+					t.Errorf("ISSUE-114 message missing %q\n  got: %s", want, f.Message)
+				}
+			}
+		}
+		if hits != 1 {
+			t.Fatalf("expected 1 ISSUE-114 finding (one per affected action), got %d", hits)
+		}
+	})
+
+	t.Run("missing metadata stays silent", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
+				Name: "build",
+				Uses: []ir.Action{
+					{Uses: "vendor/action@v1"}, // no Metadata at all
+				},
+			}},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-114" {
+				t.Fatalf("ISSUE-114 must abstain when metadata is missing; got %+v", f)
+			}
+		}
+	})
+}
+
+// TestIssue108_ActionArchivedRepo locks in the three branches of the
+// archived-repo rule: archived=true positive, archived=false negative,
+// and missing-metadata silent abstain (no false positive when the
+// GitHub API enrichment did not run).
+func TestIssue108_ActionArchivedRepo(t *testing.T) {
+	engine := opaengine.New()
+	if err := engine.LoadFromFS(policies.FS); err != nil {
+		t.Fatalf("load embedded policies: %v", err)
 	}
-	if hits != 1 {
-		t.Fatalf("expected 1 ISSUE-114 finding, got %d", hits)
-	}
+
+	t.Run("archived=true fires with uses field on the finding", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
+				Name: "release",
+				Uses: []ir.Action{
+					{Uses: "archived-org/release-action@v1", Metadata: &ir.ActionMetadata{RepoArchived: true}},
+				},
+			}},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		hits := 0
+		for _, f := range findings {
+			if f.Code != "ISSUE-108" {
+				continue
+			}
+			hits++
+			if uses, ok := f.Data["uses"].(string); !ok || uses != "archived-org/release-action@v1" {
+				t.Errorf("ISSUE-108 finding missing/wrong uses field: %v", f.Data["uses"])
+			}
+		}
+		if hits != 1 {
+			t.Fatalf("expected 1 ISSUE-108 finding, got %d", hits)
+		}
+	})
+
+	t.Run("archived=false stays silent", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
+				Name: "release",
+				Uses: []ir.Action{
+					{Uses: "actions/checkout@v4", Metadata: &ir.ActionMetadata{RepoArchived: false}},
+				},
+			}},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-108" {
+				t.Fatalf("ISSUE-108 must not fire when archived=false; got %+v", f)
+			}
+		}
+	})
+
+	t.Run("missing metadata stays silent", func(t *testing.T) {
+		pipeline := &ir.NormalizedPipeline{
+			Provider: ir.ProviderGitHub,
+			Jobs: []ir.Job{{
+				Name: "release",
+				Uses: []ir.Action{
+					{Uses: "actions/checkout@v4"}, // no Metadata
+				},
+			}},
+		}
+		findings, err := engine.Evaluate(context.Background(), pipeline, nil)
+		if err != nil {
+			t.Fatalf("evaluate: %v", err)
+		}
+		for _, f := range findings {
+			if f.Code == "ISSUE-108" {
+				t.Fatalf("ISSUE-108 must abstain when metadata is missing; got %+v", f)
+			}
+		}
+	})
 }
 
 // TestIssue115_SuperfluousAction flags peter-evans/create-pull-request
