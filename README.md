@@ -1236,7 +1236,7 @@ github:
       enabled: true
 ```
 
-Stricter scope-level audits (e.g. flagging `contents: write` on jobs that should be read-only) are handled by other rules; this one is about the blanket shortcut. Default-on, no parameters.
+Stricter scope-level audits (e.g. flagging `contents: write` on jobs that should be read-only) are handled by other rules; this one is about the blanket shortcut. Static YAML in `.github/workflows/` only; does not flag scope maps, `read-all`, or missing blocks (ISSUE-304). Default-on, no parameters.
 
 Issue code: ISSUE-509.
 
@@ -1247,7 +1247,7 @@ Issue code: ISSUE-509.
 
 Flags `uses: owner/repo@ref` references whose upstream GitHub repository is archived. Archived repos no longer receive maintenance, so open vulnerabilities stay open and runtime compatibility regressions accumulate; pinning by SHA does not save the caller because the last maintainer (or someone who later acquires the namespace) can still push new code under the same repository name.
 
-Driven by per-action GitHub API metadata: the collector queries each unique `uses:` ref once and caches the result, so cost is one API call per distinct action regardless of how many workflows reference it. Without an authenticated token the metadata is not fetched and the rule stays silent on those refs (degraded contract, no false positives).
+Driven by GitHub API metadata on step-level `uses: owner/repo@ref` in committed workflow YAML (not reusable-workflow `jobs.*.uses`, not local `./.github/actions/*`). One cached `GET /repos/{owner}/{repo}` per action repository. Without `gh` / `GH_TOKEN` the rule abstains (no finding).
 
 ```yaml
 github:
@@ -1265,11 +1265,9 @@ Issue code: ISSUE-108.
 <details>
 <summary><b>13. Actions must not carry known CVEs</b></summary>
 
-Cross-references every `uses: owner/repo@ref` against the GitHub Advisory Database under the `actions` ecosystem. A positive hit means at least one published advisory targets the action's repository. This is the rule that catches the published-CVE supply-chain class: tj-actions/changed-files (CVE-2025-30066), reviewdog/action-setup (March 2025), unpatched versions of `actions/artifact`.
+Cross-references step-level `uses: owner/repo@ref` in committed workflows against the GitHub Advisory Database (`actions` ecosystem). One cached query per `owner/repo`. When the pinned ref resolves to a semver tag, advisories are filtered by `vulnerable_version_range`; unresolvable commit SHAs may match any advisory for that repo (conservative). Catches the published-CVE supply-chain class (tj-actions/changed-files CVE-2025-30066, reviewdog, vulnerable `actions/artifact`, etc.).
 
-**Caveat:** Plumber does not today evaluate the advisory's `vulnerable_version_range` semver expression against the pinned ref, so a finding means "at least one advisory exists for this action", not "the pinned ref is definitely affected". The advisory page lists the affected range and the fixed-in version; upgrading past the fixed-in version and re-pinning the SHA resolves the finding on the next scan.
-
-Same authenticated-token requirement and one-API-call-per-ref caching path as `actionsMustNotBeArchived`.
+Requires `gh` / `GH_TOKEN` (same abstain-without-auth contract as `actionsMustNotBeArchived`). Upgrade past the fixed-in version and re-pin the SHA to clear the finding.
 
 ```yaml
 github:
@@ -1291,7 +1289,7 @@ GitHub side of the cross-provider `pipelineMustNotEnableDebugTrace` rule (the Gi
 
 When either debug toggle is on, the runner prints every environment variable (including masked secrets) and every internal action SDK call into the job log. The masking layer is bypassed for the dump itself, so any secret consumed by the workflow lands in plaintext in the run log and remains visible to anyone with `actions: read` plus indefinitely on log artefacts.
 
-Variable name matching is case-insensitive. The rule walks the merged `env:` block the GitHub collector folds together from workflow-level, job-level, and step-level scopes, so a debug toggle declared anywhere in the workflow file fires the finding.
+Variable name matching is case-insensitive. The rule walks static `env:` in workflow YAML merged from workflow-, job-, and step-level scopes, also flags `${{ }}` expression bindings on forbidden names (truthiness cannot be verified statically), and flags `run:` lines that write forbidden names to `$GITHUB_ENV`. All variants emit ISSUE-203 critical findings. Does not see org/repo Variables with no YAML reference or UI-only "Re-run with debug logging".
 
 ```yaml
 github:

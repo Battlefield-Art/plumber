@@ -13,12 +13,11 @@
 # class with the full blast radius of the job's permissions and
 # secrets.
 #
-# Caveat: Plumber does not today evaluate the advisory's
-# `vulnerable_version_range` semver expression against the pinned
-# ref, so a positive hit means "at least one advisory exists for
-# this action". Policies that want to whitelist patched versions
-# can use `--skip-controls actionsMustNotCarryKnownCVEs` on a
-# per-job basis once the upgrade is live.
+# The collector filters advisories by `vulnerable_version_range` when
+# the pinned ref resolves to a semver tag. Unresolvable commit SHAs
+# conservatively match any advisory for that owner/repo. Use
+# `--skip-controls actionsMustNotCarryKnownCVEs` after upgrading and
+# re-pinning if you need a temporary waiver.
 package known_vulnerable_action
 
 import rego.v1

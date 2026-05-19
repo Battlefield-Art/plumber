@@ -1704,6 +1704,8 @@ func TestIssue203_GitHubDebugVariables(t *testing.T) {
 			{Name: "build/step-debug", Variables: map[string]string{"ACTIONS_STEP_DEBUG": "true"}},
 			{Name: "build/runner-debug", Variables: map[string]string{"actions_runner_debug": "1"}},
 			{Name: "build/off", Variables: map[string]string{"ACTIONS_STEP_DEBUG": "false"}},
+			{Name: "build/expr", Variables: map[string]string{"ACTIONS_STEP_DEBUG": "${{ vars.enable_debug }}"}},
+			{Name: "build/github-env", Scripts: []string{`echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV`}},
 			{Name: "build/no-vars"},
 		},
 	}
@@ -1711,16 +1713,24 @@ func TestIssue203_GitHubDebugVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("evaluate: %v", err)
 	}
-	hits := []string{}
+	hits := map[string]int{}
 	for _, f := range findings {
-		if f.Code == "ISSUE-203" {
-			hits = append(hits, f.Job)
+		if f.Code != "ISSUE-203" {
+			continue
+		}
+		hits[f.Job]++
+		if f.Severity != "critical" {
+			t.Fatalf("ISSUE-203 must always emit critical (matches codes.go canonical severity), got %q on job %q", f.Severity, f.Job)
 		}
 	}
-	sort.Strings(hits)
-	want := []string{"build/runner-debug", "build/step-debug"}
-	if !stringSlicesEqual(hits, want) {
-		t.Fatalf("expected %v, got %v", want, hits)
+	wantJobs := []string{"build/expr", "build/github-env", "build/runner-debug", "build/step-debug"}
+	for _, j := range wantJobs {
+		if hits[j] == 0 {
+			t.Fatalf("expected ISSUE-203 on job %q, got hits=%v", j, hits)
+		}
+	}
+	if hits["build/off"] > 0 || hits["build/no-vars"] > 0 {
+		t.Fatalf("unexpected ISSUE-203 on clean jobs, got hits=%v", hits)
 	}
 
 	// Without cfg the GitHub side stays silent too (same skip as GitLab).
@@ -1732,6 +1742,66 @@ func TestIssue203_GitHubDebugVariables(t *testing.T) {
 		if f.Code == "ISSUE-203" {
 			t.Fatalf("ISSUE-203 must abstain when cfg is missing; got %+v", f)
 		}
+	}
+}
+
+// TestIssue203_GitHubDebugTrace_CollectorIntegration exercises expression
+// and $GITHUB_ENV bypass paths end-to-end through ScanGitHubWorkflows.
+func TestIssue203_GitHubDebugTrace_CollectorIntegration(t *testing.T) {
+	tmp := t.TempDir()
+	wfDir := filepath.Join(tmp, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	workflow := `name: debug-hardening
+on: push
+jobs:
+  expr:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_STEP_DEBUG: ${{ vars.enable_debug }}
+    steps:
+      - run: echo hi
+  github-env:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "BUILD_MODE=release" >> $GITHUB_ENV
+`
+	if err := os.WriteFile(filepath.Join(wfDir, "debug.yml"), []byte(workflow), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pipeline, partial, err := collector.ScanGitHubWorkflows("owner/repo", "main", tmp, "", false)
+	if err != nil || len(partial) != 0 {
+		t.Fatalf("scan: err=%v partial=%v", err, partial)
+	}
+	engine := opaengine.New()
+	if err := engine.LoadFromFS(policies.FS); err != nil {
+		t.Fatalf("load policies: %v", err)
+	}
+	cfg := map[string]any{
+		"debugTrace": map[string]any{
+			"forbiddenVariables": []string{"ACTIONS_STEP_DEBUG", "ACTIONS_RUNNER_DEBUG"},
+		},
+	}
+	findings, err := engine.Evaluate(context.Background(), pipeline, cfg)
+	if err != nil {
+		t.Fatalf("evaluate: %v", err)
+	}
+	hits := map[string]int{}
+	for _, f := range findings {
+		if f.Code == "ISSUE-203" {
+			hits[f.Job]++
+		}
+	}
+	if hits["debug/expr"] == 0 || hits["debug/github-env"] == 0 {
+		t.Fatalf("expected findings on debug/expr and debug/github-env, got %v", hits)
+	}
+	if hits["debug/clean"] > 0 {
+		t.Fatalf("unexpected ISSUE-203 on clean job, got %v", hits)
 	}
 }
 
