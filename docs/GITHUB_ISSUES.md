@@ -472,7 +472,7 @@ into a clickable link:
 CRIT  [ISSUE-114] job "build" references "tj-actions/changed-files@v45" —
        published advisories: GHSA-mrrh-fwg8-r2c3 (https://github.com/advisories/GHSA-mrrh-fwg8-r2c3)
    ↳ at .github/workflows/ci.yml:28
-   ↳ docs: https://getplumber.io/docs/use-plumber/issues/ISSUE-114
+   ↳ docs: https://getplumber.io/docs/cli/issues/ISSUE-114
 ```
 
 ```yaml

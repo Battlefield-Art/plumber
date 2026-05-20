@@ -1489,7 +1489,7 @@ func printIssuesTable(controls []controlSummary) {
 	}
 
 	fmt.Println(indentBlock(tbl.String(), "  "))
-	fmt.Printf("  %s\n", styleDim.Render("↳ docs: https://getplumber.io/docs/use-plumber/issues/<code>"))
+	fmt.Printf("  %s\n", styleDim.Render("↳ docs: https://getplumber.io/docs/cli/issues/<code>"))
 }
 
 // indentBlock prefixes every line of s with prefix. Used because

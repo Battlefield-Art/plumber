@@ -143,7 +143,7 @@ type legacyCommon struct {
 func projectFinding(f opaengine.Finding, jobNameKey string) map[string]any {
 	out := map[string]any{
 		"code":   f.Code,
-		"docUrl": "https://getplumber.io/docs/use-plumber/issues/" + f.Code,
+		"docUrl": "https://getplumber.io/docs/cli/issues/" + f.Code,
 	}
 	if f.Job != "" && jobNameKey != "" {
 		out[jobNameKey] = f.Job

@@ -286,7 +286,7 @@ All fields are always present (default to `0`). The provider-specific include co
 
 ### `plumberScore` Object (optional)
 
-Present only when analysis is run with `--score` and/or `--score-point`. Field meanings and the exact formula (weights, log₂ growth, per-severity caps, Critical malus, letter thresholds) are documented in **[scoring.md](scoring.md)**. Issue severities per code follow the [issues](https://getplumber.io/docs/use-plumber/issues/) documentation.
+Present only when analysis is run with `--score` and/or `--score-point`. Field meanings and the exact formula (weights, log₂ growth, per-severity caps, Critical malus, letter thresholds) are documented in **[scoring.md](scoring.md)**. Issue severities per code follow the [issues](https://getplumber.io/docs/cli/issues/) documentation.
 
 | Field | Type | Description |
 |-------|------|-------------|

@@ -1413,7 +1413,7 @@ With `--score` and/or `--score-point`, the JSON also includes a `plumberScore` o
 Plumber separates **letter score** (A–E) from numeric **points** (0–100). Points are computed from open issues grouped by **issue code**, with weight and cap derived from each code's documented **severity** (Critical, High, Medium, Low). Distinct codes at the same severity each consume their own cap, so different *types* of issues keep affecting the score. **Critical malus** can cap final points when any Critical issue is present. The active ruleset is profile **`scoring-v3`**.
 
 📖 Full specification: **[docs/scoring.md](docs/scoring.md)**  
-📖 Severity per issue code: [Plumber issues docs](https://getplumber.io/docs/use-plumber/issues/)
+📖 Severity per issue code: [Plumber issues docs](https://getplumber.io/docs/cli/issues/)
 
 ### Pipeline Bill of Materials (PBOM)
 
@@ -1717,7 +1717,7 @@ plumber analyze [flags]
 | `--ci-config-path` | No | auto-detect | Override the CI configuration file path (default: auto-detected from GitLab project settings, usually `.gitlab-ci.yml`). See [Custom CI Configuration File Path](#custom-ci-configuration-file-path) |
 | `--verbose`, `-v` | No | `false` | Enable verbose/debug output for troubleshooting |
 
-> **Plumber score:** how letter **A–E**, numeric **points**, and **Critical malus** are computed is documented in **[docs/scoring.md](docs/scoring.md)** (profile `scoring-v3`, per-code caps). Issue **severities** come from each issue’s documented code ([issues](https://getplumber.io/docs/use-plumber/issues/)).
+> **Plumber score:** how letter **A–E**, numeric **points**, and **Critical malus** are computed is documented in **[docs/scoring.md](docs/scoring.md)** (profile `scoring-v3`, per-code caps). Issue **severities** come from each issue’s documented code ([issues](https://getplumber.io/docs/cli/issues/)).
 
 > \* Auto-detected from git remote (`origin`) if not specified. Supports both SSH and HTTPS remote URLs.
 
@@ -1970,7 +1970,7 @@ Remediation:
   privileged mode and avoid the security risks of running a Docker
   daemon inside a CI container.
 
-Documentation: https://getplumber.io/docs/use-plumber/issues/ISSUE-412
+Documentation: https://getplumber.io/docs/cli/issues/ISSUE-412
 ```
 
 ---

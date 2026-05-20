@@ -2,7 +2,7 @@ package control
 
 // docsBaseURL is the base URL for Plumber issue documentation.
 // Each issue code links to its dedicated documentation page.
-const docsBaseURL = "https://getplumber.io/docs/use-plumber/issues/"
+const docsBaseURL = "https://getplumber.io/docs/cli/issues/"
 
 // ErrorCode represents a unique Plumber issue code (ISSUE-XXX format).
 type ErrorCode string
