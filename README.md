@@ -1702,7 +1702,7 @@ plumber analyze [flags]
 | `GH_TOKEN` | Optional (preferred) | GitHub PAT (fine-grained or classic). Required in GitHub upstream-fetch mode (`--github-url`). Optional in local-clone mode (enables repo-level controls). Takes precedence over `GITHUB_TOKEN` and `gh` CLI. |
 | `GITHUB_TOKEN` | Optional | Same role as `GH_TOKEN`. Auto-set by GitHub Actions runners — pick this up natively when running plumber as a workflow step. |
 | `GH_ENTERPRISE_TOKEN` | Optional | Authentication for GitHub Enterprise Server (`--github-url ghes.example.com`). |
-| `PLUMBER_DISABLE_GITHUB_API` | No | Set to any value to skip the GitHub action-metadata enrichment loop in local-clone mode. Useful for fast iteration when you don't need archived-repo / advisory-database / ref-version checks. Has no effect today since those controls are still on the bench, but kept as a documented escape hatch. |
+| `PLUMBER_DISABLE_GITHUB_API` | No | Set to any value to skip the GitHub action-metadata enrichment loop in local-clone mode (the archived-repo and known-CVE advisory checks). Speeds up local iteration when you don't need those checks. |
 | `PLUMBER_NO_UPDATE_CHECK` | No | Set to any value (e.g., `1`) to disable the automatic version check. |
 
 ### Automatic Version Check
