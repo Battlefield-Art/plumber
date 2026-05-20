@@ -119,8 +119,8 @@ type Include struct {
 
 	// GitHub-only compliance enrichments populated from GitHubComplianceData.
 	// Archived is true when the action's upstream repository is archived
-	// (ISSUE-108). HasCVE is true when the action's upstream carries at
-	// least one published GitHub Advisory (ISSUE-114). Advisories is the
+	// (ISSUE-702). HasCVE is true when the action's upstream carries at
+	// least one published GitHub Advisory (ISSUE-703). Advisories is the
 	// list of GHSA IDs that triggered HasCVE.
 	Archived   *bool    `json:"archived,omitempty"`
 	HasCVE     *bool    `json:"hasCve,omitempty"`

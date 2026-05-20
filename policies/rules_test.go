@@ -368,7 +368,7 @@ func TestIssue509_ExcessivePermissions(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-509", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-803", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -389,7 +389,7 @@ func TestIssue509_ExcessivePermissions(t *testing.T) {
 
 			hits := make([]string, 0, len(findings))
 			for _, f := range findings {
-				if f.Code != "ISSUE-509" {
+				if f.Code != "ISSUE-803" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -406,7 +406,7 @@ func TestIssue509_ExcessivePermissions(t *testing.T) {
 
 // TestIssue414_DangerousTriggers drives the dangerous_triggers policy
 // against fixtures covering the two primary risky trigger types and
-// the safe baseline. As for ISSUE-509 the test exercises the real
+// the safe baseline. As for ISSUE-803 the test exercises the real
 // production collector (ScanGitHubWorkflows) rather than the test-time
 // parser.
 func TestIssue414_DangerousTriggers(t *testing.T) {
@@ -457,7 +457,7 @@ func TestIssue414_DangerousTriggers(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-414", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-802", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -478,7 +478,7 @@ func TestIssue414_DangerousTriggers(t *testing.T) {
 
 			hits := make([]string, 0, len(findings))
 			for _, f := range findings {
-				if f.Code != "ISSUE-414" {
+				if f.Code != "ISSUE-802" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -527,7 +527,7 @@ func TestIssue206_TemplateInjection(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-206", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-207", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -548,7 +548,7 @@ func TestIssue206_TemplateInjection(t *testing.T) {
 
 			hits := make([]string, 0, len(findings))
 			for _, f := range findings {
-				if f.Code != "ISSUE-206" {
+				if f.Code != "ISSUE-207" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -2320,7 +2320,7 @@ func TestIssue105_ContainerHardcodedCredentials(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-105", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-704", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2338,7 +2338,7 @@ func TestIssue105_ContainerHardcodedCredentials(t *testing.T) {
 			}
 			hits := make([]string, 0)
 			for _, f := range findings {
-				if f.Code != "ISSUE-105" {
+				if f.Code != "ISSUE-704" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -2362,7 +2362,7 @@ func TestIssue104_ActionUnpinned(t *testing.T) {
 	if err := engine.LoadFromFS(policies.FS); err != nil {
 		t.Fatalf("load embedded policies: %v", err)
 	}
-	dir := filepath.Join("testdata", "ISSUE-104", "github")
+	dir := filepath.Join("testdata", "ISSUE-701", "github")
 	cases := []struct {
 		fixture   string
 		cfg       map[string]any
@@ -2391,12 +2391,12 @@ func TestIssue104_ActionUnpinned(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-104" {
+				if f.Code == "ISSUE-701" {
 					hits++
 				}
 			}
 			if hits != tc.wantCount {
-				t.Fatalf("%s cfg=%v: expected %d ISSUE-104, got %d", tc.fixture, tc.cfg, tc.wantCount, hits)
+				t.Fatalf("%s cfg=%v: expected %d ISSUE-701, got %d", tc.fixture, tc.cfg, tc.wantCount, hits)
 			}
 		})
 	}
@@ -2542,7 +2542,7 @@ func TestIssue106_CachePoisoning(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-106", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-705", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2560,7 +2560,7 @@ func TestIssue106_CachePoisoning(t *testing.T) {
 			}
 			hits := make([]string, 0)
 			for _, f := range findings {
-				if f.Code != "ISSUE-106" {
+				if f.Code != "ISSUE-705" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -2649,7 +2649,7 @@ func TestIssue602_MissingConcurrency(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-602", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-418", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2667,7 +2667,7 @@ func TestIssue602_MissingConcurrency(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-602" {
+				if f.Code == "ISSUE-418" {
 					hits++
 				}
 			}
@@ -2769,7 +2769,7 @@ func TestIssue603_WorkflowMisfeature(t *testing.T) {
 		{"violation_workspace.yml", []string{"violation_workspace/build"}},
 		{"clean_scoped_path.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-603", cases)
+	runGitHubFixtureCases(t, "ISSUE-419", cases)
 }
 
 // TestIssue604_WorkflowObfuscation flags zero-width / bidi Unicode
@@ -2782,7 +2782,7 @@ func TestIssue604_WorkflowObfuscation(t *testing.T) {
 		{"violation_zero_width.yml", []string{"violation_zero_width/deploy"}},
 		{"clean.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-604", cases)
+	runGitHubFixtureCases(t, "ISSUE-420", cases)
 }
 
 // TestIssue605_UseTrustedPublishing flags publish steps that carry a
@@ -2795,7 +2795,7 @@ func TestIssue605_UseTrustedPublishing(t *testing.T) {
 		{"violation_pypi_static.yml", []string{"violation_pypi_static/publish"}},
 		{"clean_oidc.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-605", cases)
+	runGitHubFixtureCases(t, "ISSUE-421", cases)
 }
 
 // TestIssue606_DependabotInsecureExec flags a dependabot.yml that
@@ -2820,7 +2820,7 @@ func TestIssue606_DependabotInsecureExec(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(tmp, ".github", "workflows"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-606", "github", c.fixture)
+			src := filepath.Join("testdata", "ISSUE-901", "github", c.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2843,7 +2843,7 @@ func TestIssue606_DependabotInsecureExec(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-606" {
+				if f.Code == "ISSUE-901" {
 					hits++
 				}
 			}
@@ -2865,7 +2865,7 @@ func TestIssue304_UndocumentedPermissions(t *testing.T) {
 		{"clean_workflow_perms.yml", nil},
 		{"clean_job_perms.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-304", cases)
+	runGitHubFixtureCases(t, "ISSUE-801", cases)
 }
 
 // TestIssue305_SecretsOutsideEnv flags deploy/publish jobs that use
@@ -2904,7 +2904,7 @@ func TestIssue607_DependabotMissingCooldown(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(tmp, ".github", "workflows"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-607", "github", c.fixture)
+			src := filepath.Join("testdata", "ISSUE-902", "github", c.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2926,7 +2926,7 @@ func TestIssue607_DependabotMissingCooldown(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-607" {
+				if f.Code == "ISSUE-902" {
 					hits++
 				}
 			}
@@ -2960,7 +2960,7 @@ func TestIssue415_PullRequestTargetWithHeadCheckout(t *testing.T) {
 		{"violation_head_sha.yml", []string{"violation_head_sha/preview"}},
 		{"clean_no_ref.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-415", cases)
+	runGitHubFixtureCases(t, "ISSUE-804", cases)
 }
 
 // TestIssue215_TemplateInjectionVars flags scripts that expand
@@ -3021,12 +3021,12 @@ func TestIssue113_RefConfusion(t *testing.T) {
 	}
 	hits := 0
 	for _, f := range findings {
-		if f.Code == "ISSUE-113" {
+		if f.Code == "ISSUE-710" {
 			hits++
 		}
 	}
 	if hits != 1 {
-		t.Fatalf("expected 1 ISSUE-113 finding, got %d", hits)
+		t.Fatalf("expected 1 ISSUE-710 finding, got %d", hits)
 	}
 }
 
@@ -3058,17 +3058,17 @@ func TestIssue114_KnownVulnerableAction(t *testing.T) {
 		}
 		hits := 0
 		for _, f := range findings {
-			if f.Code != "ISSUE-114" {
+			if f.Code != "ISSUE-703" {
 				continue
 			}
 			hits++
 			wantLink := "https://github.com/advisories/GHSA-mrrh-fwg8-r2c3"
 			if !strings.Contains(f.Message, wantLink) {
-				t.Fatalf("ISSUE-114 message missing advisory URL\n  got: %s\n  want substring: %s", f.Message, wantLink)
+				t.Fatalf("ISSUE-703 message missing advisory URL\n  got: %s\n  want substring: %s", f.Message, wantLink)
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-114 finding, got %d", hits)
+			t.Fatalf("expected 1 ISSUE-703 finding, got %d", hits)
 		}
 	})
 
@@ -3088,7 +3088,7 @@ func TestIssue114_KnownVulnerableAction(t *testing.T) {
 		}
 		hits := 0
 		for _, f := range findings {
-			if f.Code != "ISSUE-114" {
+			if f.Code != "ISSUE-703" {
 				continue
 			}
 			hits++
@@ -3097,12 +3097,12 @@ func TestIssue114_KnownVulnerableAction(t *testing.T) {
 				"https://github.com/advisories/GHSA-dddd-eeee-ffff",
 			} {
 				if !strings.Contains(f.Message, want) {
-					t.Errorf("ISSUE-114 message missing %q\n  got: %s", want, f.Message)
+					t.Errorf("ISSUE-703 message missing %q\n  got: %s", want, f.Message)
 				}
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-114 finding (one per affected action), got %d", hits)
+			t.Fatalf("expected 1 ISSUE-703 finding (one per affected action), got %d", hits)
 		}
 	})
 
@@ -3121,8 +3121,8 @@ func TestIssue114_KnownVulnerableAction(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-114" {
-				t.Fatalf("ISSUE-114 must abstain when metadata is missing; got %+v", f)
+			if f.Code == "ISSUE-703" {
+				t.Fatalf("ISSUE-703 must abstain when metadata is missing; got %+v", f)
 			}
 		}
 	})
@@ -3154,16 +3154,16 @@ func TestIssue108_ActionArchivedRepo(t *testing.T) {
 		}
 		hits := 0
 		for _, f := range findings {
-			if f.Code != "ISSUE-108" {
+			if f.Code != "ISSUE-702" {
 				continue
 			}
 			hits++
 			if uses, ok := f.Data["uses"].(string); !ok || uses != "archived-org/release-action@v1" {
-				t.Errorf("ISSUE-108 finding missing/wrong uses field: %v", f.Data["uses"])
+				t.Errorf("ISSUE-702 finding missing/wrong uses field: %v", f.Data["uses"])
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-108 finding, got %d", hits)
+			t.Fatalf("expected 1 ISSUE-702 finding, got %d", hits)
 		}
 	})
 
@@ -3182,8 +3182,8 @@ func TestIssue108_ActionArchivedRepo(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-108" {
-				t.Fatalf("ISSUE-108 must not fire when archived=false; got %+v", f)
+			if f.Code == "ISSUE-702" {
+				t.Fatalf("ISSUE-702 must not fire when archived=false; got %+v", f)
 			}
 		}
 	})
@@ -3203,8 +3203,8 @@ func TestIssue108_ActionArchivedRepo(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-108" {
-				t.Fatalf("ISSUE-108 must abstain when metadata is missing; got %+v", f)
+			if f.Code == "ISSUE-702" {
+				t.Fatalf("ISSUE-702 must abstain when metadata is missing; got %+v", f)
 			}
 		}
 	})
@@ -3220,7 +3220,7 @@ func TestIssue115_SuperfluousAction(t *testing.T) {
 		{"violation_peter_evans_pr.yml", []string{"violation_peter_evans_pr/open-pr"}},
 		{"clean.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-115", cases)
+	runGitHubFixtureCases(t, "ISSUE-711", cases)
 }
 
 // TestIssue213_UnsafeGitHubContextDump flags jobs that serialise
@@ -3259,7 +3259,7 @@ func TestIssue112_ReleaseWorkflowUnsigned(t *testing.T) {
 		{"violation_release_unsigned.yml", []string{"violation_release_unsigned/publish"}},
 		{"clean_cosign.yml", nil},
 	}
-	runGitHubFixtureCases(t, "ISSUE-112", cases)
+	runGitHubFixtureCases(t, "ISSUE-712", cases)
 }
 
 // TestIssue609_SASTWorkflowMissing flags repos with workflows but
@@ -3281,12 +3281,12 @@ func TestIssue609_SASTWorkflowMissing(t *testing.T) {
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		hits := 0
 		for _, f := range findings {
-			if f.Code == "ISSUE-609" {
+			if f.Code == "ISSUE-904" {
 				hits++
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-609, got %d", hits)
+			t.Fatalf("expected 1 ISSUE-904, got %d", hits)
 		}
 	})
 	t.Run("has-sast", func(t *testing.T) {
@@ -3300,8 +3300,8 @@ func TestIssue609_SASTWorkflowMissing(t *testing.T) {
 		}
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		for _, f := range findings {
-			if f.Code == "ISSUE-609" {
-				t.Fatalf("unexpected ISSUE-609 on SAST-equipped repo: %+v", f)
+			if f.Code == "ISSUE-904" {
+				t.Fatalf("unexpected ISSUE-904 on SAST-equipped repo: %+v", f)
 			}
 		}
 	})
@@ -3320,12 +3320,12 @@ func TestIssue608_DependencyUpdateToolMissing(t *testing.T) {
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		hits := 0
 		for _, f := range findings {
-			if f.Code == "ISSUE-608" {
+			if f.Code == "ISSUE-903" {
 				hits++
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-608, got %d", hits)
+			t.Fatalf("expected 1 ISSUE-903, got %d", hits)
 		}
 	})
 	t.Run("has-dependabot", func(t *testing.T) {
@@ -3336,8 +3336,8 @@ func TestIssue608_DependencyUpdateToolMissing(t *testing.T) {
 		}
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		for _, f := range findings {
-			if f.Code == "ISSUE-608" {
-				t.Fatalf("unexpected ISSUE-608 on dependabot-equipped repo: %+v", f)
+			if f.Code == "ISSUE-903" {
+				t.Fatalf("unexpected ISSUE-903 on dependabot-equipped repo: %+v", f)
 			}
 		}
 	})
@@ -3349,8 +3349,8 @@ func TestIssue608_DependencyUpdateToolMissing(t *testing.T) {
 		}
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		for _, f := range findings {
-			if f.Code == "ISSUE-608" {
-				t.Fatalf("unexpected ISSUE-608 on renovate-equipped repo: %+v", f)
+			if f.Code == "ISSUE-903" {
+				t.Fatalf("unexpected ISSUE-903 on renovate-equipped repo: %+v", f)
 			}
 		}
 	})
@@ -3369,12 +3369,12 @@ func TestIssue610_SecurityPolicyMissing(t *testing.T) {
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		hits := 0
 		for _, f := range findings {
-			if f.Code == "ISSUE-610" {
+			if f.Code == "ISSUE-905" {
 				hits++
 			}
 		}
 		if hits != 1 {
-			t.Fatalf("expected 1 ISSUE-610, got %d", hits)
+			t.Fatalf("expected 1 ISSUE-905, got %d", hits)
 		}
 	})
 	t.Run("present", func(t *testing.T) {
@@ -3385,8 +3385,8 @@ func TestIssue610_SecurityPolicyMissing(t *testing.T) {
 		}
 		findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 		for _, f := range findings {
-			if f.Code == "ISSUE-610" {
-				t.Fatalf("unexpected ISSUE-610: %+v", f)
+			if f.Code == "ISSUE-905" {
+				t.Fatalf("unexpected ISSUE-905: %+v", f)
 			}
 		}
 	})
@@ -3416,12 +3416,12 @@ func TestIssue107_DockerfileUnpinnedBase(t *testing.T) {
 	findings, _ := engine.Evaluate(context.Background(), pipeline, nil)
 	hits := 0
 	for _, f := range findings {
-		if f.Code == "ISSUE-107" {
+		if f.Code == "ISSUE-706" {
 			hits++
 		}
 	}
 	if hits != 1 {
-		t.Fatalf("expected 1 ISSUE-107 (alpine:3.20 unpinned), got %d", hits)
+		t.Fatalf("expected 1 ISSUE-706 (alpine:3.20 unpinned), got %d", hits)
 	}
 }
 
@@ -3462,13 +3462,13 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 		}
 		hits := map[string]bool{}
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" {
+			if f.Code == "ISSUE-417" {
 				hits[f.Job] = true
 			}
 		}
 		for _, want := range []string{"myorg/sast-scan", "myorg/policy/.github/workflows/policy.yml", "myorg/full-security"} {
 			if !hits[want] {
-				t.Errorf("expected ISSUE-416 finding for %q; got hits=%v", want, hits)
+				t.Errorf("expected ISSUE-417 finding for %q; got hits=%v", want, hits)
 			}
 		}
 	})
@@ -3494,8 +3494,8 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" {
-				t.Errorf("unexpected ISSUE-416 finding when first group fully satisfied: %+v", f)
+			if f.Code == "ISSUE-417" {
+				t.Errorf("unexpected ISSUE-417 finding when first group fully satisfied: %+v", f)
 			}
 		}
 	})
@@ -3521,7 +3521,7 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" {
+			if f.Code == "ISSUE-417" {
 				t.Errorf("sub-action should satisfy the required owner/repo prefix, got finding %+v", f)
 			}
 		}
@@ -3545,7 +3545,7 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 		}
 		matched := false
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" && f.Job == "myorg/sast-scan" {
+			if f.Code == "ISSUE-417" && f.Job == "myorg/sast-scan" {
 				matched = true
 			}
 		}
@@ -3571,7 +3571,7 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" {
+			if f.Code == "ISSUE-417" {
 				t.Errorf("second group satisfied; first-group misses should not fire: %+v", f)
 			}
 		}
@@ -3589,7 +3589,7 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 			t.Fatalf("evaluate: %v", err)
 		}
 		for _, f := range findings {
-			if f.Code == "ISSUE-416" {
+			if f.Code == "ISSUE-417" {
 				t.Errorf("policy must abstain when no requiredGroups is configured, got %+v", f)
 			}
 		}

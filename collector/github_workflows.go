@@ -578,7 +578,7 @@ func ghStringify(v any) string {
 // scanGitHubUsesComments walks the raw workflow bytes and returns a
 // map of `uses` value -> trailing `# comment`. yaml.v2 discards
 // comments during parse, so we recover them here. Used by
-// ref-version-mismatch (ISSUE-110): a `@<sha> # v4.1.0` comment
+// ref-version-mismatch (ISSUE-708): a `@<sha> # v4.1.0` comment
 // tells the reviewer which version the SHA is supposed to be; the
 // policy verifies the claim against the actual tag metadata.
 func scanGitHubUsesComments(data []byte) map[string]string {
@@ -604,7 +604,7 @@ func scanGitHubUsesComments(data []byte) map[string]string {
 // steps into plain maps without preserving positions, so the
 // collector re-scans the bytes and pairs each `[]ir.Action` entry
 // with the matching line by positional index. Fires for
-// ISSUE-104/110/111/114 where the reviewer needs the exact step, not
+// ISSUE-701/110/111/114 where the reviewer needs the exact step, not
 // the enclosing job header.
 func scanGitHubUsesLines(data []byte) map[string][]int {
 	out := map[string][]int{}

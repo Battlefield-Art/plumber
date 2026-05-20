@@ -63,12 +63,12 @@ type AnalysisResult struct {
 // GitLab side. All fields are pre-aggregated counts — the renderer
 // does not walk the IR again.
 type GitHubAnalysisStats struct {
-	// Actions pinning (ISSUE-104).
+	// Actions pinning (ISSUE-701).
 	ActionRefsTotal     int
 	ActionRefsUnpinned  int
 	ActionRefsExempt    int
 
-	// Actions supply-chain (ISSUE-108, ISSUE-114). Counted across
+	// Actions supply-chain (ISSUE-702, ISSUE-703). Counted across
 	// every `uses:` entry that has API metadata, regardless of the
 	// pin-by-SHA trusted-owner exemption — the rules themselves do
 	// not exempt. In practice trusted-owner refs have nil metadata
@@ -86,7 +86,7 @@ type GitHubAnalysisStats struct {
 	JobsWithDinD           int
 	JobsWithInsecureDaemon int
 
-	// Excessive permissions (ISSUE-509). Counts jobs whose effective
+	// Excessive permissions (ISSUE-803). Counts jobs whose effective
 	// `permissions:` is the literal `write-all` shortcut (workflow-
 	// level grants are propagated per-job by the collector, so the
 	// per-job count is the right denominator either way).
@@ -108,10 +108,10 @@ type GitHubAnalysisStats struct {
 	SecurityJobsTotal    int
 	SecurityJobsWeakened int
 
-	// Workflow content scanned for template injection (ISSUE-206).
+	// Workflow content scanned for template injection (ISSUE-207).
 	ScriptLinesTotal int
 
-	// Workflows + properties (ISSUE-414, ISSUE-304).
+	// Workflows + properties (ISSUE-802, ISSUE-801).
 	WorkflowsTotal               int
 	WorkflowsWithDangerousTrigger int
 	WorkflowsMissingPermissions  int

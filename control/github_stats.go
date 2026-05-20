@@ -79,7 +79,7 @@ func AggregateGitHubStats(pipeline *ir.NormalizedPipeline, pc *configuration.Plu
 		// and any other per-job rule).
 		stats.JobsTotal++
 
-		// ISSUE-509: count jobs whose effective permissions block is
+		// ISSUE-803: count jobs whose effective permissions block is
 		// the literal "write-all" string. The collector propagates a
 		// workflow-level write-all to every job's Permissions, so a
 		// per-job match handles both authoring styles uniformly.
@@ -133,8 +133,8 @@ func AggregateGitHubStats(pipeline *ir.NormalizedPipeline, pc *configuration.Plu
 		}
 
 		// Action refs — count steps[].uses, exclude trustedOwners for
-		// the pin-by-SHA accounting. Supply-chain checks (ISSUE-108
-		// archived, ISSUE-114 known CVEs) inspect EVERY ref because
+		// the pin-by-SHA accounting. Supply-chain checks (ISSUE-702
+		// archived, ISSUE-703 known CVEs) inspect EVERY ref because
 		// the rules themselves don't exempt trusted owners; in
 		// practice the API enrichment phase skips first-party refs,
 		// so their metadata is nil and neither counter ticks.

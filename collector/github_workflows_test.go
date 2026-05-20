@@ -340,7 +340,7 @@ jobs:
 // all three into a single Job.Variables map; later writes overwrite
 // earlier ones (step > job > workflow), mirroring GitHub's runtime
 // precedence. Rules that scan workflow content (ISSUE-203 debug
-// trace, ISSUE-206 template injection, …) read Job.Variables, so
+// trace, ISSUE-207 template injection, …) read Job.Variables, so
 // every level needs to land there or the rule sees nothing.
 func TestScanGitHubWorkflows_EnvPropagation(t *testing.T) {
 	tmp := t.TempDir()

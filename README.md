@@ -36,18 +36,6 @@
 
 ---
 
-> [!IMPORTANT]
-> **🚧 v0.3.0 is in beta — first-class GitHub Actions support is being stress-tested**
->
-> The `main` branch is preparing **v0.3.0**, which adds GitHub Actions analysis alongside GitLab and migrates `.plumber.yaml` to a per-provider schema (`gitlab.controls:` / `github.controls:`). It's currently being polished with the ambassador group and **is not yet recommended for production**.
->
-> - **Stable, production-ready (GitLab only):** browse the project at [**v0.2.22**](https://github.com/getplumber/plumber/tree/v0.2.22) — README, install instructions, and source as shipped at that tag. 
-> - **Beta (early testers, GitLab + GitHub Actions):** [v0.3.0-beta](https://github.com/getplumber/plumber/releases). See the [test plan](docs/release-announcement-0.3.0-beta.md) and report findings on [issues](https://github.com/getplumber/plumber/issues).
->
-> Everything below describes the **v0.3.0** surface. If you're on v0.2.x today, your setup keeps working unchanged when you upgrade — your existing `.plumber.yaml` auto-converts in memory and `plumber config migrate` upgrades it on disk when you're ready.
-
----
-
 ## 🤔 What is Plumber?
 
 Plumber is a compliance scanner for CI/CD. It supports two providers:
@@ -998,7 +986,7 @@ github:
         - github
 ```
 
-Issue code: ISSUE-104.
+Issue code: ISSUE-701.
 
 </details>
 
@@ -1147,7 +1135,7 @@ github:
       enabled: true
 ```
 
-Issue code: ISSUE-206.
+Issue code: ISSUE-207.
 
 </details>
 
@@ -1165,7 +1153,7 @@ github:
       enabled: true
 ```
 
-Issue code: ISSUE-414.
+Issue code: ISSUE-802.
 
 </details>
 
@@ -1181,7 +1169,7 @@ github:
       enabled: true
 ```
 
-Issue code: ISSUE-304.
+Issue code: ISSUE-801.
 
 </details>
 
@@ -1214,9 +1202,9 @@ github:
         - ["myorg/full-security-suite"]
 ```
 
-The policy is satisfied when ANY group is fully present. One ISSUE-416 finding is emitted per missing required entry per group, so the report points the user at exactly which slot is empty. Disabled by default; opt in once your org has settled on the action set every repo is expected to wire up.
+The policy is satisfied when ANY group is fully present. One ISSUE-417 finding is emitted per missing required entry per group, so the report points the user at exactly which slot is empty. Disabled by default; opt in once your org has settled on the action set every repo is expected to wire up.
 
-Issue code: ISSUE-416.
+Issue code: ISSUE-417.
 
 </details>
 
@@ -1236,9 +1224,9 @@ github:
       enabled: true
 ```
 
-Stricter scope-level audits (e.g. flagging `contents: write` on jobs that should be read-only) are handled by other rules; this one is about the blanket shortcut. Static YAML in `.github/workflows/` only; does not flag scope maps, `read-all`, or missing blocks (ISSUE-304). Default-on, no parameters.
+Stricter scope-level audits (e.g. flagging `contents: write` on jobs that should be read-only) are handled by other rules; this one is about the blanket shortcut. Static YAML in `.github/workflows/` only; does not flag scope maps, `read-all`, or missing blocks (ISSUE-801). Default-on, no parameters.
 
-Issue code: ISSUE-509.
+Issue code: ISSUE-803.
 
 </details>
 
@@ -1258,7 +1246,7 @@ github:
 
 Default-on, no parameters. The PBOM tags each archived include with `archived: true` (JSON) / `plumber:archived` (CycloneDX) so downstream dashboards can dedupe across multiple callers of the same abandoned action.
 
-Issue code: ISSUE-108.
+Issue code: ISSUE-702.
 
 </details>
 
@@ -1278,7 +1266,7 @@ github:
 
 Default-on, no parameters. The PBOM tags each affected include with `hasCve: true` plus an `advisories: [GHSA-…, …]` list (JSON) / `plumber:has-cve` plus `plumber:advisories` properties (CycloneDX), so downstream consumers can pivot on the GHSA IDs across the inventory.
 
-Issue code: ISSUE-114.
+Issue code: ISSUE-703.
 
 </details>
 

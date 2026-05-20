@@ -72,7 +72,7 @@ func statsOf(result *control.AnalysisResult) control.GitHubAnalysisStats {
 	return *result.GitHubStats
 }
 
-// buildActionPinningBlock — ISSUE-104. Total = third-party action
+// buildActionPinningBlock — ISSUE-701. Total = third-party action
 // references in scope (i.e. excluding trustedOwners). Findings are
 // the unpinned subset.
 func buildActionPinningBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
@@ -325,7 +325,7 @@ func buildReusableSecretsBlock(c legacyCommon, result *control.AnalysisResult, f
 	}
 }
 
-// buildTemplateInjectionBlock — ISSUE-206. Denominator is the total
+// buildTemplateInjectionBlock — ISSUE-207. Denominator is the total
 // scanned script lines.
 func buildTemplateInjectionBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
 	s := statsOf(result)
@@ -344,7 +344,7 @@ func buildTemplateInjectionBlock(c legacyCommon, result *control.AnalysisResult,
 	}
 }
 
-// buildDangerousTriggersBlock — ISSUE-414. Denominator is workflows
+// buildDangerousTriggersBlock — ISSUE-802. Denominator is workflows
 // total; numerator is workflows whose trigger set intersects the
 // dangerous-triggers list.
 func buildDangerousTriggersBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
@@ -363,7 +363,7 @@ func buildDangerousTriggersBlock(c legacyCommon, result *control.AnalysisResult,
 	}
 }
 
-// buildPermissionsBlock — ISSUE-304. Denominator is total workflows;
+// buildPermissionsBlock — ISSUE-801. Denominator is total workflows;
 // numerator is workflows missing an explicit `permissions:` block.
 func buildPermissionsBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
 	s := statsOf(result)
@@ -381,7 +381,7 @@ func buildPermissionsBlock(c legacyCommon, result *control.AnalysisResult, findi
 	}
 }
 
-// buildRequiredActionsBlock builds the ISSUE-416 result block. Per-group requirement
+// buildRequiredActionsBlock builds the ISSUE-417 result block. Per-group requirement
 // satisfaction shape mirrors the GitLab requiredComponentsResult /
 // requiredTemplatesResult blocks so any consumer that already
 // scripts the GitLab side gets the same fields back. Each
@@ -477,7 +477,7 @@ func _actionRefMatches(reference, required string) bool {
 	return strings.HasPrefix(normalized, required+"/")
 }
 
-// buildExcessivePermissionsBlock — ISSUE-509. Denominator is total
+// buildExcessivePermissionsBlock — ISSUE-803. Denominator is total
 // jobs (workflow-level permissions: write-all gets propagated to each
 // job by the collector, so the per-job denominator gives the right
 // "X jobs of Y" ratio whether the offending grant lives at workflow
@@ -499,7 +499,7 @@ func buildExcessivePermissionsBlock(c legacyCommon, result *control.AnalysisResu
 	}
 }
 
-// buildArchivedActionsBlock — ISSUE-108. Denominator is the number
+// buildArchivedActionsBlock — ISSUE-702. Denominator is the number
 // of action refs scanned (same denominator the action-pinning block
 // uses), so a "X of Y" ratio is meaningful even when the GitHub API
 // metadata enrichment hit a quota and some refs went unresolved.
@@ -549,7 +549,7 @@ func buildDebugTraceBlockGitHub(c legacyCommon, result *control.AnalysisResult, 
 	}
 }
 
-// buildKnownVulnerableActionsBlock — ISSUE-114. Same denominator as
+// buildKnownVulnerableActionsBlock — ISSUE-703. Same denominator as
 // the archived-actions block (total action refs); numerator counts
 // every (job, vulnerable-action) pair the rego flagged. The list of
 // GHSA IDs per finding is preserved inside `issues[*].advisories` —

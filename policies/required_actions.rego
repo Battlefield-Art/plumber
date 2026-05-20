@@ -47,7 +47,7 @@ deny contains finding if {
 	required := group[j]
 	not _required_present(required)
 	finding := {
-		"code":     "ISSUE-416",
+		"code":     "ISSUE-417",
 		"severity": "high",
 		"message":  sprintf("required action or reusable workflow %q is not referenced by any workflow (group %d)", [required, i]),
 		"job":      required,

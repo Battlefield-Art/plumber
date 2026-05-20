@@ -303,7 +303,7 @@ func (c *EnabledOnlyControlConfig) IsEnabled() bool {
 }
 
 // ActionsPinnedByShaControlConfig configures the GitHub Actions supply-
-// chain pinning check (ISSUE-104). Only meaningful on GitHub workflows.
+// chain pinning check (ISSUE-701). Only meaningful on GitHub workflows.
 type ActionsPinnedByShaControlConfig struct {
 	// Enabled controls whether this check runs
 	Enabled *bool `yaml:"enabled,omitempty"`

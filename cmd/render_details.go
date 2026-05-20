@@ -600,7 +600,7 @@ func _countScriptLines(result *control.AnalysisResult) int {
 }
 
 // _externalIncludeCount returns the number of include origins, matching
-// the v0.2.22 "Total Includes" denominator. The project's own jobs
+// the v0.3.0 "Total Includes" denominator. The project's own jobs
 // surface as `hardcoded` and are excluded; everything else is an
 // include (component / template / local / remote / project, with
 // `project` being an external `include: project:` reference, not the
@@ -975,4 +975,3 @@ func originKindMatches(originType, kindFilter string) bool {
 		return false
 	}
 }
-

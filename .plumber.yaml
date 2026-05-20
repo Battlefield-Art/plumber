@@ -780,7 +780,7 @@ github:
     #
     # Does not flag: `permissions: { contents: write, … }` maps, `read-all`,
     # or missing `permissions:` (see `workflowsMustDeclarePermissions` /
-    # ISSUE-304). Does not evaluate `${{ }}` expressions or permissions
+    # ISSUE-801). Does not evaluate `${{ }}` expressions or permissions
     # inside callee reusable-workflow files Plumber did not fetch.
     #
     # Pair with `workflowsMustDeclarePermissions` for the full story.

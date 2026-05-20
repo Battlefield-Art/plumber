@@ -29,7 +29,7 @@ deny contains finding if {
 	action.metadata
 	count(action.metadata.advisories) > 0
 	finding := {
-		"code":       "ISSUE-114",
+		"code":       "ISSUE-703",
 		"severity":   "critical",
 		"message":    sprintf("job %q references %q — published advisories: %s", [job.name, action.uses, _format_advisories(action.metadata.advisories)]),
 		"job":        job.name,

@@ -23,12 +23,12 @@ type GitHubComplianceData struct {
 	// true when the ref is not a 40-char SHA.
 	UnpinnedActions map[string]bool
 	// ArchivedActions keys on the full action ref; true when the
-	// upstream repository is archived (ISSUE-108). Sourced from the
+	// upstream repository is archived (ISSUE-702). Sourced from the
 	// per-action GitHub API metadata enrichment.
 	ArchivedActions map[string]bool
 	// VulnerableActions keys on the full action ref; true when the
 	// upstream repository has at least one published GitHub Advisory
-	// (ISSUE-114). Same metadata enrichment path as ArchivedActions.
+	// (ISSUE-703). Same metadata enrichment path as ArchivedActions.
 	VulnerableActions map[string]bool
 	// ActionAdvisories keys on the full action ref, value is the
 	// list of GHSA IDs published against the action's repository.
