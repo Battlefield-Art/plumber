@@ -45,33 +45,7 @@ Plumber is a compliance scanner for CI/CD. It supports two providers:
 
 Both providers share **one** Rego policy engine and a **single** `.plumber.yaml` config (per-provider sections). Provider is auto-detected from your git `origin`; pass `--gitlab-url` / `--github-url` to override.
 
-**Examples of what Plumber catches**
-
-GitLab pipelines (14 controls - see the [Gitlab CI controls](#gitlab-ci-controls) section):
-- Container images using mutable tags (`latest`, `dev`) or from untrusted registries
-- Unprotected branches; missing force-push / code-owner-approval rules
-- Hardcoded jobs (not from reusable components / templates), outdated or forbidden include refs (`main`, `HEAD`)
-- Missing required components / templates
-- Debug trace variables (`CI_DEBUG_TRACE`) leaking secrets in job logs
-- Unsafe variable injection via `eval` / `sh -c` (OWASP CICD-SEC-1)
-- Weakened security jobs — `allow_failure: true`, `when: manual`, `rules: [{when: never}]` on SAST, Secret Detection, etc. (OWASP CICD-SEC-4)
-- Docker-in-Docker services enabling container escape on shared runners
-
-GitHub Actions workflows (14 controls — see the [GitHub Actions controls](#github-actions-controls) section):
-- Third-party actions referenced by tag/branch instead of a 40-char SHA (CVE-2025-30066-class supply-chain risk)
-- Third-party actions hosted in archived repositories (no security patches coming)
-- Third-party actions pinned to a version with a published GitHub Advisory (known CVEs)
-- Container images using mutable tags (`latest`, …) or not pinned by digest
-- Default / matched branches lacking a protection rule (and, with admin scope, missing force-push / code-owner-approval rules)
-- Workflows missing an explicit `permissions:` block (defaults to repo-wide `GITHUB_TOKEN`)
-- `permissions: write-all` granted at workflow or job scope
-- Dangerous triggers (`pull_request_target`, `workflow_run`, …) running with base-repo secrets
-- Template-injection sinks like `${{ github.event.* }}` interpolated into `run:` shells
-- Reusable workflow calls using `secrets: inherit` instead of an explicit map
-- Debug-trace toggles (`ACTIONS_STEP_DEBUG` / `ACTIONS_RUNNER_DEBUG`) leaking secrets into job logs
-- Weakened security scanners (`continue-on-error: true` on CodeQL, TruffleHog, Gitleaks, OSV-Scanner, etc.)
-- Docker-in-Docker services on GitHub-hosted runners
-- A required action or reusable workflow missing from your workflows (opt-in org policy)
+Plumber ships **14 GitLab CI controls** and **14 GitHub Actions controls**. See the [GitLab CI controls](#gitlab-ci-controls) and [GitHub Actions controls](#github-actions-controls) sections for the full list of what each flags and how to configure it.
 
 **How does it work?** Plumber connects to your provider (or reads workflow files from disk), normalizes the pipeline into a provider-agnostic IR, evaluates Rego policies against it, and reports findings. You define what's allowed in `.plumber.yaml`. When your local clone matches the analyzed project, GitLab analysis can use your local `.gitlab-ci.yml` (or a [custom path](#custom-ci-configuration-file-path)) so you can validate before push; GitHub analysis reads `.github/workflows/` from your local repo by default and only hits the GitHub API for repo-level data (branch protection, etc.) when scope allows. Both paths report per-control compliance percentages and honor `--threshold` for exit-code gating.
 
