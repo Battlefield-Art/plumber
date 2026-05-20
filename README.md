@@ -57,16 +57,21 @@ GitLab pipelines (14 controls - see the [Gitlab CI controls](#gitlab-ci-controls
 - Weakened security jobs — `allow_failure: true`, `when: manual`, `rules: [{when: never}]` on SAST, Secret Detection, etc. (OWASP CICD-SEC-4)
 - Docker-in-Docker services enabling container escape on shared runners
 
-GitHub Actions workflows (9 controls — see the [GitHub Actions controls](#github-actions-controls) section):
+GitHub Actions workflows (14 controls — see the [GitHub Actions controls](#github-actions-controls) section):
 - Third-party actions referenced by tag/branch instead of a 40-char SHA (CVE-2025-30066-class supply-chain risk)
-- Container images using mutable tags (`latest`, …)
+- Third-party actions hosted in archived repositories (no security patches coming)
+- Third-party actions pinned to a version with a published GitHub Advisory (known CVEs)
+- Container images using mutable tags (`latest`, …) or not pinned by digest
 - Default / matched branches lacking a protection rule (and, with admin scope, missing force-push / code-owner-approval rules)
 - Workflows missing an explicit `permissions:` block (defaults to repo-wide `GITHUB_TOKEN`)
+- `permissions: write-all` granted at workflow or job scope
 - Dangerous triggers (`pull_request_target`, `workflow_run`, …) running with base-repo secrets
-- Reusable workflow calls using `secrets: inherit` instead of an explicit map
 - Template-injection sinks like `${{ github.event.* }}` interpolated into `run:` shells
+- Reusable workflow calls using `secrets: inherit` instead of an explicit map
+- Debug-trace toggles (`ACTIONS_STEP_DEBUG` / `ACTIONS_RUNNER_DEBUG`) leaking secrets into job logs
 - Weakened security scanners (`continue-on-error: true` on CodeQL, TruffleHog, Gitleaks, OSV-Scanner, etc.)
 - Docker-in-Docker services on GitHub-hosted runners
+- A required action or reusable workflow missing from your workflows (opt-in org policy)
 
 **How does it work?** Plumber connects to your provider (or reads workflow files from disk), normalizes the pipeline into a provider-agnostic IR, evaluates Rego policies against it, and reports findings. You define what's allowed in `.plumber.yaml`. When your local clone matches the analyzed project, GitLab analysis can use your local `.gitlab-ci.yml` (or a [custom path](#custom-ci-configuration-file-path)) so you can validate before push; GitHub analysis reads `.github/workflows/` from your local repo by default and only hits the GitHub API for repo-level data (branch protection, etc.) when scope allows. Both paths report per-control compliance percentages and honor `--threshold` for exit-code gating.
 
@@ -305,24 +310,6 @@ A handful of flags are GitLab-only today. On the GitHub path they are silently i
 | `--gitlab-url` | N/A — pass `--github-url` instead, or rely on git-remote auto-detection |
 
 Flags that work identically on both providers: `--config`, `--output` (JSON findings), `--pbom` (PBOM JSON; GitHub inventory: container images, third-party actions, reusable workflows), `--pbom-cyclonedx` (CycloneDX 1.5), `--threshold`, `--print`, `--score`, `--score-point`, `--controls`, `--skip-controls`, `--fail-warnings`, `--branch`, `--project` (provider chosen by which URL flag is set).
-
-#### Bench: which GitHub controls don't run yet
-
-The Rego engine ships ~50 GitHub Actions policies. Nine have substantive test fixtures and ship default-on; the rest are on the dev-side bench (`configuration/registry.go::benchedControls`). Benched policies are excluded at engine load time — they don't execute, don't produce findings, and don't appear in the output.
-
-Today's shipping GitHub set:
-
-- `actionsMustBePinnedByCommitSha` — third-party actions must use a 40-char SHA, not a tag/branch.
-- `branchMustBeProtected` — repository default branch (and any matching pattern) must have a protection rule. Inspects repo settings via the GitHub branch-protection API; needs `repo` (classic PAT) or "Administration: read" (fine-grained PAT). The first project-governance control on the GitHub path; everything else here is pipeline-governance.
-- `containerImageMustNotUseForbiddenTags` — pin container images by digest or version, not `latest`.
-- `pipelineMustNotUseDockerInDocker` — flag DinD services and insecure daemon configs.
-- `reusableWorkflowsMustNotInheritSecrets` — explicit secret mapping instead of `secrets: inherit`.
-- `securityJobsMustNotBeWeakened` — no `allow_failure: true` / `when: manual` / rules-block neutering.
-- `workflowMustNotInjectUserInputInScripts` — block `${{ github.event.* }}` inlining into shell.
-- `workflowMustNotUseDangerousTriggers` — flag `pull_request_target` / `workflow_run` patterns.
-- `workflowsMustDeclarePermissions` — workflows must set an explicit `permissions:` block.
-
-To unbench more controls as we add tests/docs, edit `benchedControls` in `configuration/registry.go`.
 
 ### Trying it on this repo
 
@@ -582,7 +569,7 @@ The migration preserves comments, wraps `controls:` under `gitlab.controls:`, an
 
 ### Available Controls
 
-Plumber ships **14 GitLab CI controls** and **9 GitHub Actions controls** today. They are configured per-provider in [`.plumber.yaml`](./.plumber.yaml) and can be enabled / disabled / tuned independently. The Rego engine also includes ~50 additional GitHub policies on the dev-side bench (see [`configuration/registry.go`](configuration/registry.go) → `benchedControls`); benched policies are excluded at engine load time and don't affect output until promoted.
+Plumber ships **14 GitLab CI controls** and **14 GitHub Actions controls** today. They are configured per-provider in [`.plumber.yaml`](./.plumber.yaml) and can be enabled / disabled / tuned independently.
 
 #### GitLab CI controls
 
@@ -1293,8 +1280,6 @@ github:
 Default-on with the two GitHub-native debug variables pre-populated; extend the list if your runner image honours additional diagnostic toggles. Issue code: ISSUE-203 (shared with the GitLab side; the message names the GitHub variable when triggered there).
 
 </details>
-
-> **What's not yet shipping on GitHub:** ~36 additional GitHub policies live in `policies/*.rego` (action-supply-chain enrichment, dependabot cooldown, OIDC trusted publishing, release-artefact signing, security policy, etc.) but are gated behind the dev bench until each clears the ship-ready bar (substantive rule + ≥3 fixtures + docs). Track promotion in [`configuration/registry.go`](configuration/registry.go) → `benchedControls`.
 
 ### Selective Control Execution
 
