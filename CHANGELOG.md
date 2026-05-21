@@ -1,3 +1,10 @@
+## [0.3.7](https://github.com/getplumber/plumber/compare/v0.3.6...v0.3.7) (2026-05-21)
+
+
+### 🐛 Bug Fixes
+
+* **terminal:** Fix colors ([5a7637b](https://github.com/getplumber/plumber/commit/5a7637b956704ef4181ddb4312903b0f5323cbbb))
+
 ## [0.3.6](https://github.com/getplumber/plumber/compare/v0.3.5...v0.3.6) (2026-05-21)
 
 ## [0.3.5](https://github.com/getplumber/plumber/compare/v0.3.4...v0.3.5) (2026-05-21)
