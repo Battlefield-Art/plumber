@@ -42,6 +42,10 @@ const (
 	compDeclarePermissions  = "Require workflows to declare an explicit permissions: block"
 	compReusableSecrets     = "Forbid reusable-workflow calls using secrets: inherit"
 	compTemplateInjection   = "Detect script-injection sinks (${{ github.event.* }} → run:)"
+	compWriteAllPerms       = "Forbid permissions: write-all in workflows"
+	compArchivedActions     = "Flag third-party actions from archived repositories"
+	compKnownCVEs           = "Flag third-party actions with known CVEs (GitHub Advisory DB)"
+	compDebugTraceGitHub    = "Flag Actions debug logging (ACTIONS_STEP_DEBUG / ACTIONS_RUNNER_DEBUG)"
 )
 
 var (
@@ -132,11 +136,24 @@ type initWizardState struct {
 	ForbiddenVersionsMultiline      string
 	DefaultBranchIsForbiddenVersion bool
 
-	// securityJobsMustNotBeWeakened (when compSecurity selected)
-	SecurityJobPatternsMultiline string
-	SecuritySubAllowFailure      bool
-	SecuritySubRules             bool
-	SecuritySubWhenNotManual     bool
+	// securityJobsMustNotBeWeakened (when compSecurity selected). All
+	// three sub-toggles are tracked per provider: GitLab ships them off
+	// (its security templates trip allow_failure / rules / when:manual)
+	// while GitHub has no such convention and defaults all three on,
+	// matching .plumber.yaml.
+	SecurityJobPatternsMultiline   string
+	SecuritySubAllowFailure        bool
+	SecuritySubAllowFailureGitHub  bool
+	SecuritySubRules               bool
+	SecuritySubRulesGitHub         bool
+	SecuritySubWhenNotManual       bool
+	SecuritySubWhenNotManualGitHub bool
+
+	// GitHub-only composition controls (when compDebugTraceGitHub /
+	// required-actions are selected).
+	DebugForbiddenVariablesGitHubMultiline string
+	RequireActions                         bool
+	RequiredActionsExpr                    string
 
 	// pipelineMustNotExecuteUnverifiedScripts (when compScripts selected)
 	ScriptTrustedURLsMultiline string
@@ -147,12 +164,15 @@ type initWizardState struct {
 	// pipelineMustNotUseDockerInDocker (when compDinD selected)
 	DinDDetectInsecureDaemon bool
 
-	// branchMustBeProtected (when catAccess)
-	BranchDefaultMustBeProtected    bool
-	BranchAllowForcePush            bool
-	BranchCodeOwnerApprovalRequired bool
-	BranchMinMergeAccessLevel       string
-	BranchMinPushAccessLevel        string
+	// branchMustBeProtected (when catAccess). Code-owner approval is
+	// tracked per provider: the curated default is off for GitLab and
+	// on for GitHub, matching .plumber.yaml.
+	BranchDefaultMustBeProtected          bool
+	BranchAllowForcePush                  bool
+	BranchCodeOwnerApprovalRequired       bool
+	BranchCodeOwnerApprovalRequiredGitHub bool
+	BranchMinMergeAccessLevel             string
+	BranchMinPushAccessLevel              string
 
 	// pipelineMustNotEnableDebugTrace
 	DebugForbiddenVariablesMultiline string
@@ -228,7 +248,7 @@ func runInitWizard() (*initWizardState, error) {
 			}, &st.ForbiddenTagsCSV); err != nil {
 				return nil, err
 			}
-			if err := survey.AskOne(&survey.Confirm{Message: "Require every image to be pinned by digest (@sha256:…)?", Default: false}, &st.PinByDigest); err != nil {
+			if err := survey.AskOne(&survey.Confirm{Message: "Require every image to be pinned by digest (@sha256:…)?", Default: true}, &st.PinByDigest); err != nil {
 				return nil, err
 			}
 		}
@@ -317,23 +337,55 @@ func runInitWizard() (*initWizardState, error) {
 					return nil, err
 				}
 			}
-			if err := survey.AskOne(&survey.Confirm{
-				Message: "Flag jobs that set allow_failure: true (GitLab) / continue-on-error: true (GitHub)?",
-				Default: false,
-			}, &st.SecuritySubAllowFailure); err != nil {
-				return nil, err
+			// allow_failure default differs per provider: GitLab security
+			// templates ship with allow_failure: true (so flagging it would
+			// fire on everyone — default off), GitHub has no such convention
+			// (default on). Ask per provider in scope.
+			if hasProvider(st, "gitlab") {
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitLab jobs that set allow_failure: true?",
+					Default: false,
+				}, &st.SecuritySubAllowFailure); err != nil {
+					return nil, err
+				}
 			}
-			if err := survey.AskOne(&survey.Confirm{
-				Message: "Flag jobs that redefine rules?",
-				Default: true,
-			}, &st.SecuritySubRules); err != nil {
-				return nil, err
+			if hasProvider(st, "github") {
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitHub jobs that set continue-on-error: true?",
+					Default: true,
+				}, &st.SecuritySubAllowFailureGitHub); err != nil {
+					return nil, err
+				}
 			}
-			if err := survey.AskOne(&survey.Confirm{
-				Message: "Flag jobs that set when: manual?",
-				Default: true,
-			}, &st.SecuritySubWhenNotManual); err != nil {
-				return nil, err
+			// rules / when:manual follow the same per-provider default as
+			// allow_failure (GitLab off, GitHub on).
+			if hasProvider(st, "gitlab") {
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitLab jobs that redefine rules?",
+					Default: false,
+				}, &st.SecuritySubRules); err != nil {
+					return nil, err
+				}
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitLab jobs that set when: manual?",
+					Default: false,
+				}, &st.SecuritySubWhenNotManual); err != nil {
+					return nil, err
+				}
+			}
+			if hasProvider(st, "github") {
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitHub jobs that redefine rules (if:/when overrides)?",
+					Default: true,
+				}, &st.SecuritySubRulesGitHub); err != nil {
+					return nil, err
+				}
+				if err := survey.AskOne(&survey.Confirm{
+					Message: "Flag GitHub jobs that are manual-dispatch only?",
+					Default: true,
+				}, &st.SecuritySubWhenNotManualGitHub); err != nil {
+					return nil, err
+				}
 			}
 		}
 
@@ -368,12 +420,41 @@ func runInitWizard() (*initWizardState, error) {
 			}
 		}
 
-		// Required-inclusions prompts are GitLab-only (the component /
-		// template concepts have no direct equivalent on GitHub —
-		// closest analogues would be required actions or required
-		// reusable workflows, but neither is shipping as a control
-		// today). Skip the section entirely when only GitHub is in
-		// scope.
+		if compSelected(st, compDebugTraceGitHub) {
+			fmt.Fprintf(os.Stderr, "\n  › Actions debug logging\n")
+			if err := survey.AskOne(&survey.Multiline{
+				Message: "Forbidden debug variables (one per line)",
+				Help:    "Setting these to true makes the Actions runner dump every env var (including masked secrets) into the job log.",
+				Default: strings.Join(defaultGitHubDebugTraceVariables(), "\n"),
+			}, &st.DebugForbiddenVariablesGitHubMultiline); err != nil {
+				return nil, err
+			}
+		}
+
+		// Required-actions (GitHub) and required-components/templates
+		// (GitLab) are the "must include" controls. Each is opt-in and
+		// only written when an expression is supplied.
+		if hasProvider(st, "github") {
+			fmt.Fprintf(os.Stderr, "\n  › Required actions (GitHub)\n")
+			if err := survey.AskOne(&survey.Confirm{
+				Message: "Require specific actions or reusable workflows across all workflows?",
+				Default: false,
+			}, &st.RequireActions); err != nil {
+				return nil, err
+			}
+			if st.RequireActions {
+				if err := survey.AskOne(&survey.Input{
+					Message: "Required actions expression",
+					Help:    "owner/repo[/path] entries with optional AND / OR and parentheses. Examples:\n  myorg/sast-scan\n  myorg/sast-scan AND myorg/dependency-review\n  (myorg/sast-scan AND myorg/secret-scan) OR myorg/full-security-suite",
+				}, &st.RequiredActionsExpr); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		// Required-inclusions prompts are GitLab-only (catalog components
+		// and project-file templates have no GitHub equivalent; the GitHub
+		// analogue is required-actions, handled just above).
 		if hasProvider(st, "gitlab") {
 			fmt.Fprintf(os.Stderr, "\n  › Required inclusions (GitLab)\n")
 			if err := survey.AskOne(&survey.Confirm{
@@ -430,11 +511,23 @@ func runInitWizard() (*initWizardState, error) {
 		}, &st.BranchAllowForcePush); err != nil {
 			return nil, err
 		}
-		if err := survey.AskOne(&survey.Confirm{
-			Message: "Require code owner approval on protected branches?",
-			Default: false,
-		}, &st.BranchCodeOwnerApprovalRequired); err != nil {
-			return nil, err
+		// Code-owner approval default differs per provider (GitLab off,
+		// GitHub on), matching the curated .plumber.yaml. Ask per scope.
+		if hasProvider(st, "gitlab") {
+			if err := survey.AskOne(&survey.Confirm{
+				Message: "Require code owner approval on protected branches? (GitLab)",
+				Default: false,
+			}, &st.BranchCodeOwnerApprovalRequired); err != nil {
+				return nil, err
+			}
+		}
+		if hasProvider(st, "github") {
+			if err := survey.AskOne(&survey.Confirm{
+				Message: "Require code owner approval on protected branches? (GitHub)",
+				Default: true,
+			}, &st.BranchCodeOwnerApprovalRequiredGitHub); err != nil {
+				return nil, err
+			}
 		}
 		// minMerge/minPushAccessLevel are GitLab-specific numeric
 		// permission tiers; GitHub uses a different model (role
@@ -606,9 +699,20 @@ func compositionOptionsForProviders(providers []string) []string {
 			compDeclarePermissions,
 			compReusableSecrets,
 			compTemplateInjection,
+			compWriteAllPerms,
+			compArchivedActions,
+			compKnownCVEs,
+			compDebugTraceGitHub,
 		)
 	}
 	return out
+}
+
+// defaultGitHubDebugTraceVariables mirrors the .plumber.yaml default for
+// github.controls.pipelineMustNotEnableDebugTrace.forbiddenVariables — the
+// Actions debug toggles that dump masked secrets into job logs.
+func defaultGitHubDebugTraceVariables() []string {
+	return []string{"ACTIONS_STEP_DEBUG", "ACTIONS_RUNNER_DEBUG"}
 }
 
 // defaultGitHubSecurityJobPatterns mirrors the GitHub-side defaults
@@ -654,15 +758,82 @@ func runAnalyzeAuthHint(providers []string) string {
 	}
 }
 
+// defaultTrustedURLs mirrors the .plumber.yaml default for
+// gitlab.controls.containerImageMustComeFromAuthorizedSources.trustedUrls.
+// Kept in lockstep with the embedded default by
+// TestDefaultTrustedURLsMatchEmbeddedDefault.
 func defaultTrustedURLs() []string {
 	return []string{
+		// Common CI/CD tool images
 		"docker.io/docker:*",
-		"gcr.io/kaniko-project/*",
+		"docker.io/getplumber/plumber:*",
+		"getplumber/plumber:*",
+		"docker.io/getplumber/plumber@sha256:*",
+		// GitLab registry patterns
 		"$CI_REGISTRY_IMAGE:*",
 		"$CI_REGISTRY_IMAGE/*",
-		"getplumber/plumber:*",
-		"docker.io/getplumber/plumber:*",
+		"$CI_REGISTRY/*",
+		"${CI_REGISTRY}/*",
+		"${CI_REGISTRY_IMAGE}:*",
+		"${CI_REGISTRY_IMAGE}/*",
+		// GitLab Dependency Proxy
+		"${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/*",
+		// GitLab official registries
 		"registry.gitlab.com/security-products/*",
+		"registry.gitlab.com/gitlab-org/*",
+		"registry.gitlab.com/pipeline-components/*",
+		// Docker Hub — well-known publishers (DevOps / CI tooling)
+		"docker.io/curlimages/*",
+		"docker.io/alpine/*",
+		"docker.io/golangci/*",
+		"docker.io/koalaman/*",
+		"docker.io/hadolint/*",
+		"docker.io/semgrep/*",
+		"docker.io/sonarsource/*",
+		"docker.io/cypress/*",
+		"docker.io/gittools/*",
+		"docker.io/renovate/*",
+		"docker.io/gitlab/*",
+		"docker.io/lycheeverse/*",
+		"docker.io/hugomods/*",
+		"docker.io/fsfe/*",
+		"docker.io/hashicorp/*",
+		"docker.io/cimg/*",
+		"docker.io/circleci/*",
+		// Docker Hub — cloud vendor official images
+		"docker.io/amazon/*",
+		"docker.io/google/*",
+		"docker.io/nvidia/*",
+		"docker.io/bitnami/*",
+		// Docker Hub — OS / distro official images
+		"docker.io/redhat/*",
+		"docker.io/opensuse/*",
+		"docker.io/gentoo/*",
+		"docker.io/nixos/*",
+		"docker.io/rustlang/*",
+		// Microsoft Container Registry — official Microsoft products
+		"mcr.microsoft.com/dotnet/*",
+		"mcr.microsoft.com/playwright/*",
+		"mcr.microsoft.com/playwright",
+		// Quay.io — well-known projects with their own organisation
+		"quay.io/buildah/*",
+		"quay.io/podman/*",
+		"quay.io/containers/*",
+		"quay.io/centos/*",
+		"quay.io/pypa/*",
+		"quay.io/gnome_infrastructure/*",
+		// GitHub Container Registry — well-known upstream organisations
+		"ghcr.io/astral-sh/*",
+		"ghcr.io/renovatebot/*",
+		"ghcr.io/containerbase/*",
+		"ghcr.io/canonical/*",
+		"ghcr.io/graalvm/*",
+		"ghcr.io/terraform-linters/*",
+		"ghcr.io/prefix-dev/*",
+		// Google Container Registry — Google-owned projects
+		"gcr.io/kaniko-project/*",
+		"gcr.io/go-containerregistry/*",
+		"gcr.io/google.com/cloudsdktool/*",
 	}
 }
 
@@ -887,32 +1058,36 @@ func (st *initWizardState) toPlumberConfig() *configuration.PlumberConfig {
 		}
 
 		// Cross-provider: security-jobs. GitLab and GitHub take their
-		// own pattern set (job-name conventions differ) but share the
-		// three sub-control toggles.
+		// own pattern set (job-name conventions differ) and their own
+		// allow-failure default (GitLab off, GitHub on); the other two
+		// sub-toggles are shared. Each section gets fresh toggle structs
+		// so the two providers never alias the same pointer.
 		if compSelected(st, compSecurity) {
-			subs := &configuration.SecurityJobsWeakenedControlConfig{
-				Enabled:                 boolPtrInit(true),
-				AllowFailureMustBeFalse: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubAllowFailure)},
-				RulesMustNotBeRedefined: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubRules)},
-				WhenMustNotBeManual:     &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubWhenNotManual)},
-			}
 			if gitlabSection != nil {
 				p := parseLinesInit(st.SecurityJobPatternsMultiline)
 				if len(p) == 0 {
 					p = defaultSecurityJobPatterns()
 				}
-				cp := *subs
-				cp.SecurityJobPatterns = p
-				gitlabSection.Controls.SecurityJobsMustNotBeWeakened = &cp
+				gitlabSection.Controls.SecurityJobsMustNotBeWeakened = &configuration.SecurityJobsWeakenedControlConfig{
+					Enabled:                 boolPtrInit(true),
+					SecurityJobPatterns:     p,
+					AllowFailureMustBeFalse: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubAllowFailure)},
+					RulesMustNotBeRedefined: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubRules)},
+					WhenMustNotBeManual:     &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubWhenNotManual)},
+				}
 			}
 			if githubSection != nil {
 				p := parseLinesInit(st.SecurityJobPatternsGitHubMultiline)
 				if len(p) == 0 {
 					p = defaultGitHubSecurityJobPatterns()
 				}
-				cp := *subs
-				cp.SecurityJobPatterns = p
-				githubSection.Controls.SecurityJobsMustNotBeWeakened = &cp
+				githubSection.Controls.SecurityJobsMustNotBeWeakened = &configuration.SecurityJobsWeakenedControlConfig{
+					Enabled:                 boolPtrInit(true),
+					SecurityJobPatterns:     p,
+					AllowFailureMustBeFalse: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubAllowFailureGitHub)},
+					RulesMustNotBeRedefined: &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubRulesGitHub)},
+					WhenMustNotBeManual:     &configuration.SecurityJobsSubControlToggle{Enabled: boolPtrInit(st.SecuritySubWhenNotManualGitHub)},
+				}
 			}
 		}
 
@@ -954,6 +1129,37 @@ func (st *initWizardState) toPlumberConfig() *configuration.PlumberConfig {
 			if compSelected(st, compTemplateInjection) {
 				githubSection.Controls.WorkflowMustNotInjectUserInputInScripts = &configuration.EnabledOnlyControlConfig{Enabled: boolPtrInit(true)}
 			}
+			if compSelected(st, compWriteAllPerms) {
+				githubSection.Controls.WorkflowMustNotGrantPermissionsWriteAll = &configuration.EnabledOnlyControlConfig{Enabled: boolPtrInit(true)}
+			}
+			if compSelected(st, compArchivedActions) {
+				githubSection.Controls.ActionsMustNotBeArchived = &configuration.EnabledOnlyControlConfig{Enabled: boolPtrInit(true)}
+			}
+			if compSelected(st, compKnownCVEs) {
+				githubSection.Controls.ActionsMustNotCarryKnownCVEs = &configuration.EnabledOnlyControlConfig{Enabled: boolPtrInit(true)}
+			}
+			if compSelected(st, compDebugTraceGitHub) {
+				fb := parseLinesInit(st.DebugForbiddenVariablesGitHubMultiline)
+				if len(fb) == 0 {
+					fb = defaultGitHubDebugTraceVariables()
+				}
+				githubSection.Controls.PipelineMustNotEnableDebugTrace = &configuration.DebugTraceControlConfig{
+					Enabled:            boolPtrInit(true),
+					ForbiddenVariables: fb,
+				}
+			}
+
+			// Required-actions is opt-in: written only when an expression
+			// is supplied, mirroring pipelineMustIncludeComponent on the
+			// GitLab side.
+			if e := strings.TrimSpace(st.RequiredActionsExpr); e != "" {
+				githubSection.Controls.WorkflowMustIncludeRequiredActions = &configuration.RequiredActionsControlConfig{
+					Enabled:  boolPtrInit(true),
+					Required: e,
+				}
+			} else if st.RequireActions {
+				fmt.Fprintln(os.Stderr, "Note: required-actions requirement skipped (no expression provided).")
+			}
 		}
 	}
 
@@ -982,7 +1188,7 @@ func (st *initWizardState) toPlumberConfig() *configuration.PlumberConfig {
 				DefaultMustBeProtected:    boolPtrInit(st.BranchDefaultMustBeProtected),
 				NamePatterns:              patterns,
 				AllowForcePush:            boolPtrInit(st.BranchAllowForcePush),
-				CodeOwnerApprovalRequired: boolPtrInit(st.BranchCodeOwnerApprovalRequired),
+				CodeOwnerApprovalRequired: boolPtrInit(st.BranchCodeOwnerApprovalRequiredGitHub),
 			}
 		}
 	}
@@ -1024,36 +1230,42 @@ func starterPlumberConfig() *configuration.PlumberConfig {
 		Categories:             []string{catImages, catComposition, catAccess, catVariables},
 		ForbiddenTagsEnabled:   true,
 		ForbiddenTagsCSV:       "latest, dev, development, staging, main, master",
-		PinByDigest:            false,
+		PinByDigest:            true,
 		AuthorizedEnabled:      true,
 		TrustDockerHubOfficial: true,
 		TrustedURLsText:        strings.Join(defaultTrustedURLs(), "\n"),
 		CompositionChoices: []string{
 			compHardcoded, compUpToDate, compForbidden, compSecurity, compScripts, compJobVars, compDinD,
 			compActionPin, compDangerousTriggers, compDeclarePermissions, compReusableSecrets, compTemplateInjection,
+			compWriteAllPerms, compArchivedActions, compKnownCVEs, compDebugTraceGitHub,
 		},
-		ActionPinTrustedOwnersMultiline:    strings.Join(defaultGitHubTrustedActionOwners(), "\n"),
-		SecurityJobPatternsGitHubMultiline: strings.Join(defaultGitHubSecurityJobPatterns(), "\n"),
-		ForbiddenVersionsMultiline:         strings.Join(defaultForbiddenVersions(), "\n"),
-		DefaultBranchIsForbiddenVersion:    false,
-		SecurityJobPatternsMultiline:       strings.Join(defaultSecurityJobPatterns(), "\n"),
-		SecuritySubAllowFailure:            false,
-		SecuritySubRules:                   true,
-		SecuritySubWhenNotManual:           true,
-		JobOverrideVariablesMultiline:      strings.Join(defaultJobOverrideVariables(), "\n"),
-		DinDDetectInsecureDaemon:           true,
-		BranchEnabled:                      true,
-		BranchPatterns:                     "main, master, release/*, production, dev",
-		BranchDefaultMustBeProtected:       true,
-		BranchAllowForcePush:               false,
-		BranchCodeOwnerApprovalRequired:    false,
-		BranchMinMergeAccessLevel:          "30",
-		BranchMinPushAccessLevel:           "40",
-		DebugTraceEnabled:                  true,
-		DebugForbiddenVariablesMultiline:   "CI_DEBUG_TRACE\nCI_DEBUG_SERVICES",
-		UnsafeExpansionEnabled:             true,
-		DangerousVariablesMultiline:        strings.Join(defaultDangerousVariables(), "\n"),
-		AllowedPatternsMultiline:           "",
+		ActionPinTrustedOwnersMultiline:        strings.Join(defaultGitHubTrustedActionOwners(), "\n"),
+		SecurityJobPatternsGitHubMultiline:     strings.Join(defaultGitHubSecurityJobPatterns(), "\n"),
+		ForbiddenVersionsMultiline:             strings.Join(defaultForbiddenVersions(), "\n"),
+		DefaultBranchIsForbiddenVersion:        false,
+		SecurityJobPatternsMultiline:           strings.Join(defaultSecurityJobPatterns(), "\n"),
+		SecuritySubAllowFailure:                false,
+		SecuritySubAllowFailureGitHub:          true,
+		SecuritySubRules:                       false,
+		SecuritySubRulesGitHub:                 true,
+		SecuritySubWhenNotManual:               false,
+		SecuritySubWhenNotManualGitHub:         true,
+		DebugForbiddenVariablesGitHubMultiline: strings.Join(defaultGitHubDebugTraceVariables(), "\n"),
+		JobOverrideVariablesMultiline:          strings.Join(defaultJobOverrideVariables(), "\n"),
+		DinDDetectInsecureDaemon:               true,
+		BranchEnabled:                          true,
+		BranchPatterns:                         "main, master, release/*, production, dev",
+		BranchDefaultMustBeProtected:           true,
+		BranchAllowForcePush:                   false,
+		BranchCodeOwnerApprovalRequired:        false,
+		BranchCodeOwnerApprovalRequiredGitHub:  true,
+		BranchMinMergeAccessLevel:              "30",
+		BranchMinPushAccessLevel:               "40",
+		DebugTraceEnabled:                      true,
+		DebugForbiddenVariablesMultiline:       "CI_DEBUG_TRACE\nCI_DEBUG_SERVICES",
+		UnsafeExpansionEnabled:                 true,
+		DangerousVariablesMultiline:            strings.Join(defaultDangerousVariables(), "\n"),
+		AllowedPatternsMultiline:               "",
 	}
 	return st.toPlumberConfig()
 }

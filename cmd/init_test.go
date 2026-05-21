@@ -1,9 +1,81 @@
 package cmd
 
 import (
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/getplumber/plumber/configuration"
+	"github.com/getplumber/plumber/internal/defaultconfig"
+	"gopkg.in/yaml.v2"
 )
+
+// The wizard's default trusted-registry list must stay in lockstep with the
+// curated .plumber.yaml list, so accepting init defaults reproduces the
+// shipped authorized-sources policy rather than a lean subset.
+func TestDefaultTrustedURLsMatchEmbeddedDefault(t *testing.T) {
+	var cfg configuration.PlumberConfig
+	if err := yaml.Unmarshal(defaultconfig.Get(), &cfg); err != nil {
+		t.Fatalf("unmarshal embedded default: %v", err)
+	}
+	want := cfg.GitLab.Controls.ContainerImageMustComeFromAuthorizedSources.TrustedUrls
+	got := defaultTrustedURLs()
+
+	ws, gs := append([]string(nil), want...), append([]string(nil), got...)
+	sort.Strings(ws)
+	sort.Strings(gs)
+	if strings.Join(ws, "\n") != strings.Join(gs, "\n") {
+		t.Errorf("defaultTrustedURLs() drifted from embedded default:\nwant (%d): %v\ngot  (%d): %v", len(ws), ws, len(gs), gs)
+	}
+}
+
+// enabledGitHubControlKeys parses a .plumber.yaml document and returns the
+// set of github.controls.<name> keys whose block has enabled: true.
+func enabledGitHubControlKeys(t *testing.T, doc []byte) map[string]bool {
+	t.Helper()
+	var root map[string]interface{}
+	if err := yaml.Unmarshal(doc, &root); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	out := map[string]bool{}
+	gh, _ := root["github"].(map[interface{}]interface{})
+	if gh == nil {
+		return out
+	}
+	controls, _ := gh["controls"].(map[interface{}]interface{})
+	for name, block := range controls {
+		m, ok := block.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+		if enabled, _ := m["enabled"].(bool); enabled {
+			out[name.(string)] = true
+		}
+	}
+	return out
+}
+
+// Every GitHub control enabled in the embedded default must also be emitted
+// (and enabled) when the wizard defaults are accepted. This is the durable
+// regression guard against `config init` drifting behind the shipped control
+// set again. Opt-in controls disabled in the default (e.g.
+// workflowMustIncludeRequiredActions) are intentionally not required here.
+func TestStarterGitHubControlsMatchEmbeddedDefault(t *testing.T) {
+	wantKeys := enabledGitHubControlKeys(t, defaultconfig.Get())
+	if len(wantKeys) == 0 {
+		t.Fatal("embedded default exposed no enabled github controls; test wiring is wrong")
+	}
+	starterBytes, err := yaml.Marshal(starterPlumberConfig())
+	if err != nil {
+		t.Fatalf("marshal starter: %v", err)
+	}
+	gotKeys := enabledGitHubControlKeys(t, starterBytes)
+	for k := range wantKeys {
+		if !gotKeys[k] {
+			t.Errorf("config init starter omits github control %q that ships enabled in the embedded default", k)
+		}
+	}
+}
 
 func TestStarterPlumberConfigValidate(t *testing.T) {
 	cfg := starterPlumberConfig()
@@ -247,6 +319,96 @@ func TestInitWizardStateBothProviders(t *testing.T) {
 
 	if err := cfg.Validate(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Accepting the wizard defaults must reproduce the curated .plumber.yaml
+// GitHub section: every shipping GitHub control present and set to its
+// shipped value. This is the regression guard against config init drifting
+// behind the embedded default again.
+func TestStarterPlumberConfigGitHubMatchesCuratedDefaults(t *testing.T) {
+	gh := starterPlumberConfig().GitHub.Controls
+
+	if gh.WorkflowMustNotGrantPermissionsWriteAll == nil || !*gh.WorkflowMustNotGrantPermissionsWriteAll.Enabled {
+		t.Error("write-all permissions control should be present and enabled")
+	}
+	if gh.ActionsMustNotBeArchived == nil || !*gh.ActionsMustNotBeArchived.Enabled {
+		t.Error("archived-actions control should be present and enabled")
+	}
+	if gh.ActionsMustNotCarryKnownCVEs == nil || !*gh.ActionsMustNotCarryKnownCVEs.Enabled {
+		t.Error("known-CVE control should be present and enabled")
+	}
+	if gh.PipelineMustNotEnableDebugTrace == nil || !*gh.PipelineMustNotEnableDebugTrace.Enabled {
+		t.Fatal("github debug-trace control should be present and enabled")
+	}
+	if got := strings.Join(gh.PipelineMustNotEnableDebugTrace.ForbiddenVariables, ","); got != "ACTIONS_STEP_DEBUG,ACTIONS_RUNNER_DEBUG" {
+		t.Errorf("github debug-trace forbidden vars: %s", got)
+	}
+	if gh.ContainerImageMustNotUseForbiddenTags == nil ||
+		gh.ContainerImageMustNotUseForbiddenTags.ContainerImagesMustBePinnedByDigest == nil ||
+		!*gh.ContainerImageMustNotUseForbiddenTags.ContainerImagesMustBePinnedByDigest {
+		t.Error("github forbidden-tags should default to pin-by-digest true")
+	}
+	if sj := gh.SecurityJobsMustNotBeWeakened; sj == nil ||
+		sj.AllowFailureMustBeFalse == nil || !*sj.AllowFailureMustBeFalse.Enabled {
+		t.Error("github securityJobs.allowFailureMustBeFalse should default true")
+	} else if !*sj.RulesMustNotBeRedefined.Enabled || !*sj.WhenMustNotBeManual.Enabled {
+		t.Error("github securityJobs.rules/whenManual should default true")
+	}
+	if gh.BranchMustBeProtected == nil ||
+		gh.BranchMustBeProtected.CodeOwnerApprovalRequired == nil ||
+		!*gh.BranchMustBeProtected.CodeOwnerApprovalRequired {
+		t.Error("github branch.codeOwnerApprovalRequired should default true")
+	}
+}
+
+// The two toggles whose curated default differs per provider must keep
+// the GitLab side at its (looser) shipped value when defaults are accepted.
+func TestStarterPlumberConfigGitLabDefaultsUnchanged(t *testing.T) {
+	gl := starterPlumberConfig().GitLab.Controls
+
+	if gl.SecurityJobsMustNotBeWeakened == nil ||
+		gl.SecurityJobsMustNotBeWeakened.AllowFailureMustBeFalse == nil ||
+		*gl.SecurityJobsMustNotBeWeakened.AllowFailureMustBeFalse.Enabled {
+		t.Error("gitlab securityJobs.allowFailureMustBeFalse should default false")
+	}
+	if gl.BranchMustBeProtected == nil ||
+		gl.BranchMustBeProtected.CodeOwnerApprovalRequired == nil ||
+		*gl.BranchMustBeProtected.CodeOwnerApprovalRequired {
+		t.Error("gitlab branch.codeOwnerApprovalRequired should default false")
+	}
+	// GitLab ships all three security sub-toggles off (templates trip
+	// them); the wizard must match rather than default rules/whenManual on.
+	if sj := gl.SecurityJobsMustNotBeWeakened; sj == nil ||
+		sj.RulesMustNotBeRedefined == nil || *sj.RulesMustNotBeRedefined.Enabled {
+		t.Error("gitlab securityJobs.rulesMustNotBeRedefined should default false")
+	} else if *sj.WhenMustNotBeManual.Enabled {
+		t.Error("gitlab securityJobs.whenMustNotBeManual should default false")
+	}
+}
+
+// workflowMustIncludeRequiredActions is opt-in: written only when the user
+// supplies an expression, mirroring pipelineMustIncludeComponent on GitLab.
+func TestToPlumberConfigRequiredActionsOptIn(t *testing.T) {
+	base := func() *initWizardState {
+		return &initWizardState{
+			Providers:          []string{"github"},
+			Categories:         []string{catComposition},
+			CompositionChoices: []string{compActionPin},
+		}
+	}
+	if cfg := base().toPlumberConfig(); cfg.GitHub.Controls.WorkflowMustIncludeRequiredActions != nil {
+		t.Fatal("required actions must stay nil when no expression is provided")
+	}
+
+	st := base()
+	st.RequiredActionsExpr = "myorg/sast-scan AND myorg/dependency-review"
+	ra := st.toPlumberConfig().GitHub.Controls.WorkflowMustIncludeRequiredActions
+	if ra == nil || !*ra.Enabled {
+		t.Fatal("required actions should be enabled when an expression is provided")
+	}
+	if ra.Required != "myorg/sast-scan AND myorg/dependency-review" {
+		t.Errorf("required actions expression: %q", ra.Required)
 	}
 }
 
