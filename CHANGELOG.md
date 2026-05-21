@@ -1,3 +1,10 @@
+## [0.3.10](https://github.com/getplumber/plumber/compare/v0.3.9...v0.3.10) (2026-05-21)
+
+
+### ✨ Features
+
+* **ci:** Add Github Action + SARIF format + GLSAST ([599125c](https://github.com/getplumber/plumber/commit/599125c23e6656ddbaf01234b0d72b17bc9d0f25))
+
 ## [0.3.9](https://github.com/getplumber/plumber/compare/v0.3.8...v0.3.9) (2026-05-21)
 
 
