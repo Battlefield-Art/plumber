@@ -1,3 +1,10 @@
+## [0.3.9](https://github.com/getplumber/plumber/compare/v0.3.8...v0.3.9) (2026-05-21)
+
+
+### ✨ Features
+
+* **init:** Fix wizard to make it compatible with github ([bf49ae2](https://github.com/getplumber/plumber/commit/bf49ae24f90bd52ae58e6a2d8d491e77a8026101))
+
 ## [0.3.8](https://github.com/getplumber/plumber/compare/v0.3.7...v0.3.8) (2026-05-21)
 
 ## [0.3.7](https://github.com/getplumber/plumber/compare/v0.3.6...v0.3.7) (2026-05-21)
