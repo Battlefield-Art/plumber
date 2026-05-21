@@ -69,26 +69,6 @@ Choose **one** of these methods:
 | **[GitLab CI Component](#option-2-gitlab-ci-component)** | GitLab only | Automated checks on every GitLab pipeline run | Add 2 lines to your `.gitlab-ci.yml` |
 | **[GitHub Action](#option-3-github-action)** | GitHub only | Automated checks on every push / PR, findings in the Security tab | Add a `uses: getplumber/plumber@<tag>` step |
 
- **GitHub Actions integration:** Plumber ships a composite action (this repo's root `action.yml`), the GitHub counterpart of the GitLab CI Component. It installs the verified binary, runs the scan, fails the job below your threshold, uploads SARIF to **Code Scanning** (Security tab), and attaches the JSON / PBOM / CycloneDX as artifacts:
-
-```yaml
-permissions:
-  contents: read
-  security-events: write   # for the Code Scanning upload
-jobs:
-  compliance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: getplumber/plumber@<commit-sha>   # v0.3.10 (pin by SHA, see note below)
-        with:
-          threshold: 80
-```
-
-> Pin third-party actions by **commit SHA**, not a tag. Plumber's own `actionsMustBePinnedByCommitSha` control flags tag-pinned actions, so pin ours the same way: copy the SHA from the [release page](https://github.com/getplumber/plumber/releases) (or let Dependabot/Renovate manage it). The version goes in the trailing comment.
-
-See the [GitHub Action](#option-3-github-action) section for all inputs/outputs. (PR comments and repo badges on GitHub are still on the roadmap, see the [parity matrix](#flags-that-dont-apply-on-github-yet).)
-
 ---
 
 ## 📖 Table of Contents
@@ -198,7 +178,7 @@ Auth requirements depend on which mode you run plumber in:
 | Mode | Command shape | Auth |
 |---|---|---|
 | **Local-clone scan** | `plumber analyze` (inside a checked-out repo) | Soft-degrade. Workflow-content controls scan local YAML and need no API access. Action-supply-chain controls (archived repos, advisory database, ref-version mismatch, …) need the API and silently no-op without it. |
-| **Upstream-fetch** | `plumber analyze --github-url … --project owner/repo` | **Required.** GitHub's anonymous tier is rate-limited to 60 req/hr, which produces partial runs without warning — so plumber refuses to start in this mode without a token. Parity with the GitLab path. |
+| **Upstream-fetch** | `plumber analyze --github-url … --project owner/repo` | **Required.** Without a token, GitHub limits you to 60 requests/hour, which silently produces partial results, so plumber refuses to start in this mode. |
 
 Plumber resolves credentials in this order, automatically:
 
@@ -213,9 +193,9 @@ Token scope (fine-grained PAT against your target repo):
 
 | Scope | What it unlocks | Without it |
 |---|---|---|
-| `Contents: Read` | Workflow YAML reads via `/contents` (used in upstream-fetch mode). All workflow-content controls (102/103/104/206/302/304/410/414). | Upstream-fetch fails on the first content request. Local-clone scans are unaffected (they read from disk). |
+| `Contents: Read` | Reads workflow YAML (upstream-fetch mode). Powers all workflow-content controls. | Upstream-fetch fails on the first content request. Local-clone scans are unaffected. |
 | `Metadata: Read` | Auto-required by GitHub for any fine-grained PAT. | Token won't function. |
-| `Administration: Read` | `/branches/{name}/protection` — force-push and code-owner-approval state on protected branches. ISSUE-505 evaluates authoritatively. | ISSUE-501 still fires (uses the listing's `protected` flag, no admin scope needed). ISSUE-505 silently abstains rather than guessing. |
+| `Administration: Read` | Reads force-push and code-owner-approval state on protected branches (ISSUE-505). | ISSUE-501 still fires; ISSUE-505 abstains rather than guessing. |
 
 Equivalent on a classic PAT: the single `repo` scope covers all three.
 
@@ -302,7 +282,7 @@ A handful of flags are GitLab-only today. On the GitHub path they are silently i
 | `--ci-config-path` | N/A — GitHub workflows always live under `.github/workflows/` |
 | `--gitlab-url` | N/A — pass `--github-url` instead, or rely on git-remote auto-detection |
 
-Flags that work identically on both providers: `--config`, `--output` (JSON findings), `--pbom` (PBOM JSON; GitHub inventory: container images, third-party actions, reusable workflows), `--pbom-cyclonedx` (CycloneDX 1.5), `--sarif` (SARIF 2.1.0 for GitHub Code Scanning / GitLab), `--glsast` (GitLab SAST report), `--threshold`, `--print`, `--score`, `--score-point`, `--controls`, `--skip-controls`, `--fail-warnings`, `--branch`, `--project` (provider chosen by which URL flag is set).
+Flags that work identically on both providers (see the [CLI Reference](#-cli-reference) for what each does): `--config`, `--output`, `--pbom`, `--pbom-cyclonedx`, `--sarif`, `--glsast`, `--threshold`, `--print`, `--score`, `--score-point`, `--controls`, `--skip-controls`, `--fail-warnings`, `--branch`, and `--project`.
 
 ### Trying it on this repo
 
@@ -357,7 +337,7 @@ In the [GitLab CI Component](#option-2-gitlab-ci-component), use the `ci_config_
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     inputs:
       ci_config_path: my-custom-ci.yml
 ```
@@ -399,7 +379,7 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     # inputs:
     #   stage: .pre | by default runs in .pre which only runs if there is at least another CI job in another stage
 ```
@@ -430,10 +410,10 @@ permissions:
 
 jobs:
   plumber:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: getplumber/plumber@<commit-sha>   # v0.3.10
+      - uses: getplumber/plumber@d1ad60b7f5259a7de887ab8b846b39106f588bf4   # v0.3.10
         with:
           threshold: 80
 ```
@@ -443,7 +423,7 @@ jobs:
 Scan a repo **without checking it out** (security-team audit) by setting `project`:
 
 ```yaml
-      - uses: getplumber/plumber@<commit-sha>   # v0.3.10
+      - uses: getplumber/plumber@d1ad60b7f5259a7de887ab8b846b39106f588bf4   # v0.3.10
         with:
           project: some-org/some-repo
           github-token: ${{ secrets.AUDIT_TOKEN }}   # needs repo / Administration:read
@@ -485,7 +465,7 @@ Override any input to fit your needs:
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     inputs:
       threshold: 80                           # Minimum % to pass (default: 100)
       config_file: configs/my-plumber.yaml    # Custom config path
@@ -1357,7 +1337,7 @@ plumber analyze --skip-controls branchMustBeProtected
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     inputs:
       controls: containerImageMustNotUseForbiddenTags,containerImageMustComeFromAuthorizedSources
 ```
@@ -1514,7 +1494,7 @@ Automatically post compliance summaries on merge requests to catch issues before
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     inputs:
       mr_comment: true  # Requires api scope on token
 ```
@@ -1539,7 +1519,7 @@ Display a live compliance badge on your project's overview page.
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@v0.2.0
+  - component: gitlab.com/getplumber/plumber/plumber@v0.3.1
     inputs:
       badge: true  # Requires api scope on token
 ```
@@ -2069,7 +2049,7 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 include:
-  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.2.0
+  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.3.10
     # inputs:
     #   stage: .pre | by default runs in .pre which only runs if there is at least another CI job in another stage
 ```
@@ -2150,12 +2130,8 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 include:
-  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.2.0
-    # inputs:
-    #   stage: .pre | by default runs in .pre which only runs if there is at least another CI job in another stage
+  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.3.10
 ```
-
-</details>
 
 ---
 
