@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/getplumber/plumber/compare/v0.3.0...v0.3.1) (2026-05-21)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** remove ci testing vlaues ([fb7d2e5](https://github.com/getplumber/plumber/commit/fb7d2e5b7a9a5b50e40a0f285f5154ff1961ac8e))
+
 ## [0.3.0](https://github.com/getplumber/plumber/compare/v0.2.22...v0.3.0) (2026-05-20)
 
 
