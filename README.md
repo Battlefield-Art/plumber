@@ -413,7 +413,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: getplumber/plumber@3474a39cd947da8717607a02ecd18b859487e5ed   # v0.3.13
+      - uses: getplumber/plumber@6db7ae35b434071697bac46078e7670448c49740   # v0.3.14
         with:
           threshold: 80
 ```
@@ -423,7 +423,7 @@ jobs:
 Scan a repo **without checking it out** (security-team audit) by setting `project`:
 
 ```yaml
-      - uses: getplumber/plumber@3474a39cd947da8717607a02ecd18b859487e5ed   # v0.3.13
+      - uses: getplumber/plumber@6db7ae35b434071697bac46078e7670448c49740   # v0.3.14
         with:
           project: some-org/some-repo
           github-token: ${{ secrets.AUDIT_TOKEN }}   # needs repo / Administration:read
