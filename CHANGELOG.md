@@ -1,3 +1,10 @@
+## [0.3.11](https://github.com/getplumber/plumber/compare/v0.3.10...v0.3.11) (2026-05-22)
+
+
+### ✨ Features
+
+* **aciton:** Pass token to CI and score point ([c9fe9a5](https://github.com/getplumber/plumber/commit/c9fe9a5bdb0f014d97f173b83383112b2adb4ba6))
+
 ## [0.3.10](https://github.com/getplumber/plumber/compare/v0.3.9...v0.3.10) (2026-05-21)
 
 
