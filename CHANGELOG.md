@@ -1,3 +1,10 @@
+## [0.3.15](https://github.com/getplumber/plumber/compare/v0.3.14...v0.3.15) (2026-05-22)
+
+
+### 🐛 Bug Fixes
+
+* **sarif:** Not outputting correctly if only repo settings were bad ([d2fecc9](https://github.com/getplumber/plumber/commit/d2fecc9248c7e60e67ef2ff29a757d350632cd94))
+
 ## [0.3.14](https://github.com/getplumber/plumber/compare/v0.3.13...v0.3.14) (2026-05-22)
 
 
