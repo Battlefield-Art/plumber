@@ -44,6 +44,7 @@ jobs:
           semantic_version: 23.1.1
           extra_plugins: |
             @semantic-release/changelog@6.0.3
+            @semantic-release/exec@6.0.3
             @semantic-release/git@10.0.1
             conventional-changelog-conventionalcommits@7.0.2
         env:
@@ -149,6 +150,8 @@ jobs:
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -387,3 +390,46 @@ jobs:
           git add Formula/
           git commit -m "Update to v${VERSION}"
           git push
+
+  pin-refs:
+    name: Pin release refs (SHA + image digest)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    needs: [release, docker]
+    if: needs.release.outputs.new_release_published == 'true'
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Pin README SHA and template image digest
+        env:
+          VERSION: ${{ needs.release.outputs.new_release_version }}
+          DIGEST: ${{ needs.docker.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # The release tag points at the chore(release) commit; pin to it so
+          # uses:@<sha> matches uses:@v${VERSION}.
+          SHA="$(git rev-parse "v${VERSION}^{commit}")"
+          bash scripts/release-pin-refs.sh "$VERSION" "$SHA" "$DIGEST"
+          if git diff --quiet; then
+            echo "No ref changes to commit."
+            exit 0
+          fi
+          git config user.name "plumber-release-bot[bot]"
+          git config user.email "plumber-release-bot[bot]@users.noreply.github.com"
+          git add README.md templates/plumber.yml
+          git commit -m "chore(release): pin v${VERSION} refs [skip ci]"
+          git push origin HEAD:main
