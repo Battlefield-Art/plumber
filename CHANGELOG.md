@@ -1,3 +1,10 @@
+## [0.3.12](https://github.com/getplumber/plumber/compare/v0.3.11...v0.3.12) (2026-05-22)
+
+
+### ✨ Features
+
+* **ci:** Automate version updates ([8a6f6df](https://github.com/getplumber/plumber/commit/8a6f6df29ea1977ed2621586aecff04d0b098a4e))
+
 ## [0.3.11](https://github.com/getplumber/plumber/compare/v0.3.10...v0.3.11) (2026-05-22)
 
 
