@@ -1,3 +1,10 @@
+## [0.3.17](https://github.com/getplumber/plumber/compare/v0.3.16...v0.3.17) (2026-05-22)
+
+
+### 🐛 Bug Fixes
+
+* improve GHES detection and add --provider flag ([#177](https://github.com/getplumber/plumber/issues/177)) ([e6779c5](https://github.com/getplumber/plumber/commit/e6779c54300191415544cdf6cb799db3bd1e8018))
+
 ## [0.3.16](https://github.com/getplumber/plumber/compare/v0.3.15...v0.3.16) (2026-05-22)
 
 ## [0.3.15](https://github.com/getplumber/plumber/compare/v0.3.14...v0.3.15) (2026-05-22)
