@@ -1,3 +1,10 @@
+## [0.3.14](https://github.com/getplumber/plumber/compare/v0.3.13...v0.3.14) (2026-05-22)
+
+
+### 🐛 Bug Fixes
+
+* **vulns:** Update some go deps ([760ae4d](https://github.com/getplumber/plumber/commit/760ae4d2e73c376507c9b505d932fb3d079757e6))
+
 ## [0.3.13](https://github.com/getplumber/plumber/compare/v0.3.12...v0.3.13) (2026-05-22)
 
 ## [0.3.12](https://github.com/getplumber/plumber/compare/v0.3.11...v0.3.12) (2026-05-22)
