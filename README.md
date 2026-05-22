@@ -413,7 +413,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: getplumber/plumber@d1ad60b7f5259a7de887ab8b846b39106f588bf4   # v0.3.10
+      - uses: getplumber/plumber@909fc0bcfc20670a6dfa9f036ac7a5e2e1283506   # v0.3.11
         with:
           threshold: 80
 ```
@@ -423,7 +423,7 @@ jobs:
 Scan a repo **without checking it out** (security-team audit) by setting `project`:
 
 ```yaml
-      - uses: getplumber/plumber@d1ad60b7f5259a7de887ab8b846b39106f588bf4   # v0.3.10
+      - uses: getplumber/plumber@909fc0bcfc20670a6dfa9f036ac7a5e2e1283506   # v0.3.11
         with:
           project: some-org/some-repo
           github-token: ${{ secrets.AUDIT_TOKEN }}   # needs repo / Administration:read
@@ -434,7 +434,7 @@ Scan a repo **without checking it out** (security-team audit) by setting `projec
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `version` | `v0.3.10` | Plumber release to install. Defaults to a pinned tag; bump explicitly when upgrading. |
+| `version` | `v0.3.11` | Plumber release to install. Defaults to a pinned tag; bump explicitly when upgrading. |
 | `verify-attestation` | `true` | Verify the downloaded binary's build-provenance attestation (sigstore/SLSA) against the getplumber/plumber release workflow via the `gh` CLI. Anchors the binary to a trusted build regardless of the mutable release tag. Set `false` for air-gapped / GHES setups without attestation access. |
 | `github-token` | `${{ github.token }}` | API token (branch protection, advisory DB) and SARIF upload. `Administration:read` for full `branchMustBeProtected`. |
 | `project` | *(checkout)* | `owner/repo` to scan remotely. Default: scan the checked-out repo. |
@@ -2049,7 +2049,7 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 include:
-  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.3.10
+  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.3.1
     # inputs:
     #   stage: .pre | by default runs in .pre which only runs if there is at least another CI job in another stage
 ```
@@ -2130,8 +2130,12 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 include:
-  - component: gitlab.example.com/infrastructure/plumber/plumber@v0.3.10
+  - component: gitlab.example.com/infrastructure/plumber/plumber@v<Your-Tag>
+    # inputs:
+    #   stage: .pre | by default runs in .pre which only runs if there is at least another CI job in another stage
 ```
+
+</details>
 
 ---
 
