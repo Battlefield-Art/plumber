@@ -42,10 +42,13 @@ jobs:
         # below. The dedicated "Enforce" step turns a finding into a job
         # failure after the upload has happened.
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./plumber analyze \
             --sarif plumber.sarif \
             --output plumber-report.json \
+            --score-point \
             --threshold 100
 
       - name: Upload SARIF to Code Scanning
