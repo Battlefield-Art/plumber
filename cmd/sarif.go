@@ -136,7 +136,16 @@ func sarifSecuritySeverity(sev string) string {
 // Rules are emitted once per distinct issue code (with metadata from the
 // codes registry); results carry a file/line location when the finding
 // has one.
-func buildSARIF(findings []opaengine.Finding) sarifLog {
+//
+// GitHub Code Scanning rejects any result without at least one location
+// ("expected at least one location") and the location's URI must resolve to
+// a committed file. Repository-level findings (branch protection and other
+// settings controls) have no source file, so they are anchored to
+// fallbackURI — the effective .plumber.yaml, the file where those controls
+// are enabled and which is always committed for a run to happen. When
+// fallbackURI is itself empty the result is emitted location-less (still
+// valid SARIF; only Code Scanning is that strict).
+func buildSARIF(findings []opaengine.Finding, fallbackURI string) sarifLog {
 	rulesByID := map[string]sarifRule{}
 	results := make([]sarifResult, 0, len(findings))
 
@@ -188,6 +197,12 @@ func buildSARIF(findings []opaengine.Finding) sarifLog {
 				phys.Region = &sarifRegion{StartLine: f.Line}
 			}
 			res.Locations = []sarifLocation{{PhysicalLocation: phys}}
+		} else if fallbackURI != "" {
+			// Repo-level finding with no source file: anchor it to the config
+			// file (no region) so Code Scanning accepts the result.
+			res.Locations = []sarifLocation{{PhysicalLocation: sarifPhysical{
+				ArtifactLocation: sarifArtifact{URI: fallbackURI},
+			}}}
 		}
 		results = append(results, res)
 	}
@@ -221,7 +236,13 @@ func buildSARIF(findings []opaengine.Finding) sarifLog {
 // them to filePath. A clean run produces a valid empty-results document so
 // downstream Code Scanning clears any previously-reported alerts.
 func writeSARIFToFile(result *control.AnalysisResult, filePath string) error {
-	data, err := json.MarshalIndent(buildSARIF(result.Findings), "", "  ")
+	// Anchor repo-level (file-less) findings to the effective config file so
+	// every result has a location that resolves to a committed file, which
+	// GitHub Code Scanning requires. configFile is the resolved --config path
+	// the run used (its own --config flag, default .plumber.yaml); it is
+	// always set and the file exists, since LoadPlumberConfig errors earlier
+	// otherwise.
+	data, err := json.MarshalIndent(buildSARIF(result.Findings, reportFilePath(configFile)), "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal sarif: %w", err)
 	}

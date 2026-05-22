@@ -1,4 +1,4 @@
-.PHONY: build clean test embed lint
+.PHONY: build clean test embed lint vuln
 
 # Binary name
 BINARY=plumber
@@ -27,6 +27,13 @@ test: embed
 # Lint (mirrors CI configuration — requires golangci-lint v2+)
 lint: embed
 	golangci-lint run ./...
+
+# Vulnerability scan. First run mirrors CI (reachability: what our code can
+# actually reach). Second run is module-level — matches OpenSSF Scorecard /
+# osv-scanner, catching vulnerable dependency versions even when unreachable.
+vuln: embed
+	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 -scan module
 
 # Clean build artifacts
 clean:

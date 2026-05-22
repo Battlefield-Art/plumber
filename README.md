@@ -400,6 +400,13 @@ That's it! Plumber will now run on every pipeline and report compliance issues.
 
 Add Plumber to your GitHub Actions workflow with a single step. The action (this repo's root `action.yml`) installs the verified release binary, runs the scan, **fails the job** below your threshold, uploads **SARIF** to Code Scanning (findings appear in the **Security** tab), and attaches the JSON report, PBOM, and CycloneDX SBOM as a workflow artifact.
 
+> **Prerequisite: commit a `.plumber.yaml` to your repo first.** The action scans against the controls defined there. If it's missing, the job fails with `config file not found` — there is no built-in fallback config. Create one before adding the workflow:
+> - **Have the Plumber CLI locally?** Run `plumber config generate` (writes the commented default config) or `plumber config init` (interactive wizard), then commit `.plumber.yaml`.
+> - **Don't have the CLI?** Download the default config and commit it:
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/getplumber/plumber/main/.plumber.yaml -o .plumber.yaml
+>   ```
+
 ```yaml
 name: Compliance
 on: [push, pull_request]
@@ -440,7 +447,7 @@ Scan a repo **without checking it out** (security-team audit) by setting `projec
 | `project` | *(checkout)* | `owner/repo` to scan remotely. Default: scan the checked-out repo. |
 | `github-url` | `github.com` | GitHub Enterprise Server host. |
 | `threshold` | `100` | Minimum compliance %% to pass. |
-| `config-file` | *(auto)* | Path to `.plumber.yaml`. Default: repo `.plumber.yaml`, else built-in defaults. |
+| `config-file` | *(auto)* | Path to `.plumber.yaml`. Default: repo `.plumber.yaml` (required — the job fails if absent; see the prerequisite above). |
 | `controls` / `skip-controls` | — | Run only / skip listed controls (comma-separated, mutually exclusive). |
 | `score` | `true` | Show the Plumber letter score + points. |
 | `fail-warnings` | `false` | Treat config warnings as errors. |

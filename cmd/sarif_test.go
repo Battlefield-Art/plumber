@@ -14,7 +14,7 @@ func TestBuildSARIF_ShapeAndSeverityMapping(t *testing.T) {
 		{Code: "ISSUE-501", Severity: "critical", Message: "branch not protected"}, // repo-level, no file
 	}
 
-	doc := buildSARIF(findings)
+	doc := buildSARIF(findings, ".plumber.yaml")
 
 	// Must serialize to valid JSON.
 	if _, err := json.Marshal(doc); err != nil {
@@ -52,13 +52,15 @@ func TestBuildSARIF_ShapeAndSeverityMapping(t *testing.T) {
 	}
 
 	// File/line location present and "./" stripped; region carries the line.
-	var withLoc, withoutLoc int
+	// Every result must carry at least one location (GitHub Code Scanning
+	// rejects location-less results); repo-level findings fall back to the
+	// config file with no region.
 	for _, r := range run.Results {
+		if len(r.Locations) == 0 {
+			t.Errorf("%s has no location; Code Scanning requires one", r.RuleID)
+		}
 		switch r.RuleID {
 		case "ISSUE-701":
-			if len(r.Locations) != 1 {
-				t.Fatalf("ISSUE-701 should have a location")
-			}
 			loc := r.Locations[0].PhysicalLocation
 			if loc.ArtifactLocation.URI != ".github/workflows/ci.yml" {
 				t.Errorf("uri = %q", loc.ArtifactLocation.URI)
@@ -66,21 +68,20 @@ func TestBuildSARIF_ShapeAndSeverityMapping(t *testing.T) {
 			if loc.Region == nil || loc.Region.StartLine != 28 {
 				t.Errorf("region = %+v, want startLine 28", loc.Region)
 			}
-			withLoc++
 		case "ISSUE-203":
 			if r.Locations[0].PhysicalLocation.ArtifactLocation.URI != ".github/workflows/ci.yml" {
 				t.Errorf("ISSUE-203 './' not stripped: %q", r.Locations[0].PhysicalLocation.ArtifactLocation.URI)
 			}
-			withLoc++
 		case "ISSUE-501":
-			if len(r.Locations) != 0 {
-				t.Errorf("ISSUE-501 (repo-level) should have no location")
+			// Repo-level: anchored to the fallback (config) file, no region.
+			loc := r.Locations[0].PhysicalLocation
+			if loc.ArtifactLocation.URI != ".plumber.yaml" {
+				t.Errorf("ISSUE-501 should fall back to .plumber.yaml, got %q", loc.ArtifactLocation.URI)
 			}
-			withoutLoc++
+			if loc.Region != nil {
+				t.Errorf("ISSUE-501 fallback location should have no region, got %+v", loc.Region)
+			}
 		}
-	}
-	if withLoc != 2 || withoutLoc != 1 {
-		t.Errorf("location counts: withLoc=%d withoutLoc=%d", withLoc, withoutLoc)
 	}
 
 	// Rules carry helpUri + security-severity from the codes registry.
@@ -100,14 +101,14 @@ func TestBuildSARIF_AllCodedFindingsBecomeResults(t *testing.T) {
 		{Code: "", Severity: "high", Message: "skipped"},
 		{Code: "ISSUE-203", Severity: "critical", Message: "b"},
 	}
-	doc := buildSARIF(findings)
+	doc := buildSARIF(findings, ".plumber.yaml")
 	if len(doc.Runs[0].Results) != 2 {
 		t.Fatalf("results = %d, want 2 (empty code omitted)", len(doc.Runs[0].Results))
 	}
 }
 
 func TestBuildSARIF_CleanRunIsValidEmpty(t *testing.T) {
-	doc := buildSARIF(nil)
+	doc := buildSARIF(nil, ".plumber.yaml")
 	if doc.Version != "2.1.0" || len(doc.Runs) != 1 {
 		t.Fatalf("clean SARIF malformed: %+v", doc)
 	}

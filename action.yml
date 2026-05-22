@@ -26,7 +26,7 @@ inputs:
     description: "Minimum compliance percentage to pass (0-100)."
     default: "100"
   config-file:
-    description: "Path to a .plumber.yaml config. Default: auto-detect in the repo, else built-in defaults."
+    description: "Path to a .plumber.yaml config. Default: the repo's .plumber.yaml (required — the run fails if absent; generate one with 'plumber config generate')."
     default: ""
   controls:
     description: "Run only these controls (comma-separated). Mutually exclusive with skip-controls."
