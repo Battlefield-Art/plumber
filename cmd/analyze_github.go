@@ -27,7 +27,7 @@ import (
 // Returns an error (exit code 1) when at least one finding is reported,
 // so the command can gate CI pipelines without any threshold flag.
 func runGitHubAnalyze(cmd *cobra.Command, info *utils.GitRemoteInfo, controlsFilterList, skipControlsList []string) error {
-	fmt.Fprintf(os.Stderr, "Auto-detected GitHub project: %s\n", info.ProjectPath)
+	fmt.Fprintf(os.Stderr, "GitHub project: %s (local clone)\n", info.ProjectPath)
 
 	plumberConfig, configPath, configWarnings, err := configuration.LoadPlumberConfig(configFile)
 	if err != nil {
@@ -58,14 +58,25 @@ func runGitHubAnalyze(cmd *cobra.Command, info *utils.GitRemoteInfo, controlsFil
 	conf.PlumberConfig = plumberConfig
 	conf.ControlsFilter = controlsFilterList
 	conf.SkipControlsFilter = skipControlsList
-	// Optional GHES override. Empty = default api.github.com.
-	conf.GithubAPIHost = strings.TrimPrefix(strings.TrimPrefix(githubURL, "https://"), "http://")
+	// API host for the settings/metadata controls. Precedence:
+	//   1. --github-url, if the user passed it explicitly;
+	//   2. otherwise the git remote host, when it is not github.com — this
+	//      is a GitHub Enterprise Server clone, so target its API directly
+	//      (mirrors how the GitLab path auto-uses the remote URL). go-gh
+	//      resolves the matching token (GH_ENTERPRISE_TOKEN / gh auth login
+	//      for that host);
+	//   3. empty -> api.github.com.
+	apiHost := strings.TrimPrefix(strings.TrimPrefix(githubURL, "https://"), "http://")
+	if apiHost == "" && info.Host != "" && !strings.EqualFold(info.Host, "github.com") {
+		apiHost = info.Host
+	}
+	conf.GithubAPIHost = apiHost
 	if verbose {
 		conf.LogLevel = logrus.DebugLevel
 	}
 
 	fmt.Fprintf(os.Stderr, "Scanning workflows under: %s\n", info.RepoRoot)
-	printGitHubAuthBanner(false)
+	printGitHubAuthBanner(apiHost, false)
 
 	// Progress spinner — mirrors the GitLab path. Only installed
 	// when we are printing to stdout and not running verbose (the
@@ -128,7 +139,7 @@ func runGitHubAnalyzeRemote(cmd *cobra.Command, host, project, ref string, contr
 	} else {
 		fmt.Fprintf(os.Stderr, "Analyzing GitHub project: %s/%s on %s (remote fetch)\n", owner, repo, apiHost)
 	}
-	printGitHubAuthBanner(true)
+	printGitHubAuthBanner(apiHost, true)
 
 	conf := configuration.NewDefaultConfiguration()
 	conf.ProjectPath = owner + "/" + repo
@@ -176,8 +187,8 @@ func runGitHubAnalyzeRemote(cmd *cobra.Command, host, project, ref string, contr
 // upstreamFetch=true means the run will fail outright if no auth is
 // resolvable (ErrAuthRequired path). For local-clone runs, "no auth"
 // is a degraded mode rather than a hard error, and the banner says so.
-func printGitHubAuthBanner(upstreamFetch bool) {
-	source := detectGitHubAuthSource()
+func printGitHubAuthBanner(apiHost string, upstreamFetch bool) {
+	source := detectGitHubAuthSource(apiHost)
 	switch source {
 	case "":
 		if upstreamFetch {
@@ -198,7 +209,12 @@ func printGitHubAuthBanner(upstreamFetch bool) {
 // would use, mirroring its resolution chain. Returns "" when no
 // source is configured. Uses go-gh's auth package so the answer
 // matches what the REST client actually picks up at request time.
-func detectGitHubAuthSource() string {
+//
+// apiHost is the host the run will talk to (a GHES host, or "" /
+// github.com for the SaaS default). The gh-CLI credential lookup is
+// per-host, so a GHES clone authenticated only via `gh auth login` to
+// its own host is correctly reported instead of falsely "degraded".
+func detectGitHubAuthSource(apiHost string) string {
 	if v := os.Getenv("GH_TOKEN"); v != "" {
 		return "GH_TOKEN"
 	}
@@ -208,10 +224,14 @@ func detectGitHubAuthSource() string {
 	if v := os.Getenv("GH_ENTERPRISE_TOKEN"); v != "" {
 		return "GH_ENTERPRISE_TOKEN"
 	}
-	// Fall back to gh CLI's stored credential. auth.TokenForHost
-	// returns ("", "") when none is configured, so we get an
-	// honest "" instead of pretending gh exists when it doesn't.
-	if token, _ := ghauth.TokenForHost("github.com"); token != "" {
+	// Fall back to gh CLI's stored credential for the host we will hit.
+	// auth.TokenForHost returns ("", "") when none is configured, so we
+	// get an honest "" instead of pretending gh exists when it doesn't.
+	host := apiHost
+	if host == "" {
+		host = "github.com"
+	}
+	if token, _ := ghauth.TokenForHost(host); token != "" {
 		return "gh"
 	}
 	return ""
@@ -447,16 +467,14 @@ func printGitHubFindings(result *control.AnalysisResult, conf *configuration.Con
 	pc := conf.PlumberConfig
 	fmt.Printf("\n%s %s\n\n", styleTitle.Render("Project:"), result.ProjectPath)
 
-	// "No workflows" is informational, not a hard short-circuit:
-	// API-driven controls (branchMustBeProtected today, more later)
-	// can still fire findings on a repo with zero workflow files.
-	// Render the per-control sections + tables when any finding
-	// exists; only bail entirely when we have nothing at all to say.
+	// "No workflows" is informational, not a short-circuit. API-driven
+	// controls (branchMustBeProtected today, more later) are evaluated
+	// regardless of whether any workflow files exist, so the per-control
+	// sections + compliance table must still render — otherwise a repo
+	// whose repository-settings controls all *pass* (no findings) would
+	// show only this note and look as if nothing was analyzed.
 	if !result.CiValid {
 		fmt.Printf("  %s\n", styleDim.Render("No GitHub Actions workflows discovered."))
-		if len(result.Findings) == 0 {
-			return
-		}
 	}
 
 	// Same shape as GitLab: build an ordered list of (catalog entry,

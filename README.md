@@ -43,7 +43,7 @@ Plumber is a compliance scanner for CI/CD. It supports two providers:
 - **GitLab CI** — reads `.gitlab-ci.yml` (and resolved includes) plus repository settings via the GitLab API.
 - **GitHub Actions** — reads `.github/workflows/*.{yml,yaml}` either from a local clone (offline-first) or via the GitHub API in `--github-url` mode (no clone required).
 
-Both providers share **one** Rego policy engine and a **single** `.plumber.yaml` config (per-provider sections). Provider is auto-detected from your git `origin`; pass `--gitlab-url` / `--github-url` to override.
+Both providers share **one** Rego policy engine and a **single** `.plumber.yaml` config (per-provider sections). Provider is auto-detected from your git `origin`: `github.com`/`gitlab.com` by host, and any other (corporate) host by looking for a `.github/workflows/` directory (a GitHub-mandated path) — present means GitHub, otherwise GitLab. Plumber prints which provider it picked and why on startup. To override, pass `--provider github|gitlab` (forces the provider, host still auto-detected), or `--gitlab-url` / `--github-url` (also pins a specific host/remote).
 
 Plumber ships **14 GitLab CI controls** and **14 GitHub Actions controls**. See the [GitLab CI controls](#gitlab-ci-controls) and [GitHub Actions controls](#github-actions-controls) sections for the full list of what each flags and how to configure it.
 
@@ -53,7 +53,7 @@ Plumber ships **14 GitLab CI controls** and **14 GitHub Actions controls**. See 
 - `GITLAB_TOKEN` is required for any GitLab analysis.
 - GitHub analysis is **soft-degrade in local-clone mode** (workflow-content controls run without a token; repo-level controls silently abstain) and **token-required in upstream-fetch mode** (`--github-url`). See [Step 3: Authenticate](#step-3-authenticate) for scope guidance.
 
-To analyze GitLab from a GitHub clone (or vice versa), pass the explicit URL flag (`--gitlab-url …` or `--github-url …`) — that forces the analyzer regardless of `origin`.
+To analyze GitLab from a GitHub clone (or vice versa), force the provider with `--provider github|gitlab` (host auto-detected) or pass the explicit URL flag (`--gitlab-url …` / `--github-url …`, which also pins the host) — either forces the analyzer regardless of `origin`. `--provider` and the *opposite* provider's URL flag conflict (e.g. `--provider github --gitlab-url`) and error.
 
 <p align="center">
   <img src="assets/component.gif" alt="Plumber Demo" width="700">
@@ -248,10 +248,14 @@ In this mode Plumber lists `.github/workflows/` via the GitHub Contents API and 
 #### GitHub Enterprise Server
 
 ```bash
-export GH_ENTERPRISE_TOKEN=ghp_…
-plumber analyze --github-url ghes.example.com --project owner/repo  # remote fetch on GHES
-plumber analyze --github-url ghes.example.com                       # GHES API host for a local-clone scan
+export GH_ENTERPRISE_TOKEN=ghp_…   # or: gh auth login --hostname ghes.example.com
+plumber analyze                                                    # local clone: auto-detected, API host taken from the git remote
+plumber analyze --provider github                                  # local clone: force GitHub when there are no workflows on disk yet (host still from the remote)
+plumber analyze --github-url ghes.example.com                      # local clone: force GitHub + pin the GHES API host explicitly
+plumber analyze --github-url ghes.example.com --project owner/repo # remote fetch on GHES
 ```
+
+In a GHES **local clone**, Plumber classifies the repo as GitHub via the `.github/workflows/` directory (GitHub mandates that path, so it is a reliable signal even though a GHES host name is otherwise indistinguishable from self-hosted GitLab) and uses the git remote host as the API host — so the flagless form just works, mirroring how self-hosted GitLab is auto-detected. When the repo has **no** workflows on disk (e.g. you only want the repository-settings controls), the marker is absent, so force it with `--provider github` (host still taken from the remote) or `--github-url` (which also pins the host).
 
 `--github-url` accepts a bare host (`ghes.example.com`) or a full API path (`ghes.example.com/api/v3`). `--gitlab-url` and `--github-url` are mutually exclusive — pass exactly one to select the provider explicitly.
 

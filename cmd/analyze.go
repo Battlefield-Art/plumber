@@ -25,6 +25,7 @@ var (
 	// Flags for analyze command
 	gitlabURL         string
 	githubURL         string
+	providerFlag      string
 	projectPath       string
 	defaultBranch     string
 	outputFile        string
@@ -120,6 +121,13 @@ func init() {
 	// self-hosted instance. Auth via GH_TOKEN / GH_ENTERPRISE_TOKEN.
 	analyzeCmd.Flags().StringVar(&githubURL, "github-url", "", "GitHub Enterprise Server API host (empty = api.github.com)")
 
+	// Provider override. Forces GitHub or GitLab without pinning a host —
+	// the host is still auto-detected from the git remote (or defaults to
+	// the SaaS host). Use it when auto-detection cannot tell a corporate
+	// GitHub Enterprise Server host apart from self-hosted GitLab. For
+	// pinning a specific host/remote, use --github-url / --gitlab-url.
+	analyzeCmd.Flags().StringVar(&providerFlag, "provider", "", "Force provider: 'github' or 'gitlab' (overrides auto-detection; host still auto-detected)")
+
 	// Optional flags with defaults
 	analyzeCmd.Flags().StringVar(&configFile, "config", ".plumber.yaml", "Path to .plumber.yaml config file")
 	analyzeCmd.Flags().Float64Var(&threshold, "threshold", 100, "Minimum compliance percentage to pass, 0-100")
@@ -138,6 +146,40 @@ func init() {
 	analyzeCmd.Flags().StringVar(&skipControls, "skip-controls", "", "Skip listed controls (comma-separated)")
 	analyzeCmd.Flags().BoolVar(&failWarnings, "fail-warnings", false, "Treat configuration warnings as errors (exit 2)")
 	analyzeCmd.Flags().StringVar(&ciConfigPath, "ci-config-path", "", "Override the CI configuration file path (default: auto-detected from GitLab project settings, usually .gitlab-ci.yml)")
+}
+
+// resolveProvider applies the provider-selection precedence and returns the
+// chosen provider ("github"/"gitlab") plus a short, user-facing reason for
+// the detection banner. Returns ("", "") when neither a flag nor a git remote
+// can determine it (not in a repo, no provider flag).
+func resolveProvider(provider string, gitlabURLFromFlag, githubURLFromFlag bool, remoteInfo *utils.GitRemoteInfo) (string, string) {
+	switch {
+	case githubURLFromFlag:
+		return "github", "set by --github-url"
+	case gitlabURLFromFlag:
+		return "gitlab", "set by --gitlab-url"
+	case provider == "github":
+		return "github", "set by --provider github"
+	case provider == "gitlab":
+		return "gitlab", "set by --provider gitlab"
+	case remoteInfo != nil:
+		return remoteInfo.Provider, remoteInfo.ProviderReason
+	default:
+		return "", ""
+	}
+}
+
+// printProviderDetection tells the user which provider was selected and why,
+// then always shows how to change it — so a wrong guess (e.g. a GitHub
+// Enterprise Server host mistaken for self-hosted GitLab) is both visible and
+// trivially correctable.
+func printProviderDetection(provider, reason string) {
+	name := "GitLab"
+	if provider == "github" {
+		name = "GitHub"
+	}
+	fmt.Fprintf(os.Stderr, "Provider: %s (%s)\n", name, reason)
+	fmt.Fprintf(os.Stderr, "  To change: --provider github|gitlab, or --github-url <host> / --gitlab-url <url> to also target a specific host/remote.\n")
 }
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
@@ -160,6 +202,22 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--gitlab-url and --github-url are mutually exclusive; pass one to select the provider explicitly")
 	}
 
+	// --provider forces the provider without pinning a host. Validate the
+	// value and reject combinations that contradict an explicit host flag
+	// (a same-provider host flag is allowed — it just additionally pins the
+	// host).
+	switch providerFlag {
+	case "", "github", "gitlab":
+	default:
+		return fmt.Errorf("--provider must be 'github' or 'gitlab' (got %q)", providerFlag)
+	}
+	if providerFlag == "gitlab" && githubURLFromFlag {
+		return fmt.Errorf("--provider gitlab conflicts with --github-url; use --gitlab-url to pin a GitLab host")
+	}
+	if providerFlag == "github" && gitlabURLFromFlag {
+		return fmt.Errorf("--provider github conflicts with --gitlab-url; use --github-url to pin a GitHub host")
+	}
+
 	// Validate + parse --controls / --skip-controls before any provider
 	// dispatch — both providers honour the filter, so the lists must
 	// be available no matter which path runs. (Previously these were
@@ -177,60 +235,63 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Explicit GitHub remote-fetch: when both --github-url and
-	// --project are set, the user wants to scan an upstream GitHub
-	// project they have not checked out locally. Symmetric to
-	// --gitlab-url + --project on the GitLab side. --github-url
-	// alone (no project) keeps its existing meaning: GHES API host
-	// for the local-clone scan.
-	if githubURLFromFlag && projectFromFlag {
-		ref := ""
-		if branchFromFlag {
-			ref = defaultBranch
+	// Detect the git remote once. It feeds provider auto-detection, host
+	// resolution, and local CI-file matching.
+	remoteInfo := utils.DetectGitRemote()
+
+	// Resolve which provider to run, applying precedence:
+	//   1. --github-url / --gitlab-url  (pins the provider AND the host)
+	//   2. --provider                   (pins the provider; host auto-detected)
+	//   3. auto-detection from the git remote (host name + .github/workflows)
+	provider, reason := resolveProvider(providerFlag, gitlabURLFromFlag, githubURLFromFlag, remoteInfo)
+	if provider == "" {
+		return fmt.Errorf("could not determine the provider: not in a git repository and no provider flag set. " +
+			"Pass --provider github|gitlab, or --github-url <host> / --gitlab-url <url> to target a specific instance")
+	}
+	printProviderDetection(provider, reason)
+
+	// GitHub: remote-fetch when --project names an upstream repo, else scan
+	// the local clone.
+	if provider == "github" {
+		if projectFromFlag {
+			ref := ""
+			if branchFromFlag {
+				ref = defaultBranch
+			}
+			return runGitHubAnalyzeRemote(cmd, githubURL, projectPath, ref, controlsFilterList, skipControlsList)
 		}
-		return runGitHubAnalyzeRemote(cmd, githubURL, projectPath, ref, controlsFilterList, skipControlsList)
+		if remoteInfo == nil {
+			return fmt.Errorf("GitHub local scan needs a git repository (run inside a clone), or pass --project owner/repo for a remote scan")
+		}
+		return runGitHubAnalyze(cmd, remoteInfo, controlsFilterList, skipControlsList)
 	}
 
+	// GitLab path. Resolve host + project from flags, falling back to the git
+	// remote, then to the SaaS default when --provider gitlab is used outside
+	// a clone.
 	var gitRepoRoot string
 	var gitRemoteURL string
 	var gitRemoteProjectPath string
-
-	if remoteInfo := utils.DetectGitRemote(); remoteInfo != nil {
+	if remoteInfo != nil {
 		gitRepoRoot = remoteInfo.RepoRoot
 		gitRemoteURL = remoteInfo.URL
 		gitRemoteProjectPath = remoteInfo.ProjectPath
-
-		// Multi-provider dispatch: GitHub projects take the Rego-only,
-		// local-file path. GitLab (and self-hosted) continue to use the
-		// full legacy analyzer below.
-		//
-		// Explicit --gitlab-url / --project flags always win over
-		// auto-detection: a user inside a GitHub clone may legitimately
-		// want to analyse a GitLab project they passed by hand
-		// (cross-checks, demos, scripted regression runs). Only
-		// dispatch to the GitHub path when the caller did not override.
-		if remoteInfo.Provider == "github" && !gitlabURLFromFlag && !projectFromFlag {
-			return runGitHubAnalyze(cmd, remoteInfo, controlsFilterList, skipControlsList)
-		}
-
-		if !gitlabURLFromFlag {
+	}
+	if !gitlabURLFromFlag {
+		if remoteInfo != nil {
 			gitlabURL = remoteInfo.URL
-			fmt.Fprintf(os.Stderr, "Auto-detected GitLab URL: %s\n", gitlabURL)
+		} else {
+			gitlabURL = "https://gitlab.com"
 		}
-		if !projectFromFlag {
-			projectPath = remoteInfo.ProjectPath
-			fmt.Fprintf(os.Stderr, "Auto-detected project: %s\n", projectPath)
-		}
+		fmt.Fprintf(os.Stderr, "GitLab URL: %s\n", gitlabURL)
+	}
+	if !projectFromFlag && remoteInfo != nil {
+		projectPath = remoteInfo.ProjectPath
+		fmt.Fprintf(os.Stderr, "Project: %s\n", projectPath)
 	}
 
-	// Validate required values (either from flags or auto-detected).
-	// At this point either --gitlab-url has been set / auto-detected,
-	// or the GitHub-remote-fetch path above has already returned. So
-	// reaching here without a gitlab URL means neither auto-detection
-	// nor an explicit flag landed — surface both providers in the
-	// error so the user knows the symmetric option exists.
 	if gitlabURL == "" {
-		return fmt.Errorf("could not auto-detect provider from git remote — pass --gitlab-url + --project (GitLab) or --github-url + --project (GitHub)")
+		return fmt.Errorf("GitLab URL is required: pass --gitlab-url <url> or run inside a git clone so it can be auto-detected")
 	}
 	if projectPath == "" {
 		return fmt.Errorf("--project is required (could not auto-detect from git remote)")
@@ -252,7 +313,14 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	// Get token from environment variable (required)
 	gitlabToken := os.Getenv("GITLAB_TOKEN")
 	if gitlabToken == "" {
-		return fmt.Errorf("GITLAB_TOKEN environment variable is required")
+		// Only nudge toward GitHub when GitLab was *auto-detected* — if the
+		// user picked GitLab explicitly, the GHES hint is just noise.
+		if providerFlag == "" && !gitlabURLFromFlag {
+			host := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSuffix(gitlabURL, "/"), "https://"), "http://")
+			return fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis. "+
+				"If %s is actually a GitHub Enterprise Server instance, scan it as GitHub instead with: plumber analyze --provider github (or --github-url %s)", host, host)
+		}
+		return fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis")
 	}
 
 	// Clean up URL

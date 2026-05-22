@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -170,6 +172,60 @@ func TestParseGitRemoteURL(t *testing.T) {
 
 			if result.URL != tt.wantURL {
 				t.Errorf("ParseGitRemoteURL(%q).URL = %q, want %q", tt.remoteURL, result.URL, tt.wantURL)
+			}
+		})
+	}
+}
+
+func TestDetectProvider(t *testing.T) {
+	// Build a repo root that contains a GitHub Actions workflow file, so the
+	// .github/workflows positive signal is exercised against the real FS.
+	withWorkflows := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(withWorkflows, ".github", "workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(withWorkflows, ".github", "workflows", "ci.yml"), []byte("name: ci\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// A repo with the directory but no workflow file is NOT a GitHub signal.
+	emptyWorkflowsDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(emptyWorkflowsDir, ".github", "workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	noWorkflows := t.TempDir() // plain repo, no .github/workflows
+
+	tests := []struct {
+		name     string
+		host     string
+		repoRoot string
+		want     string
+	}{
+		// github.com is always GitHub, regardless of contents.
+		{"github.com no workflows", "github.com", noWorkflows, "github"},
+		{"github.com case-insensitive", "GitHub.com", noWorkflows, "github"},
+		// GHES: corporate host disambiguated by the workflows marker.
+		{"GHES host with workflows", "github.corp.example.com", withWorkflows, "github"},
+		// Self-hosted GitLab: corporate host, no GitHub marker -> default GitLab.
+		{"self-hosted gitlab no workflows", "gitlab.corp.example.com", noWorkflows, "gitlab"},
+		{"corp host empty workflows dir", "git.corp.example.com", emptyWorkflowsDir, "gitlab"},
+		// gitlab.com stays GitLab even if a stray workflows dir exists
+		// (only matters for the corporate-host ambiguity; SaaS hosts are
+		// matched by name first for github.com, default otherwise).
+		{"gitlab.com with workflows stays gitlab", "gitlab.com", withWorkflows, "gitlab"},
+		// No repo root available (detection ran before tree was known):
+		// fall back to host-only behaviour.
+		{"GHES host no repo root", "github.corp.example.com", "", "gitlab"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, reason := detectProvider(tt.host, tt.repoRoot)
+			if got != tt.want {
+				t.Errorf("detectProvider(%q, repoRoot) = %q, want %q", tt.host, got, tt.want)
+			}
+			if reason == "" {
+				t.Errorf("detectProvider(%q, repoRoot) returned empty reason", tt.host)
 			}
 		})
 	}

@@ -165,8 +165,14 @@ runs:
         set -uo pipefail
         args=(analyze --threshold "$IN_THRESHOLD")
         if [ -n "$IN_PROJECT" ]; then
+          # Remote-fetch: scan an upstream repo via the API (no checkout).
           gh_url="${IN_GITHUB_URL:-github.com}"
           args+=(--github-url "$gh_url" --project "$IN_PROJECT")
+        elif [ -n "$IN_GITHUB_URL" ]; then
+          # Local-clone scan against a GitHub Enterprise Server host: forward
+          # --github-url so the run targets the GHES API (and is classified as
+          # GitHub even when the host is otherwise indistinguishable).
+          args+=(--github-url "$IN_GITHUB_URL")
         fi
         [ -n "$IN_CONFIG" ]         && args+=(--config "$IN_CONFIG")
         [ -n "$IN_CONTROLS" ]       && args+=(--controls "$IN_CONTROLS")

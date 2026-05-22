@@ -430,5 +430,5 @@ jobs:
           git config user.name "plumber-release-bot[bot]"
           git config user.email "plumber-release-bot[bot]@users.noreply.github.com"
           git add README.md templates/plumber.yml
-          git commit -m "chore(release): pin v${VERSION} refs [skip ci]"
+          git commit -m "ci(release): pin v${VERSION} refs [skip ci]"
           git push origin HEAD:main
