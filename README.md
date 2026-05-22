@@ -409,7 +409,10 @@ Add Plumber to your GitHub Actions workflow with a single step. The action (this
 
 ```yaml
 name: Compliance
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]   # scope to the default branch so a PR push isn't scanned twice
+  pull_request: null
 
 permissions:
   contents: read
@@ -419,13 +422,13 @@ jobs:
   plumber:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: getplumber/plumber@bc2c753bca0846ab98d111bbe541c334d679627a   # v0.3.15
         with:
           threshold: 80
 ```
 
-> **Pin by commit SHA, not a tag.** Plumber's `actionsMustBePinnedByCommitSha` control flags tag-pinned third-party actions (a tag is mutable; a SHA is not), so pin ours by SHA and keep the version in the trailing comment. Grab the SHA from the [release page](https://github.com/getplumber/plumber/releases), or let Dependabot/Renovate keep it current. (`actions/checkout@v4` is exempt only because `actions` is a default trusted owner.)
+> **Pin by commit SHA, not a tag.** Plumber's `actionsMustBePinnedByCommitSha` control flags tag-pinned third-party actions (a tag is mutable; a SHA is not), so pin ours by SHA and keep the version in the trailing comment. Grab the SHA from the [release page](https://github.com/getplumber/plumber/releases), or let Dependabot/Renovate keep it current. (`actions/checkout@v6` is exempt only because `actions` is a default trusted owner.)
 
 Scan a repo **without checking it out** (security-team audit) by setting `project`:
 
