@@ -1,3 +1,10 @@
+## [0.3.18](https://github.com/getplumber/plumber/compare/v0.3.17...v0.3.18) (2026-05-25)
+
+
+### ✨ Features
+
+* **action:** Update action documentation ([ce01848](https://github.com/getplumber/plumber/commit/ce0184848f0632fd927c8db780413b6dd0e76611))
+
 ## [0.3.17](https://github.com/getplumber/plumber/compare/v0.3.16...v0.3.17) (2026-05-22)
 
 
