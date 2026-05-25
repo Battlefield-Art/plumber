@@ -1,5 +1,5 @@
-name: "Plumber CI/CD Compliance Scan"
-description: "Scan GitHub Actions workflows and repository settings for CI/CD compliance and supply-chain risks. Fails the job below a compliance threshold and uploads SARIF, PBOM and CycloneDX."
+name: "Plumber"
+description: "CI/CD compliance scanner for GitHub Actions workflows and repository settings. Uploads SARIF to Code Scanning."
 author: "Plumber (getplumber.io)"
 
 branding:
