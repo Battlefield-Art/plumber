@@ -1,3 +1,10 @@
+## [0.3.23](https://github.com/getplumber/plumber/compare/v0.3.22...v0.3.23) (2026-05-25)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** scope template-injection to free-text github fields ([fcfbc05](https://github.com/getplumber/plumber/commit/fcfbc0585154369e1393716f7f930ef01618b5bd)), closes [#191](https://github.com/getplumber/plumber/issues/191)
+
 ## [0.3.22](https://github.com/getplumber/plumber/compare/v0.3.21...v0.3.22) (2026-05-25)
 
 
