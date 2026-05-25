@@ -1,3 +1,10 @@
+## [0.3.22](https://github.com/getplumber/plumber/compare/v0.3.21...v0.3.22) (2026-05-25)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** resolve SHA-pinned action refs in advisory filter ([43484a1](https://github.com/getplumber/plumber/commit/43484a160c718048e744908b80e7af7ec8042f9f)), closes [#179](https://github.com/getplumber/plumber/issues/179)
+
 ## [0.3.21](https://github.com/getplumber/plumber/compare/v0.3.20...v0.3.21) (2026-05-25)
 
 
