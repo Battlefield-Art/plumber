@@ -1,4 +1,4 @@
-name: "Plumber"
+name: "Plumber Compliance Scanner"
 description: "CI/CD compliance scanner for GitHub Actions workflows and repository settings. Uploads SARIF to Code Scanning."
 author: "Plumber (getplumber.io)"
 
