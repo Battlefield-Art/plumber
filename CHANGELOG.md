@@ -1,3 +1,10 @@
+## [0.3.25](https://github.com/getplumber/plumber/compare/v0.3.24...v0.3.25) (2026-05-25)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** treat moving major tags as a version span in advisory filter ([148bab8](https://github.com/getplumber/plumber/commit/148bab81f5691c6dc901de7718a82a9a29c0ecf6)), closes [#180](https://github.com/getplumber/plumber/issues/180) [#195](https://github.com/getplumber/plumber/issues/195)
+
 ## [0.3.24](https://github.com/getplumber/plumber/compare/v0.3.23...v0.3.24) (2026-05-25)
 
 
