@@ -1,3 +1,10 @@
+## [0.3.24](https://github.com/getplumber/plumber/compare/v0.3.23...v0.3.24) (2026-05-25)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** scope dangerous-triggers to exploitable cases ([af25ee0](https://github.com/getplumber/plumber/commit/af25ee0f1f339a2029bc0bfb385daecc4f83ee61)), closes [#192](https://github.com/getplumber/plumber/issues/192)
+
 ## [0.3.23](https://github.com/getplumber/plumber/compare/v0.3.22...v0.3.23) (2026-05-25)
 
 
