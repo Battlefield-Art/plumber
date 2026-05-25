@@ -1,3 +1,10 @@
+## [0.3.19](https://github.com/getplumber/plumber/compare/v0.3.18...v0.3.19) (2026-05-25)
+
+
+### ✨ Features
+
+* **action:** Update action documentation to stop conflict with existing name ([4401339](https://github.com/getplumber/plumber/commit/4401339a6e13a512de835a8bc9d8ef4355f732d0))
+
 ## [0.3.18](https://github.com/getplumber/plumber/compare/v0.3.17...v0.3.18) (2026-05-25)
 
 
