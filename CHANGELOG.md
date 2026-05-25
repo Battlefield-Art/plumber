@@ -1,3 +1,10 @@
+## [0.3.20](https://github.com/getplumber/plumber/compare/v0.3.19...v0.3.20) (2026-05-25)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Fix gitlab sast description ([c572607](https://github.com/getplumber/plumber/commit/c572607603f7fa372adb56af879cae7623037c09))
+
 ## [0.3.19](https://github.com/getplumber/plumber/compare/v0.3.18...v0.3.19) (2026-05-25)
 
 
