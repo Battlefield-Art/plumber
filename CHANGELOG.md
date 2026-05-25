@@ -1,3 +1,10 @@
+## [0.3.21](https://github.com/getplumber/plumber/compare/v0.3.20...v0.3.21) (2026-05-25)
+
+
+### ✨ Features
+
+* **init:** Interactive configuration generation when no config file ([5dd70c9](https://github.com/getplumber/plumber/commit/5dd70c91b1ec91e0c5471fa603a7fe0274446b49))
+
 ## [0.3.20](https://github.com/getplumber/plumber/compare/v0.3.19...v0.3.20) (2026-05-25)
 
 
