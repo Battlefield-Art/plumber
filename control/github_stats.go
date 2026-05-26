@@ -160,6 +160,25 @@ func AggregateGitHubStats(pipeline *ir.NormalizedPipeline, pc *configuration.Plu
 			}
 		}
 
+		// Job-level reusable workflow calls (`jobs.<id>.uses: ...@ref`)
+		// are subject to the same pin-by-SHA rule as step-level action
+		// refs — the action_unpinned rego rule fires a separate `deny`
+		// block on them. Mirror that here so actionRefsTotal /
+		// actionRefsUnpinned / actionRefsExempt stay aligned with the
+		// number of ISSUE-701 findings (previously this counter only
+		// looked at steps[].uses, which produced reports showing
+		// "0 unpinned" alongside ten unpinned reusable workflows).
+		if ref := job.ReusableWorkflowUses; ref != "" {
+			if ownerOf(ref) != "" && isTrustedOwner(ref, trustedOwners) {
+				stats.ActionRefsExempt++
+			} else {
+				stats.ActionRefsTotal++
+				if !isShaPinned(ref) {
+					stats.ActionRefsUnpinned++
+				}
+			}
+		}
+
 		// Script lines for template-injection denominator.
 		stats.ScriptLinesTotal += len(job.Scripts)
 	}
