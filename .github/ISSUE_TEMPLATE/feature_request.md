@@ -53,8 +53,8 @@ That checklist is copy-pasteable into Claude Code / Cursor / Copilot
 so the implementer (or their LLM) can tick boxes step by step.
 
 Detection logic for every new control lives in a Rego rule under
-`policies/*.rego`. The `control/controlGitlab*.go` Go-pattern layer is
-frozen — DO NOT propose new controls there.
+`policies/*.rego`. The `control/` package is bookkeeping only; the
+pre-Rego Go-function pattern has been fully phased out.
 
 Consider covering (briefly):
 1. Data source: which IR field would the rule read? If the data isn't
