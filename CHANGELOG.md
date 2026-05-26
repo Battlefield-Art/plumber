@@ -1,3 +1,11 @@
+## [0.3.26](https://github.com/getplumber/plumber/compare/v0.3.25...v0.3.26) (2026-05-26)
+
+
+### ✨ Features
+
+* **controls:** Implement pipelineMustNotExecuteUnverifiedScripts for github and cover a wider range such as the megalodon attack ([efcb8a7](https://github.com/getplumber/plumber/commit/efcb8a73c8b9c7931db5fe30403d50b56109371d))
+* **reporting:** clickable source links in every output ([3b10260](https://github.com/getplumber/plumber/commit/3b102603282d20dbf93348d93ffd83b07f7c8327))
+
 ## [0.3.25](https://github.com/getplumber/plumber/compare/v0.3.24...v0.3.25) (2026-05-25)
 
 
