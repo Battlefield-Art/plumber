@@ -1,3 +1,10 @@
+## [0.3.27](https://github.com/getplumber/plumber/compare/v0.3.26...v0.3.27) (2026-05-26)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Fix bug in counting unpinned ([6401984](https://github.com/getplumber/plumber/commit/640198467b6c8f53d67cb9d173829eefa91d63dc))
+
 ## [0.3.26](https://github.com/getplumber/plumber/compare/v0.3.25...v0.3.26) (2026-05-26)
 
 
