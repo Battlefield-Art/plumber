@@ -1,3 +1,10 @@
+## [0.3.29](https://github.com/getplumber/plumber/compare/v0.3.28...v0.3.29) (2026-06-01)
+
+
+### 🐛 Bug Fixes
+
+* **collector:** fold Docker Hub registry-host aliases to docker.io ([9df2679](https://github.com/getplumber/plumber/commit/9df26799f81349dfdce00dc5582f98b6063e2b87))
+
 ## [0.3.28](https://github.com/getplumber/plumber/compare/v0.3.27...v0.3.28) (2026-06-01)
 
 
