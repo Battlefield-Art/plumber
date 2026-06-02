@@ -1,3 +1,15 @@
+## [0.3.33](https://github.com/getplumber/plumber/compare/v0.3.32...v0.3.33) (2026-06-02)
+
+
+### ✨ Features
+
+* **controls:** ship pull-request-target-with-head-checkout (ISSUE-804) ([54e1162](https://github.com/getplumber/plumber/commit/54e11626c4bf5240d67ed4ef91a22629076ec016)), closes [#181](https://github.com/getplumber/plumber/issues/181)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** Prevent duplicaiton with existing 802 issue for workflow ([a4a19a1](https://github.com/getplumber/plumber/commit/a4a19a1a3ff319999d7ae258f57fc35f73ff1c0f))
+
 ## [0.3.32](https://github.com/getplumber/plumber/compare/v0.3.31...v0.3.32) (2026-06-02)
 
 ## [0.3.31](https://github.com/getplumber/plumber/compare/v0.3.30...v0.3.31) (2026-06-02)
