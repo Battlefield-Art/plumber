@@ -1,3 +1,10 @@
+## [0.3.37](https://github.com/getplumber/plumber/compare/v0.3.36...v0.3.37) (2026-06-02)
+
+
+### ✨ Features
+
+* **docs:** Simplify doc ([48859f1](https://github.com/getplumber/plumber/commit/48859f19afe18a4c24ecca9197945750b1d769a4))
+
 ## [0.3.36](https://github.com/getplumber/plumber/compare/v0.3.35...v0.3.36) (2026-06-02)
 
 ## [0.3.35](https://github.com/getplumber/plumber/compare/v0.3.34...v0.3.35) (2026-06-02)

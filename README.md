@@ -134,7 +134,7 @@ Add Plumber to `.gitlab-ci.yml`:
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@0.3.36
+  - component: gitlab.com/getplumber/plumber/plumber@0.3.37
 ```
 
 Then add `GITLAB_TOKEN` in **Settings -> CI/CD -> Variables**.
