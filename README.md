@@ -53,9 +53,11 @@ Run your first scan before reading the full docs.
 brew tap getplumber/plumber
 brew install plumber
 
-plumber config init
+plumber config generate # generates default configuration yaml file
 plumber analyze
 ```
+
+See the generated default config in this repo: [`.plumber.yaml`](./.plumber.yaml).
 
 Plumber auto-detects the provider from your git remote. Use explicit flags when scanning a repo that is not the current checkout.
 
@@ -84,7 +86,10 @@ Other options:
 - Download a binary from [GitHub Releases](https://github.com/getplumber/plumber/releases)
 - Run the Docker image: `getplumber/plumber`
 
-Full install docs: [getplumber.io/docs/installation](https://getplumber.io/docs/installation)
+Full install docs:
+
+- GitLab: [getplumber.io/docs/cli/gitlab#installation](https://getplumber.io/docs/cli/gitlab#installation)
+- GitHub: [getplumber.io/docs/cli/github#installation](https://getplumber.io/docs/cli/github#installation)
 
 ### Authenticate
 
@@ -94,7 +99,13 @@ GitLab:
 export GITLAB_TOKEN=glpat_xxxx
 ```
 
-GitHub:
+GitHub (preferred — uses the gh CLI's keyring):
+
+```bash
+gh auth login
+```
+
+Alternative (CI runners, automation):
 
 ```bash
 export GH_TOKEN=ghp_xxxx
@@ -134,12 +145,14 @@ Add Plumber to `.gitlab-ci.yml`:
 
 ```yaml
 include:
-  - component: gitlab.com/getplumber/plumber/plumber@0.3.37
+  - component: gitlab.com/getplumber/plumber/plumber@<version>
 ```
+
+Find the latest published version on the [GitLab CI/CD Catalog](https://gitlab.com/explore/catalog/getplumber/plumber).
 
 Then add `GITLAB_TOKEN` in **Settings -> CI/CD -> Variables**.
 
-Use `read_api` + `read_repository` for scanning. Use `api` if you enable MR comments or badges.
+Use `read_api` + `read_repository` for scanning. Use `api` if you want Plumber to create MR comments or badges.
 
 Full guide: [getplumber.io/docs/cli/gitlab#gitlab-ci-component](https://getplumber.io/docs/cli/gitlab#gitlab-ci-component)
 
@@ -174,13 +187,13 @@ Full guide (SARIF upload, Code Scanning, action inputs): [getplumber.io/docs/cli
 
 Plumber reads `.plumber.yaml`.
 
-Create a small config interactively:
+Create a config interactively:
 
 ```bash
 plumber config init
 ```
 
-Generate the full commented template:
+Generate the full commented [default template](./.plumber.yaml):
 
 ```bash
 plumber config generate
