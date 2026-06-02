@@ -1,3 +1,10 @@
+## [0.3.38](https://github.com/getplumber/plumber/compare/v0.3.37...v0.3.38) (2026-06-02)
+
+
+### ✨ Features
+
+* **docs:** Fix typos ([251bc47](https://github.com/getplumber/plumber/commit/251bc47d6ae12fbc8f652aab4fb49f60969df91d))
+
 ## [0.3.37](https://github.com/getplumber/plumber/compare/v0.3.36...v0.3.37) (2026-06-02)
 
 
