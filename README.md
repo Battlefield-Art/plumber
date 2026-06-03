@@ -178,7 +178,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-      - uses: getplumber/plumber@a0d9c45ef309b8a07a6c54cf89baedcd18bbdd4f # v0.3.39
+      - uses: getplumber/plumber@709cda0514070e137c718c01771377717d9947c4 # v0.3.40
 ```
 
 Full guide (SARIF upload, Code Scanning, action inputs): [getplumber.io/docs/cli/github#github-action](https://getplumber.io/docs/cli/github#github-action)
