@@ -1,3 +1,10 @@
+## [0.3.41](https://github.com/getplumber/plumber/compare/v0.3.40...v0.3.41) (2026-06-03)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Update toolchain in ci ([3a4e209](https://github.com/getplumber/plumber/commit/3a4e2099568246cf499ac3cd4a2ced15b55ea3a4))
+
 ## [0.3.40](https://github.com/getplumber/plumber/compare/v0.3.39...v0.3.40) (2026-06-03)
 
 
