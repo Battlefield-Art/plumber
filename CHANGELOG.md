@@ -1,3 +1,15 @@
+## [0.3.39](https://github.com/getplumber/plumber/compare/v0.3.38...v0.3.39) (2026-06-03)
+
+
+### ✨ Features
+
+* **controls:** add pipeline secret detection via gitleaks (ISSUE-309) ([f902934](https://github.com/getplumber/plumber/commit/f90293451e6b0a03b07e6a3db1c7b1b574ea689f))
+
+
+### 🐛 Bug Fixes
+
+* **control:** Fixed and tested implementation for gitleaks ([d8170d4](https://github.com/getplumber/plumber/commit/d8170d4682f0943c59a4bf992f57ecd41658a31b))
+
 ## [0.3.38](https://github.com/getplumber/plumber/compare/v0.3.37...v0.3.38) (2026-06-02)
 
 
