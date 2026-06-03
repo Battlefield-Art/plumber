@@ -1,3 +1,10 @@
+## [0.3.42](https://github.com/getplumber/plumber/compare/v0.3.41...v0.3.42) (2026-06-03)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** Correct bug mixing up 301 and 309 ([2ef64fe](https://github.com/getplumber/plumber/commit/2ef64fe210be8e14e9787b0d30a343e8d383e9ab))
+
 ## [0.3.41](https://github.com/getplumber/plumber/compare/v0.3.40...v0.3.41) (2026-06-03)
 
 
