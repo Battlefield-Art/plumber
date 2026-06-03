@@ -95,13 +95,13 @@ func runRegoEngine(
 		protectionData,
 	)
 	// Optional gitleaks enrichment for pipelineMustNotLeakSecretsInConfig
-	// (ISSUE-309). The scanner abstains silently when the control is
+	// (ISSUE-301). The scanner abstains silently when the control is
 	// disabled or gitleaks is not installed; failures are logged at
 	// warn level and never fail the run. The second return carries the
 	// abstain reason (if any) so the caller can mark the control SKIPPED
 	// instead of letting the empty-hits default render as 100% green.
 	if err := collector.ScanGitleaksForGitlab(l, conf, originData, pipeline); err != nil {
-		l.WithError(err).Warn("gitleaks scan failed; ISSUE-309 will not fire")
+		l.WithError(err).Warn("gitleaks scan failed; ISSUE-301 will not fire")
 	}
 	return evaluatePolicies(l, conf, "gitlab", pipeline), pipeline.GitleaksAbstainReason
 }

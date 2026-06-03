@@ -176,7 +176,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 		defaultBranch = pipeline.DefaultBranch
 	}
 	// Optional gitleaks enrichment for pipelineMustNotLeakSecretsInConfig
-	// (ISSUE-309). The scanner abstains silently when the control is
+	// (ISSUE-301). The scanner abstains silently when the control is
 	// disabled or gitleaks is not installed. Runs only on the local-
 	// clone path where we have on-disk files; the remote path has no
 	// equivalent (workflow contents are fetched into the IR, not

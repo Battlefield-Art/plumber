@@ -44,7 +44,7 @@ reading the upstream docs.
 
 | Code | Name | Severity |
 | :--- | :--- | :--- |
-| [ISSUE-301](#issue-301--overprovisioned-secrets) | `overprovisioned-secrets` | **critical** |
+| [ISSUE-301](#issue-301--leaked-secrets) | `leaked-secrets` | **critical** _(opt-in)_ |
 | [ISSUE-302](#issue-302--secrets-inherit) | `secrets-inherit` | high |
 | [ISSUE-303](#issue-303--unredacted-secrets) | `unredacted-secrets` | high |
 | [ISSUE-801](#issue-304--undocumented-permissions) | `undocumented-permissions` | medium |
@@ -52,7 +52,7 @@ reading the upstream docs.
 | [ISSUE-306](#issue-306--github-app-skip-revoke) | `github-app-skip-revoke` | high |
 | [ISSUE-307](#issue-307--artipacked) | `artipacked` | high |
 | [ISSUE-308](#issue-308--secrets-dynamic-index) | `secrets-dynamic-index` | low |
-| [ISSUE-309](#issue-309--leaked-secrets) | `leaked-secrets` | **critical** _(opt-in)_ |
+| [ISSUE-309](#issue-309--overprovisioned-secrets) | `overprovisioned-secrets` | **critical** |
 
 ### Triggers & composition — `4xx`
 
@@ -831,7 +831,7 @@ are flagged:
 
 ---
 
-## ISSUE-301 — `overprovisioned-secrets`
+## ISSUE-309 — `overprovisioned-secrets`
 
 **Severity:** `critical` • **Control:** `workflowMustNotExportEntireSecretsContext`
 
@@ -1083,7 +1083,7 @@ reviewability.
 
 ---
 
-## ISSUE-309 — `leaked-secrets`
+## ISSUE-301 — `leaked-secrets`
 
 **Severity:** `critical` • **Control:** `pipelineMustNotLeakSecretsInConfig`
 
@@ -1749,7 +1749,8 @@ and in `.plumber.yaml`) is declared in
 | ISSUE-214 | `workflowMustPinPackageInstalls` |
 | ISSUE-215 | `workflowMustNotInjectVarsInScripts` |
 | ISSUE-308 | `workflowMustNotIndexSecretsDynamically` |
-| ISSUE-309 | `pipelineMustNotLeakSecretsInConfig` _(opt-in; requires gitleaks)_ |
+| ISSUE-301 | `pipelineMustNotLeakSecretsInConfig` _(opt-in; requires gitleaks)_ |
+| ISSUE-309 | `workflowMustNotExportEntireSecretsContext` |
 | ISSUE-802 / 415 | `workflowMustNotUseDangerousTriggers`, `pullRequestTargetMustNotCheckoutHead` |
 | ISSUE-902 | `dependabotEcosystemsMustHaveCooldown` |
 | ISSUE-903 | `repositoriesMustConfigureDependencyUpdates` |

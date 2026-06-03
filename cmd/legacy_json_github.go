@@ -592,7 +592,7 @@ func buildUnverifiedScriptsBlockGitHub(c legacyCommon, result *control.AnalysisR
 	}
 }
 
-// buildLeakedSecretsBlock — ISSUE-309. Each finding is one redacted
+// buildLeakedSecretsBlock — ISSUE-301. Each finding is one redacted
 // gitleaks hit. There is no meaningful "X of Y" denominator (a hit is
 // either present or it isn't), so the block surfaces only the hit
 // count alongside the standard compliance fields. issues carries the

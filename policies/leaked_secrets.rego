@@ -3,7 +3,7 @@
 # (collector/gitleaks_scan.go), which shells out to gitleaks and
 # redacts each match before writing it to
 # input.pipeline.gitleaksHits. This rule converts each redacted hit
-# into an ISSUE-309 finding.
+# into an ISSUE-301 finding.
 #
 # Why detection is outside rego: gitleaks is a regex + entropy
 # engine over arbitrary text, not a structured-input check, so it
@@ -23,7 +23,7 @@ deny contains finding if {
 	input.config.pipelineMustNotLeakSecretsInConfig
 	some hit in input.pipeline.gitleaksHits
 	finding := {
-		"code":     "ISSUE-309",
+		"code":     "ISSUE-301",
 		"severity": "critical",
 		"message":  sprintf("hardcoded secret detected (%s) at %s:%d — %s", [hit.ruleId, hit.file, object.get(hit, "line", 0), hit.preview]),
 		"job":      hit.file,

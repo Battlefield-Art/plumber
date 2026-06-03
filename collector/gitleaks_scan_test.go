@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestRedactPreview is the load-bearing safety test for ISSUE-309:
+// TestRedactPreview is the load-bearing safety test for ISSUE-301:
 // the raw secret value must never leave the collector. Every other
 // guard depends on this function producing a redacted form.
 func TestRedactPreview(t *testing.T) {

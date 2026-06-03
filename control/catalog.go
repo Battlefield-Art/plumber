@@ -185,7 +185,7 @@ func GitHubControls(pc *configuration.PlumberConfig) []ControlEntry {
 		Skipped:     c.PipelineMustNotExecuteUnverifiedScripts == nil || !c.PipelineMustNotExecuteUnverifiedScripts.IsEnabled(),
 	})
 	entries = append(entries, ControlEntry{
-		DisplayName: "Pipeline must not leak secrets in configuration",
+		DisplayName: "Workflow must not leak secrets in configuration",
 		ControlName: "pipelineMustNotLeakSecretsInConfig",
 		Skipped:     c.PipelineMustNotLeakSecretsInConfig == nil || !c.PipelineMustNotLeakSecretsInConfig.IsEnabled(),
 	})

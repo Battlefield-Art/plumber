@@ -310,14 +310,14 @@ func presentGitHubResult(result *control.AnalysisResult, conf *configuration.Con
 	}
 
 	if sarifFile != "" {
-		if err := writeSARIFToFile(result, sarifFile); err != nil {
+		if err := writeSARIFToFile(result, sarifFile, "github"); err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "SARIF written to: %s\n", sarifFile)
 	}
 
 	if glsastFile != "" {
-		if err := writeGLSASTToFile(result, glsastFile); err != nil {
+		if err := writeGLSASTToFile(result, glsastFile, "github"); err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "GitLab SAST report written to: %s\n", glsastFile)

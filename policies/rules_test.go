@@ -2383,7 +2383,7 @@ func TestIssue301_OverprovisionedSecrets(t *testing.T) {
 			if err := os.MkdirAll(wfDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			src := filepath.Join("testdata", "ISSUE-301", "github", tc.fixture)
+			src := filepath.Join("testdata", "ISSUE-309", "github", tc.fixture)
 			data, err := os.ReadFile(src)
 			if err != nil {
 				t.Fatalf("read fixture: %v", err)
@@ -2401,7 +2401,7 @@ func TestIssue301_OverprovisionedSecrets(t *testing.T) {
 			}
 			hits := make([]string, 0)
 			for _, f := range findings {
-				if f.Code != "ISSUE-301" {
+				if f.Code != "ISSUE-309" {
 					continue
 				}
 				hits = append(hits, f.Job)
@@ -3794,11 +3794,11 @@ func TestIssue416_RequiredActionMissing(t *testing.T) {
 }
 
 
-// TestIssue309_LeakedSecrets covers the leaked_secrets rule. Detection is
+// TestIssue301_LeakedSecrets covers the leaked_secrets rule. Detection is
 // done in the collector (collector/gitleaks_scan.go); the rego rule turns
-// each redacted GitleaksHit on the pipeline IR into an ISSUE-309 finding,
+// each redacted GitleaksHit on the pipeline IR into an ISSUE-301 finding,
 // gated by input.config.pipelineMustNotLeakSecretsInConfig.
-func TestIssue309_LeakedSecrets(t *testing.T) {
+func TestIssue301_LeakedSecrets(t *testing.T) {
 	engine := opaengine.New()
 	if err := engine.LoadFromFS(policies.FS); err != nil {
 		t.Fatalf("load embedded policies: %v", err)
@@ -3851,13 +3851,13 @@ func TestIssue309_LeakedSecrets(t *testing.T) {
 			hits := 0
 			var sample string
 			for _, f := range findings {
-				if f.Code == "ISSUE-309" {
+				if f.Code == "ISSUE-301" {
 					hits++
 					sample = f.Message
 				}
 			}
 			if hits != tc.wantHits {
-				t.Fatalf("expected %d ISSUE-309 findings, got %d", tc.wantHits, hits)
+				t.Fatalf("expected %d ISSUE-301 findings, got %d", tc.wantHits, hits)
 			}
 			// Defence in depth: the redacted preview must never contain
 			// the raw test value that the collector would have replaced.

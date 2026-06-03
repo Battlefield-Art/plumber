@@ -3,7 +3,7 @@
 // shell out to a user-installed `gitleaks` binary, parse its JSON
 // report, redact matches, and write GitleaksHit entries onto the
 // pipeline IR. The rego rule policies/leaked_secrets.rego turns those
-// IR entries into ISSUE-309 findings.
+// IR entries into ISSUE-301 findings.
 //
 // The raw secret value never leaves this file: redactPreview replaces
 // it with first-4 + "***" + last-4 (or "***" only for short matches)
@@ -82,7 +82,7 @@ func ScanGitleaksForGitlab(
 	}
 	binary, err := resolveGitleaksBinary(cfg)
 	if err != nil {
-		l.WithError(err).Warn("gitleaks not available; ISSUE-309 will not fire")
+		l.WithError(err).Warn("gitleaks not available; ISSUE-301 will not fire")
 		pipeline.GitleaksAbstainReason = "gitleaks binary not available: " + err.Error()
 		return nil
 	}
@@ -101,7 +101,7 @@ func ScanGitleaksForGitlab(
 
 	entries, err := execGitleaks(binary, cfg, tmp)
 	if err != nil {
-		l.WithError(err).Warn("gitleaks scan failed; ISSUE-309 will not fire")
+		l.WithError(err).Warn("gitleaks scan failed; ISSUE-301 will not fire")
 		pipeline.GitleaksAbstainReason = "gitleaks scan failed: " + err.Error()
 		return nil
 	}
@@ -138,20 +138,20 @@ func ScanGitleaksForGitHub(
 	}
 	info, err := os.Stat(workflowsDir)
 	if err != nil || !info.IsDir() {
-		l.WithField("workflowsDir", workflowsDir).WithError(err).Warn("gitleaks: workflows dir not found; ISSUE-309 will not fire")
+		l.WithField("workflowsDir", workflowsDir).WithError(err).Warn("gitleaks: workflows dir not found; ISSUE-301 will not fire")
 		pipeline.GitleaksAbstainReason = "workflows directory not found at " + workflowsDir
 		return nil
 	}
 	binary, err := resolveGitleaksBinary(cfg)
 	if err != nil {
-		l.WithError(err).Warn("gitleaks not available; ISSUE-309 will not fire")
+		l.WithError(err).Warn("gitleaks not available; ISSUE-301 will not fire")
 		pipeline.GitleaksAbstainReason = "gitleaks binary not available: " + err.Error()
 		return nil
 	}
 	l.WithFields(logrus.Fields{"workflowsDir": workflowsDir, "binary": binary}).Info("gitleaks: scanning GitHub workflows")
 	entries, err := execGitleaks(binary, cfg, workflowsDir)
 	if err != nil {
-		l.WithError(err).Warn("gitleaks scan failed; ISSUE-309 will not fire")
+		l.WithError(err).Warn("gitleaks scan failed; ISSUE-301 will not fire")
 		pipeline.GitleaksAbstainReason = "gitleaks scan failed: " + err.Error()
 		return nil
 	}

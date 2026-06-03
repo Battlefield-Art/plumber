@@ -555,7 +555,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	// Write SARIF report to file if specified
 	if sarifFile != "" {
-		if err := writeSARIFToFile(result, sarifFile); err != nil {
+		if err := writeSARIFToFile(result, sarifFile, "gitlab"); err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "SARIF written to: %s\n", sarifFile)
@@ -563,7 +563,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	// Write GitLab SAST report to file if specified
 	if glsastFile != "" {
-		if err := writeGLSASTToFile(result, glsastFile); err != nil {
+		if err := writeGLSASTToFile(result, glsastFile, "gitlab"); err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "GitLab SAST report written to: %s\n", glsastFile)
