@@ -1,3 +1,11 @@
+## [0.3.43](https://github.com/getplumber/plumber/compare/v0.3.42...v0.3.43) (2026-06-03)
+
+
+### 🐛 Bug Fixes
+
+* **analysis:** handle multi-document YAML (spec: block) in CI config parsing ([b467b60](https://github.com/getplumber/plumber/commit/b467b608e7ab076344d82fc7e95da28f92452909))
+* **parser:** Fix missing entries un unmarshal ([b2563a4](https://github.com/getplumber/plumber/commit/b2563a45b601601cc078588b00c490de44f043c9))
+
 ## [0.3.42](https://github.com/getplumber/plumber/compare/v0.3.41...v0.3.42) (2026-06-03)
 
 
