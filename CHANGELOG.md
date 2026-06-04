@@ -1,3 +1,10 @@
+## [0.3.45](https://github.com/getplumber/plumber/compare/v0.3.44...v0.3.45) (2026-06-04)
+
+
+### 🐛 Bug Fixes
+
+* **component:** space separated inputs are now supported ([d1c90c7](https://github.com/getplumber/plumber/commit/d1c90c7121ef3e0a3ca1ad13c6b01589b69eef3f))
+
 ## [0.3.44](https://github.com/getplumber/plumber/compare/v0.3.43...v0.3.44) (2026-06-04)
 
 ## [0.3.43](https://github.com/getplumber/plumber/compare/v0.3.42...v0.3.43) (2026-06-03)
