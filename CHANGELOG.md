@@ -1,3 +1,10 @@
+## [0.3.47](https://github.com/getplumber/plumber/compare/v0.3.46...v0.3.47) (2026-06-04)
+
+
+### 🐛 Bug Fixes
+
+* **docker:** Update docker image ([3b7bcfd](https://github.com/getplumber/plumber/commit/3b7bcfd7309b2118bce0f7b37e89d4b21def25c1))
+
 ## [0.3.46](https://github.com/getplumber/plumber/compare/v0.3.45...v0.3.46) (2026-06-04)
 
 ## [0.3.45](https://github.com/getplumber/plumber/compare/v0.3.44...v0.3.45) (2026-06-04)
