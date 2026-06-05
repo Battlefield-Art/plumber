@@ -135,6 +135,7 @@ var envKeys = map[string]string{
 	"skip-controls":  "PLUMBER_ANALYZE_SKIP_CONTROLS",
 	"fail-warnings":  "PLUMBER_ANALYZE_FAIL_WARNINGS",
 	"ci-config-path": "PLUMBER_ANALYZE_CI_CONFIG_PATH",
+	"verbose":        "PLUMBER_ANALYZE_VERBOSE",
 }
 
 func init() {
@@ -158,7 +159,7 @@ func init() {
 	analyzeCmd.Flags().StringVar(&providerFlag, "provider", "", "Force provider: 'github' or 'gitlab' (overrides auto-detection; host still auto-detected)")
 
 	// Optional flags with defaults
-	analyzeCmd.Flags().StringVar(&configFile, "config", ".plumber.yaml", "Path to .plumber.yaml config file")
+	analyzeCmd.Flags().StringVar(&configFile, "config", "", "Path to Plumber config file (default to `.plumber.yaml` if exists, `/.plumber.yaml` otherwise)")
 	analyzeCmd.Flags().Float64Var(&threshold, "threshold", 100, "Minimum compliance percentage to pass, 0-100")
 	analyzeCmd.Flags().StringVar(&defaultBranch, "branch", "", "Branch to analyze (defaults to project's default branch)")
 	analyzeCmd.Flags().BoolVar(&printOutput, "print", true, "Print text output to stdout")
@@ -228,6 +229,18 @@ func printProviderDetection(provider, reason string) {
 // spot (via the wizard or the default template) and then reloads it so the
 // calling analyze command can continue uninterrupted.
 func loadConfigOrOffer(cfgFile string) (*configuration.PlumberConfig, string, []string, error) {
+	if cfgFile == "" {
+		if _, err := os.Stat(".plumber.yaml"); err == nil {
+		    // Use local config if available
+			cfgFile = ".plumber.yaml"
+		} else if _, err := os.Stat("/.plumber.yaml"); err == nil {
+		    // Fallback to global config is available
+			cfgFile = "/.plumber.yaml"
+		} else {
+		    // Back to local configuration to suggest interactive
+			cfgFile = ".plumber.yaml"
+		}
+	}
 	pc, path, warnings, err := configuration.LoadPlumberConfig(cfgFile)
 	if err == nil {
 		return pc, path, warnings, nil
@@ -322,10 +335,12 @@ func envFloat64Fallback(cmd *cobra.Command, flag, envKey string, dest *float64) 
 }
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
-	// Set log level based on verbose flag
+	// Set log level based on verbose flag or env var
 	// Default: WarnLevel (quiet output, only show warnings/errors)
 	// Verbose: DebugLevel (show all logs for troubleshooting)
-	if verbose {
+	if err := envBoolFallback(cmd, "verbose", envKeys["verbose"], &verbose); err != nil {
+		return err
+	} else if verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.WarnLevel)
