@@ -1,3 +1,15 @@
+## [0.3.51](https://github.com/getplumber/plumber/compare/v0.3.50...v0.3.51) (2026-06-08)
+
+
+### ✨ Features
+
+* **gh:** Make data collector retry fetching tags with no auth if auth gets blocked + allow users to provide a metadata token to be used (a pat) ([dd65ebc](https://github.com/getplumber/plumber/commit/dd65ebc7d50dc0ea63f4b524b502bf6613ca3b5d))
+
+
+### 🐛 Bug Fixes
+
+* **ctrl:** False positive when using moving tags ([84b4a8f](https://github.com/getplumber/plumber/commit/84b4a8fd11ebde36a10dd6b107d15031a3ca635a))
+
 ## [0.3.50](https://github.com/getplumber/plumber/compare/v0.3.49...v0.3.50) (2026-06-04)
 
 ## [0.3.49](https://github.com/getplumber/plumber/compare/v0.3.48...v0.3.49) (2026-06-04)
