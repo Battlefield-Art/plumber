@@ -458,6 +458,32 @@ func TestIssue414_DangerousTriggers(t *testing.T) {
 				"violation_extended_triggers/comment-handler",
 			},
 		},
+		// #235: workflow_run job gated to upstream PUSH events. The
+		// run head is a trusted base-repo commit, not fork code, so
+		// the job is safe and must stay silent.
+		{
+			fixture:      "clean_workflow_run_push_guard.yml",
+			expectedHits: nil,
+		},
+		// #235: comment-trigger job gated by a trusted author_association
+		// allowlist (OWNER/MEMBER/COLLABORATOR). Untrusted users cannot
+		// reach the checkout, so the job is safe and must stay silent.
+		{
+			fixture:      "clean_author_association_allowlist.yml",
+			expectedHits: nil,
+		},
+		// #235: the `== 'OWNER' || == 'MEMBER'` allowlist form. Safe.
+		{
+			fixture:      "clean_author_association_equality.yml",
+			expectedHits: nil,
+		},
+		// #235 guard: an `author_association != 'OWNER'` denylist is NOT
+		// a trusted-author allowlist — untrusted commenters still pass —
+		// so the job stays exploitable and must keep firing.
+		{
+			fixture:      "violation_author_association_negation.yml",
+			expectedHits: []string{"violation_author_association_negation/handler"},
+		},
 	}
 
 	engine := opaengine.New()
