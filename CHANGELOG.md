@@ -1,3 +1,10 @@
+## [0.3.56](https://github.com/getplumber/plumber/compare/v0.3.55...v0.3.56) (2026-06-10)
+
+
+### 🐛 Bug Fixes
+
+* **control:** ISSUE-411 false positive when piping a local variable into an interpreter (echo "$VAR" | python3). Issue [#236](https://github.com/getplumber/plumber/issues/236) ([201755d](https://github.com/getplumber/plumber/commit/201755d2c71d1dba599280d0ff4c70f906bbf3fb))
+
 ## [0.3.55](https://github.com/getplumber/plumber/compare/v0.3.54...v0.3.55) (2026-06-10)
 
 
