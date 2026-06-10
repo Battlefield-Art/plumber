@@ -1,3 +1,10 @@
+## [0.3.55](https://github.com/getplumber/plumber/compare/v0.3.54...v0.3.55) (2026-06-10)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Align dangerous-trigger metric with rule events and de-duplicate findings per job. Issue [#235](https://github.com/getplumber/plumber/issues/235) ([51e4c01](https://github.com/getplumber/plumber/commit/51e4c01c9433f86e861a660d729b2cd45e68789c))
+
 ## [0.3.54](https://github.com/getplumber/plumber/compare/v0.3.53...v0.3.54) (2026-06-10)
 
 
