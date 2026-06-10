@@ -1,3 +1,10 @@
+## [0.3.53](https://github.com/getplumber/plumber/compare/v0.3.52...v0.3.53) (2026-06-10)
+
+
+### 🐛 Bug Fixes
+
+* **analysis:** Display clear error when fetching remote branch that doesnt exist ([9f15e31](https://github.com/getplumber/plumber/commit/9f15e31c95221e5d8433901994d824d58ec2b855))
+
 ## [0.3.52](https://github.com/getplumber/plumber/compare/v0.3.51...v0.3.52) (2026-06-10)
 
 
