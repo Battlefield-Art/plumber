@@ -242,7 +242,9 @@ func detectGitHubAuthSource(apiHost string) string {
 // non-zero exit when findings are present.
 func presentGitHubResult(result *control.AnalysisResult, conf *configuration.Configuration) error {
 	plumberConfig := conf.PlumberConfig
-	scoreMode := showScore || showScorePoint
+	// The score is always shown now (issue #218); --score is a no-op kept only
+	// for backward compatibility. --score-point still adds the full breakdown.
+	scoreMode := true
 	var scoreResult *control.PlumberScoreResult
 	if scoreMode {
 		codeCounts := control.AggregateIssueCodeCounts(result)

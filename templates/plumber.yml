@@ -74,15 +74,15 @@ spec:
       default: false
       type: boolean
     badge:
-      description: Create/update a Plumber compliance badge on the project (requires api scope; only runs on default branch pipelines)
+      description: Create/update a Plumber letter-score badge on the project (requires api scope; only runs on default branch pipelines)
       default: false
       type: boolean
     score:
-      description: "Banner on stdout: letter score, points, bar, and severity counts; points + score in JSON, PBOM, and CycloneDX; when badge is enabled, the badge shows the letter instead of compliance percentage"
+      description: "Deprecated no-op: the Plumber score is shown by default now (banner, JSON, PBOM, CycloneDX, a letter-grade badge when badge is enabled, and an MR score line). Kept so pipelines that already set it do not break; it has no effect. Use score_point for the full points breakdown"
       default: false
       type: boolean
     score_point:
-      description: Like score plus full points breakdown in stdout and MR comment; if both score and score_point are true, points mode is used
+      description: "Add the full points breakdown table to stdout and the MR comment (the score banner is shown by default)"
       default: false
       type: boolean
     controls:

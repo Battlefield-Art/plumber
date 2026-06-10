@@ -76,8 +76,8 @@ Optional flags:
   --pbom-cyclonedx   Write PBOM in CycloneDX format for integration with security tools
   --mr-comment       Post/update a compliance comment on the merge request (requires api scope, merge request pipeline only)
   --badge            Create/update a Plumber compliance badge on the project (requires api scope; only runs on default branch)
-  --score            Letter score, points, bar, and counts in stdout (banner only); points + score in JSON/PBOM/CycloneDX; badge/MR use letter when set (optional)
-  --score-point      Same as --score plus full points breakdown in stdout and MR comment (optional; wins if both set)
+  --score            Deprecated: the score is shown by default now. Kept as a no-op so existing invocations keep working; it has no effect.
+  --score-point      Add the full points breakdown to stdout and the MR comment (the score banner is shown by default)
   --controls         Run only listed controls (comma-separated)
   --skip-controls    Skip listed controls (comma-separated)
   --fail-warnings    Fail on warnings: configuration warnings (exit 2) and
@@ -144,8 +144,14 @@ func init() {
 	analyzeCmd.Flags().StringVar(&glsastFile, "glsast", "", "Write a GitLab SAST report (gl-sast-report.json) to file (for the GitLab Security Dashboard / MR widget)")
 	analyzeCmd.Flags().BoolVar(&mrComment, "mr-comment", false, "Post/update a compliance comment on the merge request (requires api scope token; only works in merge request pipelines)")
 	analyzeCmd.Flags().BoolVar(&badge, "badge", false, "Create/update a Plumber compliance badge on the project (requires api scope; only runs on default branch)")
-	analyzeCmd.Flags().BoolVar(&showScore, "score", false, "Banner: letter score, points, bar, severity counts on stdout; points + score in JSON, PBOM, CycloneDX; badge shows letter when set")
-	analyzeCmd.Flags().BoolVar(&showScorePoint, "score-point", false, "Like --score plus full points breakdown in stdout and MR comment; overrides --score when both are set")
+	// The Plumber score is always shown now (issue #218). --score is kept as a
+	// silent no-op so existing invocations (and the GitLab component's `score`
+	// input) don't error with "unknown flag"; it no longer has any effect.
+	// Hidden rather than deprecation-warned so component users don't get a
+	// warning on every run. --score-point still adds the full points breakdown.
+	analyzeCmd.Flags().BoolVar(&showScore, "score", false, "Deprecated no-op: the score is shown by default")
+	_ = analyzeCmd.Flags().MarkHidden("score")
+	analyzeCmd.Flags().BoolVar(&showScorePoint, "score-point", false, "Add the full points breakdown to stdout and the MR comment (the score banner is shown by default)")
 	analyzeCmd.Flags().StringVar(&controlsFilter, "controls", "", "Run only listed controls (comma-separated)")
 	analyzeCmd.Flags().StringVar(&skipControls, "skip-controls", "", "Skip listed controls (comma-separated)")
 	analyzeCmd.Flags().BoolVar(&failWarnings, "fail-warnings", false, "Fail on warnings: configuration warnings (exit 2) and could-not-verify warnings, e.g. a skipped known-CVE check (exit 3)")
@@ -370,8 +376,9 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("threshold must be between 0 and 100")
 	}
 
-	// --score-point implies score output; if both --score and --score-point are set, points mode wins for breakdown/MR text.
-	scoreMode := showScore || showScorePoint
+	// The score is always shown now (issue #218); --score is a no-op kept only
+	// for backward compatibility. --score-point still adds the full breakdown.
+	scoreMode := true
 	scorePointMode := showScorePoint
 
 	// controlsFilterList / skipControlsList were parsed earlier so the
