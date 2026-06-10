@@ -79,16 +79,19 @@ guard_patterns := [
 ]
 
 deny contains finding if {
-	some i, j
+	some i
 	job := input.pipeline.jobs[i]
-	trigger := job.triggers[j]
-	dangerous_events[trigger]
 	_checks_out_untrusted_code(job)
 	not _has_guard(job)
+	# The risk is a per-job property. Collect every dangerous trigger that
+	# reaches this job and emit ONE finding listing them, rather than one
+	# duplicate finding per trigger on the same line (#235).
+	triggers := sort([t | some t in job.triggers; dangerous_events[t]])
+	count(triggers) > 0
 	finding := {
 		"code":     "ISSUE-802",
 		"severity": "critical",
-		"message":  sprintf("job %q runs under the dangerous trigger %q and checks out fork-controlled code — untrusted code executes with the base repo's secrets (CVE-2025-30066 pattern)", [job.name, trigger]),
+		"message":  sprintf("job %q runs under dangerous trigger(s) %s and checks out fork-controlled code — untrusted code executes with the base repo's secrets (CVE-2025-30066 pattern)", [job.name, concat(", ", triggers)]),
 		"job":      job.name,
 	}
 }

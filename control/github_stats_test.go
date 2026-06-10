@@ -76,3 +76,29 @@ func TestAggregate_ReusableWorkflowRefsCountTowardActionPinning(t *testing.T) {
 		t.Errorf("ReusableCalls = %d, want 3 (the three jobs with ReusableWorkflowUses set)", stats.ReusableCalls)
 	}
 }
+
+// TestHasDangerousTrigger_MatchesRegoEventSet locks the metric's
+// dangerous-trigger set to the ISSUE-802 Rego rule's dangerous_events.
+// When they drift, workflowsWithDangerousTrigger disagrees with the
+// emitted findings — e.g. an issue_comment job fires 3 ISSUE-802 issues
+// while the metric reports 0 dangerous-trigger workflows (#235).
+func TestHasDangerousTrigger_MatchesRegoEventSet(t *testing.T) {
+	fires := []string{
+		"workflow_run", "issue_comment", "pull_request_review",
+		"pull_request_review_comment", "discussion_comment", "discussion",
+		"gollum", "fork",
+	}
+	for _, ev := range fires {
+		if !hasDangerousTrigger([]string{ev}) {
+			t.Errorf("%q must count as a dangerous trigger — ISSUE-802 fires on it", ev)
+		}
+	}
+	// pull_request_target is ISSUE-804's concern and is excluded from the
+	// ISSUE-802 rule, so it must not inflate this control's metric.
+	if hasDangerousTrigger([]string{"pull_request_target"}) {
+		t.Error("pull_request_target must not count for the ISSUE-802 metric (owned by ISSUE-804)")
+	}
+	if hasDangerousTrigger([]string{"push"}) {
+		t.Error("push must not count as a dangerous trigger")
+	}
+}

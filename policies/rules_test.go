@@ -443,20 +443,13 @@ func TestIssue414_DangerousTriggers(t *testing.T) {
 			fixture:      "clean_fork_guard.yml",
 			expectedHits: nil,
 		},
-		// Regression: the extended dangerous-events set. The job is
-		// reachable from seven dangerous events AND checks out
-		// fork-controlled code, so it fires once per event.
+		// The extended dangerous-events set: the job is reachable from
+		// seven dangerous events AND checks out fork-controlled code. The
+		// risk is a per-JOB property, so it fires exactly once regardless
+		// of how many dangerous triggers reach it (#235 de-dup).
 		{
-			fixture: "violation_extended_triggers.yml",
-			expectedHits: []string{
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-				"violation_extended_triggers/comment-handler",
-			},
+			fixture:      "violation_extended_triggers.yml",
+			expectedHits: []string{"violation_extended_triggers/comment-handler"},
 		},
 		// #235: workflow_run job gated to upstream PUSH events. The
 		// run head is a trusted base-repo commit, not fork code, so

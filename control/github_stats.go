@@ -282,10 +282,20 @@ var shaRefRegex = regexp.MustCompile(`@[0-9a-f]{40}$`)
 
 // dangerousTriggers are the GitHub Actions event names that grant
 // access to base-repo secrets while being influenceable by an
-// unprivileged caller. Mirrors policies/dangerous_triggers.rego.
+// unprivileged caller. This MUST mirror `dangerous_events` in
+// policies/dangerous_triggers.rego so the workflowsWithDangerousTrigger
+// metric never disagrees with the emitted ISSUE-802 findings (#235).
+// pull_request_target is intentionally excluded — it is owned by
+// ISSUE-804 and the ISSUE-802 rule excludes it too.
 var dangerousTriggers = map[string]struct{}{
-	"pull_request_target": {},
-	"workflow_run":        {},
+	"workflow_run":                {},
+	"issue_comment":               {},
+	"pull_request_review":         {},
+	"pull_request_review_comment": {},
+	"discussion_comment":          {},
+	"discussion":                  {},
+	"gollum":                      {},
+	"fork":                        {},
 }
 
 func ownerOf(ref string) string {
