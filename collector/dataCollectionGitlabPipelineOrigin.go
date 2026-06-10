@@ -2,6 +2,7 @@ package collector
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -351,6 +352,16 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 
 		// Check if this is a 404 error when project.NotFound is false
 		if strings.Contains(err.Error(), "404") && !project.NotFound {
+			// A 404 on the CI config is ambiguous: the requested branch may
+			// not exist, or it exists but simply has no .gitlab-ci.yml. Tell
+			// them apart so a non-existent --branch fails loudly instead of
+			// rendering a confusing limited report at 0%/FAILED with a
+			// 100/100 score (#222). A branch probe that itself fails (auth,
+			// network) falls through to the limited-data path rather than
+			// masking the original error.
+			if exists, berr := gitlab.BranchExists(project.ID, project.AnalyzeBranch, token, conf.GitlabURL, conf); berr == nil && !exists {
+				return nil, nil, fmt.Errorf("branch or ref %q not found in %s", project.AnalyzeBranch, project.Path)
+			}
 			// In this case, it's CI missing rather than an analysis error
 			data.CiMissing = true
 			data.CiValid = true // It's not really valid (missing) but we keep it to avoid false positive on "invalid"

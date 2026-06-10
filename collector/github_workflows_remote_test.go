@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/getplumber/plumber/internal/ir"
@@ -88,12 +89,19 @@ jobs:
 }
 
 func TestScanGitHubWorkflowsRemote_NoWorkflowsDir(t *testing.T) {
-	// 404 on the listing means the repo has no .github/workflows
-	// directory — degrade gracefully to an empty pipeline (no
-	// findings will fire). Mirrors the local-scan behaviour.
+	// An existing repo+ref that has no .github/workflows directory
+	// degrades gracefully to an empty pipeline (no findings fire).
+	// The listing 404s, but the repo and ref probes succeed, so this is
+	// distinguished from a missing repo/branch (which hard-errors, #222).
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/owner/repo/contents/.github/workflows", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "Not Found", http.StatusNotFound)
+	})
+	mux.HandleFunc("/repos/owner/repo", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"full_name": "owner/repo"})
+	})
+	mux.HandleFunc("/repos/owner/repo/commits/main", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"sha": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"})
 	})
 	server := httptest.NewServer(mux)
 	defer server.Close()
@@ -108,6 +116,59 @@ func TestScanGitHubWorkflowsRemote_NoWorkflowsDir(t *testing.T) {
 	}
 	if len(pipeline.Jobs) != 0 {
 		t.Errorf("expected zero jobs, got %d", len(pipeline.Jobs))
+	}
+}
+
+func TestScanGitHubWorkflowsRemote_NonexistentRepoErrors(t *testing.T) {
+	// #222: a repo that does not exist must be a hard error, not an empty
+	// pipeline that the scorer renders as 100% compliant. The workflows
+	// listing 404s (the repo is gone) and so does the repo-existence probe.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/owner/repo/contents/.github/workflows", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	})
+	mux.HandleFunc("/repos/owner/repo", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	swapRESTClient(t, server)
+
+	_, _, err := ScanGitHubWorkflowsRemote("", "owner", "repo", "main", false, nil)
+	if err == nil {
+		t.Fatal("expected a hard error for a non-existent repository, got nil (vacuous 100% bug #222)")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error should say the repository was not found, got: %v", err)
+	}
+}
+
+func TestScanGitHubWorkflowsRemote_NonexistentBranchErrors(t *testing.T) {
+	// #222: a branch that does not exist must be a hard error. The repo
+	// exists (200) but the requested ref 404s, as does the workflows listing.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/owner/repo/contents/.github/workflows", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	})
+	mux.HandleFunc("/repos/owner/repo", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"full_name": "owner/repo"})
+	})
+	mux.HandleFunc("/repos/owner/repo/commits/lolxkdaksjdad", func(w http.ResponseWriter, _ *http.Request) {
+		// Real GitHub answers a missing ref on the commits endpoint with
+		// 422 "No commit found for SHA", not 404.
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_ = json.NewEncoder(w).Encode(map[string]any{"message": "No commit found for SHA: lolxkdaksjdad"})
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	swapRESTClient(t, server)
+
+	_, _, err := ScanGitHubWorkflowsRemote("", "owner", "repo", "lolxkdaksjdad", false, nil)
+	if err == nil {
+		t.Fatal("expected a hard error for a non-existent branch, got nil (vacuous 100% bug #222)")
+	}
+	if !strings.Contains(err.Error(), "lolxkdaksjdad") || !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error should clearly say the ref was not found, got: %v", err)
 	}
 }
 

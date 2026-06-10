@@ -195,9 +195,18 @@ func listWorkflowFiles(rest *api.RESTClient, owner, repo, ref string) ([]remoteC
 	}
 	var entries []remoteContentEntry
 	if err := rest.Get(endpoint, &entries); err != nil {
-		// 404 on the directory means no workflows — return empty,
-		// not an error. Anything else (auth, rate-limit) propagates.
+		// A 404 here is ambiguous: it fires for a missing repository, a
+		// missing ref, AND for a repo+ref that simply has no
+		// .github/workflows directory. Treating all three as "no
+		// workflows" let a non-existent project or branch score a
+		// vacuous 100% compliant (ISSUE #222). Disambiguate: a missing
+		// repo or ref is a hard error; only a genuinely absent workflows
+		// directory degrades to an empty set. Anything else (auth,
+		// rate-limit) propagates.
 		if isNotFound(err) {
+			if verr := verifyRepoAndRefExist(rest, owner, repo, ref); verr != nil {
+				return nil, verr
+			}
 			return nil, nil
 		}
 		return nil, err
@@ -214,6 +223,44 @@ func listWorkflowFiles(rest *api.RESTClient, owner, repo, ref string) ([]remoteC
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// verifyRepoAndRefExist probes the repository and, when ref is non-empty, the
+// requested ref, so a 404 on the workflows listing can be told apart from a
+// missing repo or branch. It returns a descriptive error when the repository
+// or ref does not exist; nil means both exist and the listing 404 genuinely
+// means the repo has no .github/workflows directory. See ISSUE #222: without
+// this, a non-existent --project or --branch scored a vacuous 100% compliant.
+func verifyRepoAndRefExist(rest *api.RESTClient, owner, repo, ref string) error {
+	var repoMeta struct {
+		FullName string `json:"full_name"`
+	}
+	if err := rest.Get(fmt.Sprintf("repos/%s/%s", owner, repo), &repoMeta); err != nil {
+		if isNotFound(err) {
+			return fmt.Errorf("repository %s/%s not found", owner, repo)
+		}
+		return err
+	}
+	if ref == "" {
+		return nil
+	}
+	var commit struct {
+		SHA string `json:"sha"`
+	}
+	if err := rest.Get(fmt.Sprintf("repos/%s/%s/commits/%s", owner, repo, ref), &commit); err != nil {
+		if isRefMissing(err) {
+			return fmt.Errorf("branch or ref %q not found in %s/%s", ref, owner, repo)
+		}
+		return err
+	}
+	return nil
+}
+
+// isRefMissing reports whether err indicates the requested ref does not
+// exist. GitHub answers a missing ref on the commits endpoint with 422
+// ("No commit found for SHA"); a 404 is also possible, so accept both.
+func isRefMissing(err error) bool {
+	return isNotFound(err) || (err != nil && strings.Contains(err.Error(), "HTTP 422"))
 }
 
 func fetchFileContent(rest *api.RESTClient, owner, repo, filePath, ref string) ([]byte, error) {
