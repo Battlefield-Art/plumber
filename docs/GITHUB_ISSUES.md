@@ -1178,6 +1178,11 @@ False-positive guards keep the signal sharp:
     echo "verified, in-tree content"
     EOF
 
+# Leading echo/printf piping in-workflow data into an interpreter —
+# local data, not a download (issue #236). Voided when curl/wget/base64
+# is also on the line, so the Megalodon chain above still fires.
+- run: echo "$NEEDS_CONTEXT" | python3 -c 'import json, sys; print(json.load(sys.stdin))'
+
 # Innocent pipes (no shell target)
 - run: echo hello | wc -l
 - run: ls | grep foo

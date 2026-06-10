@@ -870,7 +870,17 @@ func TestIssue411_UnverifiedScripts(t *testing.T) {
 		// A verification keyword inside a quoted string is not a real
 		// verification step — must still fire.
 		{"violation_verify_keyword_in_string.gitlab-ci.yml", []string{"bypass"}},
+		// Generic catch-all guard: a non-echo pipe into a shell still
+		// fires after the issue #236 echo/printf exemption.
+		{"violation_generic_pipe_to_shell.gitlab-ci.yml", []string{"fetch"}},
+		// issue #236 guard: a curl hidden inside a quoted command
+		// substitution ("$(curl ...)") is a real fetch and must fire
+		// despite the leading echo — the exemption checks the raw line.
+		{"violation_echo_quoted_curl_subst.gitlab-ci.yml", []string{"exfil"}},
 		{"clean_checksum.gitlab-ci.yml", nil},
+		// Regression for issue #236: echo/printf of in-workflow data
+		// piped into an interpreter is not a remote fetch.
+		{"clean_echo_var_pipe_python.gitlab-ci.yml", nil},
 		// FP guards: pipe-to-shell substrings inside quoted strings.
 		{"clean_pipe_inside_docstring.gitlab-ci.yml", nil},
 		// FP guards: heredoc-to-shell is operator-authored in-tree
@@ -956,7 +966,17 @@ func TestIssue411_UnverifiedScripts_GitHub(t *testing.T) {
 		// Verification-keyword-in-string bypass: putting `sha256sum`
 		// inside a quoted echo must not exempt the line.
 		{"violation_verify_keyword_in_string.yml", []string{"violation_verify_keyword_in_string/bypass"}},
+		// Generic catch-all guard: a non-echo pipe into a shell still
+		// fires after the issue #236 echo/printf exemption.
+		{"violation_generic_pipe_to_shell.yml", []string{"violation_generic_pipe_to_shell/fetch"}},
+		// issue #236 guard: curl hidden in a quoted command substitution
+		// is a real fetch and must fire despite the leading echo.
+		{"violation_echo_quoted_curl_subst.yml", []string{"violation_echo_quoted_curl_subst/exfil"}},
 		{"clean_no_shell_pipes.yml", nil},
+		// Regression for issue #236 (electron pgo-generation.yml):
+		// echo/printf of in-workflow data piped into an interpreter
+		// is not a remote fetch.
+		{"clean_echo_var_pipe_python.yml", nil},
 		// FP guards: pipe-to-shell substrings inside quoted strings
 		// (instructional echo of install commands) must not fire.
 		{"clean_pipe_inside_docstring.yml", nil},
