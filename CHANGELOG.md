@@ -1,3 +1,10 @@
+## [0.3.54](https://github.com/getplumber/plumber/compare/v0.3.53...v0.3.54) (2026-06-10)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Recognize safe dangerous triggers through protective mechanis such as psuh events and author association list. Issue [#235](https://github.com/getplumber/plumber/issues/235) ([7aea20e](https://github.com/getplumber/plumber/commit/7aea20ebd910a671ff392ec001ad599fa107b109))
+
 ## [0.3.53](https://github.com/getplumber/plumber/compare/v0.3.52...v0.3.53) (2026-06-10)
 
 
