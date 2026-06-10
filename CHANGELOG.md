@@ -1,3 +1,10 @@
+## [0.3.52](https://github.com/getplumber/plumber/compare/v0.3.51...v0.3.52) (2026-06-10)
+
+
+### ✨ Features
+
+* **score:** Enforce --score always. Always make it so that this automatically uses this for the plumber compliance badge and mr comments ([809685a](https://github.com/getplumber/plumber/commit/809685a8261300262446137dda1dcc0bfdc77c32))
+
 ## [0.3.51](https://github.com/getplumber/plumber/compare/v0.3.50...v0.3.51) (2026-06-08)
 
 
