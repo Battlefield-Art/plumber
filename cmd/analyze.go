@@ -538,6 +538,17 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Artifacts are written even on a degraded run: they are local files the
+	// user explicitly requested, and the exit-3 gate (below) — not the
+	// file's absence — is what protects CI. Each format stamps itself as
+	// degraded (SARIF executionSuccessful=false, SAST status=failure, the
+	// JSON dataCollectionDegraded flag) so a dashboard does not treat a
+	// partial report as authoritative. Badge/MR, which mutate shared state,
+	// are still skipped (#220).
+	if result.DataCollectionDegraded && (outputFile != "" || pbomFile != "" || pbomCycloneDXFile != "" || sarifFile != "" || glsastFile != "") {
+		fmt.Fprintf(os.Stderr, "Note: data collection was incomplete — artifacts are written but marked degraded; treat them as partial.\n")
+	}
+
 	// Write JSON to file if specified
 	if outputFile != "" {
 		if err := writeJSONToFile(result, conf.PlumberConfig, threshold, compliance, outputFile, scoreResult, scoreMode, "gitlab", conf.ControlsFilter, conf.SkipControlsFilter); err != nil {
@@ -580,7 +591,13 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	// Post merge request comment if explicitly enabled and in a CI merge request pipeline
 	if mrComment {
-		if mrIID := glabCI.DetectMergeRequestIID(); mrIID != 0 {
+		if result.DataCollectionDegraded {
+			// A transient collection failure must not overwrite the MR
+			// comment with a partial result whose score reads as a clean
+			// A on an empty pipeline. Leave the existing comment in place
+			// (#220).
+			fmt.Fprintf(os.Stderr, "Skipping merge request comment: data collection was incomplete; not overwriting with a partial result.\n")
+		} else if mrIID := glabCI.DetectMergeRequestIID(); mrIID != 0 {
 			fmt.Fprintf(os.Stderr, "Merge request pipeline detected (MR !%d), posting compliance comment...\n", mrIID)
 			if err := control.ManageMergeRequestComment(result.ProjectID, mrIID, result, conf.PlumberConfig, compliance, threshold, conf, scoreResult, scoreMode, scorePointMode); err != nil {
 				// Log but don't fail the analysis for a comment error
@@ -597,7 +614,12 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		shouldUpdateBadge := false
 		skipReason := ""
 
-		if glabCI.IsRunningInCI() {
+		if result.DataCollectionDegraded {
+			// Same reasoning as the MR comment: a network/rate-limit blip
+			// should leave the last good badge untouched, not replace it
+			// with a misleading score from an empty pipeline (#220).
+			skipReason = "data collection was incomplete; badge left unchanged to avoid overwriting the last good score"
+		} else if glabCI.IsRunningInCI() {
 			// In CI: use environment variables
 			if glabCI.IsOnDefaultBranchCI() {
 				shouldUpdateBadge = true
@@ -631,6 +653,14 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		} else {
 			fmt.Fprintf(os.Stderr, "Skipping badge update (%s)\n", skipReason)
 		}
+	}
+
+	// A data-collection-degraded run ran on partial data, so the compliance
+	// number is not trustworthy. Fail at exit 3 ("could not fully verify")
+	// regardless of the measured compliance, so a CI gate cannot go green on
+	// an incomplete scan (#220). Checked before the threshold gate.
+	if result.DataCollectionDegraded {
+		return &IncompleteDataError{Reasons: result.DegradedReasons}
 	}
 
 	// A degraded check ("could not verify") fails the run only under
@@ -1291,12 +1321,28 @@ func outputText(result *control.AnalysisResult, pc *configuration.PlumberConfig,
 				fmt.Printf("    %s %s\n", bullet, e)
 			}
 			fmt.Println()
+		} else if len(result.DegradedReasons) > 0 {
+			// A later collection step (image/variable fetch, branch protection)
+			// failed on the network; name what was missed instead of the
+			// generic "data collection failed" (#220).
+			fmt.Printf("  %s\n", styleError.Render("Data collection was incomplete:"))
+			bullet := styleError.Render("•")
+			for _, r := range result.DegradedReasons {
+				fmt.Printf("    %s %s\n", bullet, r)
+			}
+			fmt.Println()
 		} else if result.CiMissing {
 			fmt.Printf("  %s\n\n", styleDim.Render("CI configuration file is missing from the project."))
 		} else {
 			fmt.Printf("  %s\n", styleDim.Render("Data collection failed - compliance defaults to 0%."))
 			fmt.Printf("  %s\n\n", styleDim.Render("Use --verbose for more info."))
 		}
+	} else if result.DataCollectionDegraded {
+		// Partial run: some controls evaluated but a later collection step
+		// (branch protection, an include) failed, so the findings below are
+		// from incomplete data. Name what was missed up front — the
+		// controlCount==0 block above only covers total failures (#220).
+		renderDegradedCaveat(result.DegradedReasons)
 	}
 
 	// CI config source info
@@ -1366,7 +1412,12 @@ func outputText(result *control.AnalysisResult, pc *configuration.PlumberConfig,
 			Findings:   items,
 		})
 	}
-	renderFindingGroups(groups)
+	// On a degraded run the per-control verdict is untrustworthy (the
+	// pipeline is partial), so render only the findings we DID surface —
+	// a violation found on partial data is still real — and drop the
+	// green stat blocks, the compliance table and the score. The caveat
+	// above and the withheld score carry the honest signal (#220).
+	renderFindingGroups(filterGroupsForDegraded(groups, result.DataCollectionDegraded))
 	renderWarnings(result.Warnings)
 
 	// Summary Section
@@ -1379,23 +1430,33 @@ func outputText(result *control.AnalysisResult, pc *configuration.PlumberConfig,
 	}
 
 	// Status
-	if compliance >= threshold {
+	switch {
+	case result.DataCollectionDegraded:
+		fmt.Printf("  Status: %s%sINCOMPLETE — data collection failed%s\n\n", colorBold, colorYellow, colorReset)
+	case compliance >= threshold:
 		fmt.Printf("  Status: %s%sPASSED ✓%s\n\n", colorBold, colorGreen, colorReset)
-	} else {
+	default:
 		fmt.Printf("  Status: %s%sFAILED ✗%s\n\n", colorBold, colorRed, colorReset)
 	}
 
-	// Issues Table
-	printIssuesTable(controls)
-	fmt.Println()
+	// Issues Table (real findings). On a degraded run with no findings we
+	// skip it rather than print "(none with open issues)", which would
+	// imply a clean pipeline we never actually evaluated.
+	if !result.DataCollectionDegraded || len(result.Findings) > 0 {
+		printIssuesTable(controls)
+		fmt.Println()
+	}
 
-	// Compliance Table (issues/compliance summary before Plumber score output)
-	printComplianceTable(controls, compliance, threshold)
-	fmt.Println()
+	// Compliance Table — suppressed on a degraded run: its per-control
+	// greens and total would present partial data as a verdict.
+	if !result.DataCollectionDegraded {
+		printComplianceTable(controls, compliance, threshold)
+		fmt.Println()
+	}
 
 	// Letter score + points breakdown last on stdout (--score / --score-point)
-	printSummaryScoreBanner(score, scoreMode)
-	if scorePointMode && score != nil {
+	printSummaryScoreBanner(score, scoreMode, result.DataCollectionDegraded)
+	if scorePointMode && score != nil && !result.DataCollectionDegraded {
 		printScoreBreakdown(score)
 	}
 
@@ -1595,8 +1656,26 @@ func printSectionHeader(name string) {
 // modernised two-column layout: a large grade badge on the left, and
 // a side panel on the right with points, progress bar, meaning text,
 // severity chips, and any Critical malus warning.
-func printSummaryScoreBanner(score *control.PlumberScoreResult, scoreMode bool) {
+func printSummaryScoreBanner(score *control.PlumberScoreResult, scoreMode, degraded bool) {
 	if score == nil || !scoreMode {
+		return
+	}
+
+	// When data collection was degraded the run scored against incomplete
+	// data, so the letter grade would be meaningless (an empty pipeline
+	// reads as a clean A). Withhold the badge and say so plainly instead
+	// of presenting a green grade over missing data (#220).
+	if degraded {
+		sep := styleRule.Render(strings.Repeat("─", hrWidth))
+		fmt.Println()
+		fmt.Println(" " + sep)
+		fmt.Println(" " + styleMuted.Render("Plumber Score"))
+		fmt.Println()
+		fmt.Printf(" %s\n", styleFail.Render("Score withheld — analysis ran on incomplete data"))
+		fmt.Printf(" %s\n", styleMuted.Render("Resolve the data-collection warnings above, then re-run for a grade."))
+		fmt.Println()
+		fmt.Println(" " + sep)
+		fmt.Println()
 		return
 	}
 

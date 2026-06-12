@@ -284,10 +284,20 @@ func presentGitHubResult(result *control.AnalysisResult, conf *configuration.Con
 	// per-control output and out of the visible scrollback.
 	if printOutput {
 		printGitHubFindings(result, conf, compliance)
-		printSummaryScoreBanner(scoreResult, scoreMode)
-		if showScorePoint {
+		printSummaryScoreBanner(scoreResult, scoreMode, result.DataCollectionDegraded)
+		if showScorePoint && !result.DataCollectionDegraded {
 			printScoreBreakdown(scoreResult)
 		}
+	}
+
+	// Artifacts are written even on a degraded run (same contract as the
+	// GitLab path): they are files the user requested, the exit-3 gate below
+	// protects CI, and each format stamps itself degraded so a dashboard
+	// does not treat a partial report as authoritative. Badge/MR (which
+	// mutate shared state) stay skipped — though the GitHub path posts
+	// neither (#220).
+	if result.DataCollectionDegraded && (outputFile != "" || pbomFile != "" || pbomCycloneDXFile != "" || sarifFile != "" || glsastFile != "") {
+		fmt.Fprintf(os.Stderr, "Note: data collection was incomplete — artifacts are written but marked degraded; treat them as partial.\n")
 	}
 
 	if outputFile != "" {
@@ -323,6 +333,13 @@ func presentGitHubResult(result *control.AnalysisResult, conf *configuration.Con
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "GitLab SAST report written to: %s\n", glsastFile)
+	}
+
+	// A data-collection-degraded run ran on partial data, so the compliance
+	// number is not trustworthy. Fail at exit 3 regardless of the measured
+	// compliance, so a CI gate cannot go green on an incomplete scan (#220).
+	if result.DataCollectionDegraded {
+		return &IncompleteDataError{Reasons: result.DegradedReasons}
 	}
 
 	// A degraded check ("could not verify") fails the run only when the
@@ -493,6 +510,12 @@ func printGitHubFindings(result *control.AnalysisResult, conf *configuration.Con
 		fmt.Printf("  %s\n", styleDim.Render("No GitHub Actions workflows discovered."))
 	}
 
+	// When some workflow files or the branch-protection fetch could not be
+	// retrieved, the controls below ran on incomplete data and any green
+	// they show may be vacuous. Surface that up front — without it a
+	// partial GitHub run looks identical to a clean one (#220).
+	renderDegradedCaveat(result.DegradedReasons)
+
 	// Same shape as GitLab: build an ordered list of (catalog entry,
 	// findings, stats) tuples so renderFindingGroups + the Issues +
 	// Compliance tables all see the full set of shipping controls,
@@ -552,15 +575,28 @@ func printGitHubFindings(result *control.AnalysisResult, conf *configuration.Con
 			Findings:   items,
 		})
 	}
-	renderFindingGroups(groups)
+	// On a degraded run render only the real findings (partial data still
+	// yields real violations), and drop the green stat blocks, the "all
+	// pass" note, the compliance table and the score — the caveat above
+	// and the withheld score carry the honest signal (#220).
+	renderFindingGroups(filterGroupsForDegraded(groups, result.DataCollectionDegraded))
 	renderWarnings(result.Warnings)
 
-	if len(result.Findings) == 0 {
+	if len(result.Findings) == 0 && !result.DataCollectionDegraded {
 		fmt.Printf("  %s\n\n", styleSuccess.Render("✓ No findings. All policies pass."))
 	}
 
-	printIssuesTable(summaries)
-	fmt.Println()
-	printComplianceTable(summaries, overallCompliance, 100)
+	// Issues table only when there are real findings; on a degraded run
+	// with none, "(none with open issues)" would imply a clean pipeline we
+	// never fully evaluated.
+	if !result.DataCollectionDegraded || len(result.Findings) > 0 {
+		printIssuesTable(summaries)
+		fmt.Println()
+	}
+	// Compliance table suppressed on a degraded run — its greens and total
+	// would present partial data as a verdict.
+	if !result.DataCollectionDegraded {
+		printComplianceTable(summaries, overallCompliance, 100)
+	}
 }
 

@@ -79,6 +79,7 @@ type GitlabPipelineOriginData struct {
 	CiValid         bool
 	CiMissing       bool
 	CiErrors        []string // Specific CI config errors for output
+	IncludesFailed  []string // include locations whose fetch failed (jobs dropped from analysis, #220)
 	LimitedAnalysis bool
 
 	// Origins and jobs data
@@ -895,6 +896,13 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			jobsFromInclude, err = gitlab.FetchGitlabInclude(include, project.Path, token, conf.GitlabURL, project.LatestHeadCommitSha, conf, includeInputs, data.MergedConf.Stages)
 			if err != nil {
 				lInclude.WithError(err).Error("Unable to fetch include from GitLab")
+				// Record the dropped include so the caller can flag the run
+				// degraded: its jobs are missing from the analysis (#220).
+				loc := include.Location
+				if loc == "" {
+					loc = include.Extra.Project
+				}
+				data.IncludesFailed = append(data.IncludesFailed, loc)
 				// If we cannot retrieve the include, next
 				continue
 			}

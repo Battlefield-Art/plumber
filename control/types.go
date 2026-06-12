@@ -80,6 +80,23 @@ type AnalysisResult struct {
 	// JSON, SARIF and GLSAST output, and gated by --fail-warnings (exit
 	// 3) so a degraded check is visible instead of silently passing.
 	Warnings []string `json:"warnings,omitempty"`
+
+	// DataCollectionDegraded is set when a collection or enrichment step
+	// failed mid-run, so the analysis ran on incomplete data: a GitLab
+	// merged-CI fetch that timed out (empty pipeline), or a GitHub run
+	// where some workflow files or the branch-protection fetch could not
+	// be retrieved. When true the renderer withholds the letter-score
+	// banner and marks the un-collected controls "not evaluated" instead
+	// of presenting missing data as 100% compliant (#220). Distinct from
+	// CiMissing, which is the legitimate "this project has no CI config"
+	// state and is not degraded.
+	DataCollectionDegraded bool `json:"dataCollectionDegraded,omitempty"`
+
+	// DegradedReasons lists the human-readable collection/enrichment
+	// failures behind DataCollectionDegraded (e.g. "3 workflow file(s)
+	// could not be fetched", "branch protection could not be fetched").
+	// Surfaced as a caveat in the terminal. Empty when not degraded.
+	DegradedReasons []string `json:"degradedReasons,omitempty"`
 }
 
 // GitHubAnalysisStats holds per-control aggregations computed by

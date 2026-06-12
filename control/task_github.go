@@ -20,20 +20,26 @@ import (
 // isn't owner/repo shaped. Lacking auth or scope, the collector
 // returns an empty slice and the rego rule emits no findings — the
 // same degraded-mode contract as the action-metadata enrichment.
-func enrichGitHubBranches(l *logrus.Entry, pipeline *ir.NormalizedPipeline, host string, pc *configuration.PlumberConfig, projectPath string, onProgress func(message string)) {
+// Returns true when the protection fetch failed outright (network,
+// rate-limit, lost connectivity) and the pipeline was left with zero
+// branches, so the caller can flag the run degraded and route
+// branchMustBeProtected to "not evaluated" rather than a vacuous 100%
+// green (#220). Returns false when the control is disabled/benched/out
+// of scope (nothing to fetch) or the fetch succeeded.
+func enrichGitHubBranches(l *logrus.Entry, pipeline *ir.NormalizedPipeline, host string, pc *configuration.PlumberConfig, projectPath string, onProgress func(message string)) (fetchFailed bool) {
 	if pipeline == nil || pc == nil {
-		return
+		return false
 	}
 	if configuration.IsBenched("github", "branchMustBeProtected") {
-		return
+		return false
 	}
 	cfg := pc.ControlsFor("github").BranchMustBeProtected
 	if cfg == nil || !cfg.IsEnabled() {
-		return
+		return false
 	}
 	parts := strings.SplitN(projectPath, "/", 2)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return
+		return false
 	}
 
 	// Resolve the repo's actual default branch FIRST: the targeted
@@ -99,9 +105,10 @@ func enrichGitHubBranches(l *logrus.Entry, pipeline *ir.NormalizedPipeline, host
 	})
 	if err != nil {
 		l.WithError(err).Warn("GitHub branch-protection fetch failed; branchMustBeProtected will see zero branches")
-		return
+		return true
 	}
 	pipeline.Branches = branches
+	return false
 }
 
 // isBranchGlob reports whether a branch-name pattern contains the
@@ -150,6 +157,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 		l.WithError(perr).Warn("GitHub workflow parse: partial failure (file skipped)")
 	}
 
+	branchFetchFailed := false
 	if shouldRunControl(controlBranchMustBeProtected, conf) {
 		total := collector.TotalProgressStepsForPipeline(pipeline)
 		if conf.ProgressFunc != nil {
@@ -164,7 +172,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 				conf.ProgressFunc(total-2, total, message)
 			}
 		}
-		enrichGitHubBranches(l, pipeline, conf.GithubAPIHost, conf.PlumberConfig, conf.ProjectPath, onProgress)
+		branchFetchFailed = enrichGitHubBranches(l, pipeline, conf.GithubAPIHost, conf.PlumberConfig, conf.ProjectPath, onProgress)
 	}
 
 	if conf.ProgressFunc != nil {
@@ -198,6 +206,10 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 		GitleaksAbstainReason: pipeline.GitleaksAbstainReason,
 		Warnings:              pipeline.AdvisoryWarnings,
 	}
+	// Local scans read workflow files from disk, so a skipped file is a
+	// parse/read problem (user-fixable), not a degraded collection — only
+	// a failed branch-protection API fetch counts as degraded here (#220).
+	applyGitHubDegraded(result, 0, branchFetchFailed)
 	// Resolve the local clone's HEAD SHA so source links in the report
 	// point at the exact commit being analysed instead of a mutable
 	// branch name. CI runs already get the SHA from GITHUB_SHA; this
@@ -266,6 +278,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 		l.WithError(perr).Warn("GitHub workflow parse: partial failure (file skipped)")
 	}
 
+	branchFetchFailed := false
 	if shouldRunControl(controlBranchMustBeProtected, conf) {
 		total := collector.TotalProgressStepsForPipeline(pipeline)
 		if conf.ProgressFunc != nil {
@@ -277,7 +290,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 				conf.ProgressFunc(total-2, total, message)
 			}
 		}
-		enrichGitHubBranches(l, pipeline, conf.GithubAPIHost, conf.PlumberConfig, owner+"/"+repo, onProgress)
+		branchFetchFailed = enrichGitHubBranches(l, pipeline, conf.GithubAPIHost, conf.PlumberConfig, owner+"/"+repo, onProgress)
 	}
 
 	if conf.ProgressFunc != nil {
@@ -300,6 +313,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 		GitHubPipeline: pipeline,
 		Warnings:       pipeline.AdvisoryWarnings,
 	}
+	applyGitHubDegraded(result, len(partial), branchFetchFailed)
 	ApplyGitHubFindingCounts(result.GitHubStats, result.Findings)
 	if conf.ProgressFunc != nil {
 		total := collector.TotalProgressStepsForPipeline(pipeline)

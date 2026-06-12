@@ -72,6 +72,41 @@ func renderWarnings(warnings []string) {
 	fmt.Printf("    %s↳ if an action above is in an org with an IP allow list, set PLUMBER_METADATA_TOKEN (a token with public-repo read) to resolve its version; see the README \"GitHub Action\" section.%s\n", colorYellow, colorReset)
 }
 
+// renderDegradedCaveat prints an up-front warning that the run scored
+// against incomplete data because one or more collection/enrichment
+// steps failed (#220). Without it a partial GitHub run looks identical
+// to a clean one. No-op when there are no reasons.
+func renderDegradedCaveat(reasons []string) {
+	if len(reasons) == 0 {
+		return
+	}
+	fmt.Printf("  %s⚠ Data collection was incomplete — results may be partial:%s\n", colorYellow, colorReset)
+	for _, r := range reasons {
+		fmt.Printf("    %s•%s %s\n", colorYellow, colorReset, r)
+	}
+	fmt.Printf("    %s↳ controls with un-collected data are marked \"not evaluated\"; the letter score is withheld until the run completes cleanly.%s\n\n", colorDim, colorReset)
+}
+
+// filterGroupsForDegraded drops every group that has no findings when the
+// run is data-collection-degraded, leaving only the real findings (#220).
+// A control that showed "100% compliant" over partial data is untrustworthy
+// (the un-collected inputs could hold violations), so its green stat block
+// is suppressed; a control that found a violation keeps it, because a
+// finding on partial data is still real. Returns the input unchanged when
+// not degraded.
+func filterGroupsForDegraded(groups []findingGroup, degraded bool) []findingGroup {
+	if !degraded {
+		return groups
+	}
+	kept := make([]findingGroup, 0, len(groups))
+	for _, g := range groups {
+		if len(g.Findings) > 0 {
+			kept = append(kept, g)
+		}
+	}
+	return kept
+}
+
 // renderFindingGroups prints each group in the canonical Plumber
 // format used across providers: horizontal separator header with the
 // rule title and compliance (or "skipped"), the stat lines, and an
