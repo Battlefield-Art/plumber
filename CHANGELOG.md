@@ -1,3 +1,10 @@
+## [0.3.58](https://github.com/getplumber/plumber/compare/v0.3.57...v0.3.58) (2026-06-12)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Fix false positives in issue 207 ([3a471ba](https://github.com/getplumber/plumber/commit/3a471ba59f14a84feccd700637fb3557b7b1514e))
+
 ## [0.3.57](https://github.com/getplumber/plumber/compare/v0.3.56...v0.3.57) (2026-06-12)
 
 
