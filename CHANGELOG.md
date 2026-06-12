@@ -1,3 +1,10 @@
+## [0.3.57](https://github.com/getplumber/plumber/compare/v0.3.56...v0.3.57) (2026-06-12)
+
+
+### 🐛 Bug Fixes
+
+* **analysis:** Issue [#220](https://github.com/getplumber/plumber/issues/220) - Make data collection on github and gitlab more robust to network and fetch failures and render them in a UX friendly way ([650b13a](https://github.com/getplumber/plumber/commit/650b13a1f55ee3b25cc7fd94ebb4e6b3c854ffdf))
+
 ## [0.3.56](https://github.com/getplumber/plumber/compare/v0.3.55...v0.3.56) (2026-06-10)
 
 
