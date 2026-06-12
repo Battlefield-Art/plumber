@@ -559,6 +559,44 @@ func TestIssue206_TemplateInjection(t *testing.T) {
 			fixture:      "clean_event_fork.yml",
 			expectedHits: nil,
 		},
+		{
+			// Base-repo default_branch is admin metadata, not
+			// attacker-controlled (#230). Must not fire.
+			fixture:      "clean_base_default_branch.yml",
+			expectedHits: nil,
+		},
+		{
+			// Fork's default_branch is attacker-renamable; must
+			// still fire (#230).
+			fixture:      "violation_fork_default_branch.yml",
+			expectedHits: []string{"violation_fork_default_branch/bad"},
+		},
+		{
+			// workflow_run head_repository is the fork on a fork-PR
+			// run; its default_branch is attacker-controlled (#230).
+			fixture:      "violation_workflow_run_default_branch.yml",
+			expectedHits: []string{"violation_workflow_run_default_branch/bad"},
+		},
+		{
+			// Safe sink (#229): toJSON + quoted heredoc. Must not fire.
+			fixture:      "clean_tojson_quoted_heredoc.yml",
+			expectedHits: nil,
+		},
+		{
+			// toJSON alone (no heredoc): $() still fires. Must fire (#229).
+			fixture:      "violation_tojson_no_heredoc.yml",
+			expectedHits: []string{"violation_tojson_no_heredoc/bad"},
+		},
+		{
+			// Quoted heredoc alone (raw expr): EOF breakout. Must fire (#229).
+			fixture:      "violation_raw_in_quoted_heredoc.yml",
+			expectedHits: []string{"violation_raw_in_quoted_heredoc/bad"},
+		},
+		{
+			// Unquoted heredoc still expands $(). Must fire (#229).
+			fixture:      "violation_tojson_unquoted_heredoc.yml",
+			expectedHits: []string{"violation_tojson_unquoted_heredoc/bad"},
+		},
 	}
 
 	engine := opaengine.New()
