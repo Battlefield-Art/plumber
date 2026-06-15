@@ -1,3 +1,10 @@
+## [0.3.59](https://github.com/getplumber/plumber/compare/v0.3.58...v0.3.59) (2026-06-15)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Add missing pullRequestTargetHeadCheckoutResult and correctly count workflowsWithDangerousTrigger in reports ([4e73959](https://github.com/getplumber/plumber/commit/4e7395978aef1ffcd62e1265e4ac0520c7150b7b))
+
 ## [0.3.58](https://github.com/getplumber/plumber/compare/v0.3.57...v0.3.58) (2026-06-12)
 
 
