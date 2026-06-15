@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/getplumber/plumber/configuration"
+	opaengine "github.com/getplumber/plumber/internal/engine/opa"
 	"github.com/getplumber/plumber/internal/ir"
 )
 
@@ -77,28 +78,32 @@ func TestAggregate_ReusableWorkflowRefsCountTowardActionPinning(t *testing.T) {
 	}
 }
 
-// TestHasDangerousTrigger_MatchesRegoEventSet locks the metric's
-// dangerous-trigger set to the ISSUE-802 Rego rule's dangerous_events.
-// When they drift, workflowsWithDangerousTrigger disagrees with the
-// emitted findings — e.g. an issue_comment job fires 3 ISSUE-802 issues
-// while the metric reports 0 dangerous-trigger workflows (#235).
-func TestHasDangerousTrigger_MatchesRegoEventSet(t *testing.T) {
-	fires := []string{
-		"workflow_run", "issue_comment", "pull_request_review",
-		"pull_request_review_comment", "discussion_comment", "discussion",
-		"gollum", "fork",
+// TestDangerousTriggerMetricFollowsFindings locks the
+// workflowsWithDangerousTrigger metric to the ISSUE-802 findings the rule
+// actually emits, rather than a structural scan of trigger names. The
+// rule's fork-guard recognition lives in Rego (#235), so a workflow with
+// a dangerous trigger but a `push`-event / author-association guard emits
+// no finding and must not inflate the metric (#235 follow-up).
+func TestDangerousTriggerMetricFollowsFindings(t *testing.T) {
+	// No ISSUE-802 findings → metric 0, even if a structural pass seeded
+	// a higher value.
+	s := &GitHubAnalysisStats{WorkflowsWithDangerousTrigger: 2}
+	ApplyGitHubFindingCounts(s, nil)
+	if s.WorkflowsWithDangerousTrigger != 0 {
+		t.Fatalf("no ISSUE-802 findings → metric 0, got %d", s.WorkflowsWithDangerousTrigger)
 	}
-	for _, ev := range fires {
-		if !hasDangerousTrigger([]string{ev}) {
-			t.Errorf("%q must count as a dangerous trigger — ISSUE-802 fires on it", ev)
-		}
+
+	// Per-job findings collapse to their distinct workflows; other codes
+	// are ignored.
+	s = &GitHubAnalysisStats{}
+	findings := []opaengine.Finding{
+		{Code: "ISSUE-802", Job: "ci/build", File: ".github/workflows/ci.yml"},
+		{Code: "ISSUE-802", Job: "ci/test", File: ".github/workflows/ci.yml"},
+		{Code: "ISSUE-802", Job: "release/publish", File: ".github/workflows/release.yml"},
+		{Code: "ISSUE-103", Job: "ci/build", File: ".github/workflows/ci.yml"},
 	}
-	// pull_request_target is ISSUE-804's concern and is excluded from the
-	// ISSUE-802 rule, so it must not inflate this control's metric.
-	if hasDangerousTrigger([]string{"pull_request_target"}) {
-		t.Error("pull_request_target must not count for the ISSUE-802 metric (owned by ISSUE-804)")
-	}
-	if hasDangerousTrigger([]string{"push"}) {
-		t.Error("push must not count as a dangerous trigger")
+	ApplyGitHubFindingCounts(s, findings)
+	if s.WorkflowsWithDangerousTrigger != 2 {
+		t.Fatalf("expected 2 distinct flagged workflows, got %d", s.WorkflowsWithDangerousTrigger)
 	}
 }

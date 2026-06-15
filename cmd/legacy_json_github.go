@@ -46,6 +46,8 @@ func buildLegacyResultGitHub(e control.ControlEntry, result *control.AnalysisRes
 		return "templateInjectionResult", buildTemplateInjectionBlock(common, result, findings)
 	case "workflowMustNotUseDangerousTriggers":
 		return "dangerousTriggersResult", buildDangerousTriggersBlock(common, result, findings)
+	case "pullRequestTargetMustNotCheckoutHead":
+		return "pullRequestTargetHeadCheckoutResult", buildPullRequestTargetHeadCheckoutBlock(common, result, findings)
 	case "workflowsMustDeclarePermissions":
 		return "permissionsResult", buildPermissionsBlock(common, result, findings)
 	case "workflowMustIncludeRequiredActions":
@@ -358,6 +360,29 @@ func buildDangerousTriggersBlock(c legacyCommon, result *control.AnalysisResult,
 		"metrics": map[string]any{
 			"workflowsScanned":              s.WorkflowsTotal,
 			"workflowsWithDangerousTrigger": s.WorkflowsWithDangerousTrigger,
+		},
+		"compliance": c.Compliance,
+		"version":    "0.1.0",
+		"ciValid":    c.CiValid,
+		"ciMissing":  c.CiMissing,
+		"skipped":    c.Skipped,
+	}
+}
+
+// buildPullRequestTargetHeadCheckoutBlock — ISSUE-804. The exploitable
+// pull_request_target + PR-head-checkout combination (tj-actions /
+// CVE-2025-30066). Mirrors dangerousTriggersResult so dashboards get the
+// same issue/metric shape; the issues[] carry the file/job/line the
+// terminal already shows but the JSON previously dropped (only a
+// plumberScore.codeLosses line remained). Findings are per-job; the
+// metric counts the flagged (job, checkout) pairs.
+func buildPullRequestTargetHeadCheckoutBlock(c legacyCommon, result *control.AnalysisResult, findings []opaengine.Finding) map[string]any {
+	s := statsOf(result)
+	return map[string]any{
+		"issues": projectFindings(_sortedFindings(findings), "jobName"),
+		"metrics": map[string]any{
+			"workflowsScanned":           s.WorkflowsTotal,
+			"headCheckoutsUnderPrTarget": len(findings),
 		},
 		"compliance": c.Compliance,
 		"version":    "0.1.0",
