@@ -1,3 +1,10 @@
+## [0.3.60](https://github.com/getplumber/plumber/compare/v0.3.59...v0.3.60) (2026-06-15)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Issue [#156](https://github.com/getplumber/plumber/issues/156) - Outdated Includes ([00d6866](https://github.com/getplumber/plumber/commit/00d68664e1d3542f82cbf57f92d3790240087fda))
+
 ## [0.3.59](https://github.com/getplumber/plumber/compare/v0.3.58...v0.3.59) (2026-06-15)
 
 
