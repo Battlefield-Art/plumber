@@ -66,11 +66,6 @@ type GitlabPipelineOriginMetrics struct {
 
 type GitlabPipelineOriginData struct {
 
-	// Gitlab CI catalog data
-	GitlabCatalogResources    []gitlab.CICatalogResource
-	GitlabCatalogComponentMap map[string]int      // path -> index in catalogResources
-	VersionMap                map[string][]string // path -> []versions (newest first)
-
 	// Gitlab CI configuration
 	Conf            *gitlab.GitlabCIConf
 	ConfString      string
@@ -185,6 +180,58 @@ func ParseGitlabComponentPath(path string, instanceURL string) (string, string, 
 	}
 
 	return instance, cleanPath, version
+}
+
+// splitComponentPath splits a GitLab component cleanPath
+// ("group/.../project/component") into the project full path and the component
+// name (the last segment). GitLab component includes are always
+// <project-full-path>/<component-name>, so the project is everything before the
+// final "/". Used to resolve the project's catalog resource / git tags (#156).
+func splitComponentPath(cleanPath string) (project string, component string) {
+	i := strings.LastIndex(cleanPath, "/")
+	if i < 0 {
+		return "", cleanPath
+	}
+	return cleanPath[:i], cleanPath[i+1:]
+}
+
+// latestSemver returns the newest version from versions using semantic-version
+// ordering, falling back to lexicographic order for non-semver strings. Returns
+// "" for an empty slice.
+func latestSemver(versions []string) string {
+	if len(versions) == 0 {
+		return ""
+	}
+	out := append([]string(nil), versions...)
+	sort.Slice(out, func(i, j int) bool {
+		v1, e1 := gover.NewVersion(out[i])
+		v2, e2 := gover.NewVersion(out[j])
+		if e1 == nil && e2 == nil {
+			return v1.GreaterThan(v2)
+		}
+		return out[i] > out[j]
+	})
+	return out[0]
+}
+
+// latestCatalogVersion returns the newest released version of the resource that
+// still carries the named component. Components are versioned with their
+// project, but a component can be added or removed across releases, so we only
+// consider versions that actually contain it.
+func latestCatalogVersion(resource *gitlab.CICatalogResource, component string) string {
+	if resource == nil {
+		return ""
+	}
+	candidates := make([]string, 0, len(resource.Versions))
+	for _, v := range resource.Versions {
+		for _, c := range v.Components {
+			if c.Name == component {
+				candidates = append(candidates, v.Name)
+				break
+			}
+		}
+	}
+	return latestSemver(candidates)
 }
 
 // extractInputsFromInclude extracts inputs from a single include entry and generates its hash
@@ -327,9 +374,6 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 	data.JobExtendsMap = make(map[string][]string)
 	data.JobHardcodedMap = make(map[string]bool)
 	data.JobHardcodedContent = make(map[string]interface{})
-	data.GitlabCatalogResources = []gitlab.CICatalogResource{}
-	data.GitlabCatalogComponentMap = make(map[string]int)
-	data.VersionMap = make(map[string][]string)
 	data.Origins = []GitlabPipelineOriginDataFull{}
 	data.ConfString = ""
 	data.MergedConf = nil
@@ -401,50 +445,39 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 		return data, metrics, nil
 	}
 
-	// Fetch all GitLab components
-	data.GitlabCatalogResources, err = gitlab.GetGitlabCIComponentResources(project.IsGroup, token, conf.GitlabURL, conf)
-	if err != nil {
-		l.WithError(err).Warn("Unable to retrieve GitLab CI components")
-		// Continue even if we can't get components (will just not detect them)
-	}
-
-	// Create maps to quickly lookup components and versions
-	for i, resource := range data.GitlabCatalogResources {
-		// Process each version and component
-		for _, version := range resource.Versions {
-			for _, component := range version.Components {
-
-				// Extract instance, clean path, and version from the includePath
-				_, cleanPath, _ := ParseGitlabComponentPath(component.IncludePath, conf.GitlabURL)
-
-				// Store component resource index in the map - key is the clean path
-				data.GitlabCatalogComponentMap[cleanPath] = i
-
-				// Add component to versionMap
-				if _, ok := data.VersionMap[cleanPath]; !ok {
-					data.VersionMap[cleanPath] = make([]string, 0, len(resource.Versions))
-				}
-				data.VersionMap[cleanPath] = append(data.VersionMap[cleanPath], version.Name)
+	// Component latest-version resolution (#156).
+	//
+	// We no longer enumerate the whole instance catalog up front
+	// (ciCatalogResources(scope: ALL)): on gitlab.com that query returns a
+	// ~2 MB / 30 s+ payload that exceeds the HTTP timeout, gets cancelled, and
+	// silently leaves every component "up to date". Instead each component
+	// include resolves its project on demand via a targeted
+	// ciCatalogResource(fullPath:) lookup (cheap and complete). Results are
+	// cached per project so repeated includes from the same project share one
+	// query.
+	catalogCache := map[string]*gitlab.CICatalogResource{}
+	catalogTried := map[string]bool{}
+	resolveComponentLatest := func(project, component string) (latest, webPath, repoName string) {
+		webPath = "/" + project
+		repoName = component
+		if !catalogTried[project] {
+			r, qerr := gitlab.GetGitlabCIComponentResource(project, token, conf.GitlabURL, conf)
+			if qerr != nil {
+				l.WithError(qerr).WithField("project", project).Debug("catalog resource lookup failed")
+			}
+			catalogCache[project] = r
+			catalogTried[project] = true
+		}
+		if r := catalogCache[project]; r != nil {
+			latest = latestCatalogVersion(r, component)
+			if r.WebPath != "" {
+				webPath = r.WebPath
+			}
+			if r.Name != "" {
+				repoName = r.Name
 			}
 		}
-	}
-
-	// Sort versions (newest first) - using semantic versioning comparison
-	for path, versions := range data.VersionMap {
-		sort.Slice(versions, func(i, j int) bool {
-			// Try to parse as semantic versions
-			v1, err1 := gover.NewVersion(versions[i])
-			v2, err2 := gover.NewVersion(versions[j])
-
-			// If both are valid semantic versions, compare them properly
-			if err1 == nil && err2 == nil {
-				return v1.GreaterThan(v2) // For descending order (newest first)
-			}
-
-			// Fall back to string comparison if not valid semantic versions
-			return versions[i] > versions[j] // Simple lexicographic sort for descending order
-		})
-		data.VersionMap[path] = versions
+		return latest, webPath, repoName
 	}
 
 	////////////////////////////////////////////////////////
@@ -615,149 +648,33 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 				// Set the version
 				originData.Version = version
 
-				// Check if we can find this component in the catalog
-				foundComponent := false
-
-				// Try to find matching component directly in our componentMap
-				if resourceIndex, exists := data.GitlabCatalogComponentMap[cleanPath]; exists {
-
-					// We found a matching component
-					lInclude.WithFields(logrus.Fields{
-						"componentLocation": originData.GitlabIncludeOrigin.Location,
-						"cleanPath":         cleanPath,
-						"fullPath":          data.GitlabCatalogResources[resourceIndex].FullPath,
-					}).Debug("Found a matching GitLab component")
-
-					foundComponent = true
-
-					// Mark as found in GitLab catalog
+				// Resolve the component's latest published version via a targeted
+				// catalog lookup (cached), falling back to the project's git tags (#156).
+				project, componentName := splitComponentPath(cleanPath)
+				if componentName == "" {
+					lInclude.Warning("Component name is empty. It should not happen.")
+					continue
+				}
+				latestVersion, webPath, repoName := resolveComponentLatest(project, componentName)
+				if latestVersion != "" {
 					originData.FromGitlabCatalog = true
-
-					// Get latest version from our pre-sorted version map
-					latestVersion := ""
-					if versions, ok := data.VersionMap[cleanPath]; ok && len(versions) > 0 {
-						latestVersion = versions[0] // First version is the newest
-					}
-
-					// Extract component name from the path (last segment)
-					// The component include is: <instance>/<repo_full_path>/<component_name>@version
-					repoFullPath := data.GitlabCatalogResources[resourceIndex].FullPath
-					componentName := ""
-					pathParts := strings.Split(cleanPath, "/")
-					if len(pathParts) > 0 {
-						componentName = pathParts[len(pathParts)-1]
-					}
-
-					// If component name is empty, skip
-					if componentName == "" {
-						lInclude.Warning("Component name is empty. It should not happen.")
-						continue
-					}
-
-					// Set GitLab component data
 					originData.GitlabComponent = GitlabPipelineJobGitlabComponent{
-						RepoFullPath:           data.GitlabCatalogResources[resourceIndex].FullPath + "/" + componentName,
-						RepoWebPath:            data.GitlabCatalogResources[resourceIndex].WebPath,
-						RepoName:               data.GitlabCatalogResources[resourceIndex].Name,
+						RepoFullPath:           project + "/" + componentName,
+						RepoWebPath:            webPath,
+						RepoName:               repoName,
 						ComponentName:          componentName,
 						ComponentIncludePath:   instance + "/" + cleanPath,
 						ComponentLatestVersion: latestVersion,
 					}
-
-					// Check if version is up to date
-					originData.UpToDate = gitlab.IsUpToDate(originData.Version, latestVersion, latestRefs)
-
+					originData.UpToDate = gitlab.IsUpToDate(version, latestVersion, latestRefs)
 					lInclude.WithFields(logrus.Fields{
-						"repoFullPath":  repoFullPath,
-						"componentName": componentName,
 						"cleanPath":     cleanPath,
-					}).Debug("Extracted component information")
-				}
-
-				// If component was not found in catalog, check if it's a GitLab built-in component
-				if !foundComponent {
-					// Check if this is a GitLab built-in component (e.g., gitlab.com/components/sast/sast@3.4.0)
-					// These are not in the CI/CD Catalog but we can fetch their versions from the source project
-					if strings.Contains(instance, "gitlab.com") && strings.HasPrefix(cleanPath, "components/") {
-						// Extract component name (e.g., "components/sast/sast" -> "sast")
-						pathParts := strings.Split(cleanPath, "/")
-						if len(pathParts) >= 3 && pathParts[0] == "components" {
-							componentName := pathParts[1] // e.g., "sast", "secret-detection"
-							
-							// The source project for GitLab built-in components is: components/{component-name}
-							sourceProject := "components/" + componentName
-							
-							lInclude.WithFields(logrus.Fields{
-								"sourceProject": sourceProject,
-								"componentName": componentName,
-								"version":       version,
-							}).Debug("Detected GitLab built-in component, fetching version info")
-							
-							// Fetch tags from the source project to determine latest version
-							tags, errPlatform, err := gitlab.SearchTags(sourceProject, token, conf.GitlabURL, conf)
-							if err != nil || errPlatform != nil {
-								lInclude.WithFields(logrus.Fields{
-									"err":         err,
-									"errPlatform": errPlatform,
-								}).Debug("Could not fetch tags from GitLab built-in component source project")
-							} else if len(tags) > 0 {
-								// Parse and sort versions semantically
-								var validVersions []string
-								for _, tag := range tags {
-									// GitLab component tags are typically just version numbers (e.g., "3.4.0", "2.2.0")
-									// Skip non-version tags
-									if _, verr := gover.NewVersion(tag); verr == nil {
-										validVersions = append(validVersions, tag)
-									}
-								}
-								
-								if len(validVersions) > 0 {
-									// Sort versions (newest first)
-									sort.Slice(validVersions, func(i, j int) bool {
-										v1, _ := gover.NewVersion(validVersions[i])
-										v2, _ := gover.NewVersion(validVersions[j])
-										return v1.GreaterThan(v2)
-									})
-									
-									latestVersion := validVersions[0]
-									
-									// Mark as found in GitLab catalog (even though it's a built-in component)
-									originData.FromGitlabCatalog = true
-									foundComponent = true
-									
-									// Set component data
-									originData.GitlabComponent = GitlabPipelineJobGitlabComponent{
-										RepoFullPath:           sourceProject + "/" + componentName,
-										RepoWebPath:            "/" + sourceProject,
-										RepoName:               componentName,
-										ComponentName:          componentName,
-										ComponentIncludePath:   instance + "/" + cleanPath,
-										ComponentLatestVersion: latestVersion,
-									}
-									
-									// Check if version is up to date
-									originData.UpToDate = gitlab.IsUpToDate(version, latestVersion, latestRefs)
-									
-									lInclude.WithFields(logrus.Fields{
-										"currentVersion": version,
-										"latestVersion":  latestVersion,
-										"upToDate":       originData.UpToDate,
-										"validVersions":  validVersions,
-									}).Debug("GitLab built-in component version check completed")
-								}
-							}
-						}
-					}
-					
-					// If still not found, log a debug message
-					if !foundComponent {
-						lInclude.WithFields(logrus.Fields{
-							"componentIncludeLocation": originData.GitlabIncludeOrigin.Location,
-							"cleanComponentPath":       cleanPath,
-							"componentMap":             data.GitlabCatalogComponentMap,
-							"versionMap":               data.VersionMap,
-						}).Debug("Could not find a matching GitLab component")
-					}
+						"componentName": componentName,
+						"latestVersion": latestVersion,
+						"upToDate":      originData.UpToDate,
+					}).Debug("Resolved GitLab component latest version")
+				} else {
+					lInclude.WithField("cleanPath", cleanPath).Debug("Could not resolve latest version for component (not in catalog and no semver tags)")
 				}
 
 			// External file (project)
