@@ -1,3 +1,10 @@
+## [0.3.61](https://github.com/getplumber/plumber/compare/v0.3.60...v0.3.61) (2026-06-17)
+
+
+### 🐛 Bug Fixes
+
+* **wizard:** Make platform selection in wizard cleaner ([2987afb](https://github.com/getplumber/plumber/commit/2987afb95ee2d7cf53571cdfc741f03589105029))
+
 ## [0.3.60](https://github.com/getplumber/plumber/compare/v0.3.59...v0.3.60) (2026-06-15)
 
 
