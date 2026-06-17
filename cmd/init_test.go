@@ -422,6 +422,31 @@ func TestProvidersFromWizardLabels(t *testing.T) {
 	}
 }
 
+// TestProvidersFromProviderChoice guards the issue #256 fix: the single
+// provider select must scope to exactly the chosen provider (picking
+// GitHub must NOT leave GitLab in scope); "Both" is the explicit opt-in.
+func TestProvidersFromProviderChoice(t *testing.T) {
+	cases := []struct {
+		choice string
+		want   []string
+	}{
+		{provGitLab, []string{"gitlab"}},
+		{provGitHub, []string{"github"}},
+		{provBoth, []string{"gitlab", "github"}},
+	}
+	for _, c := range cases {
+		got := providersFromProviderChoice(c.choice)
+		if len(got) != len(c.want) {
+			t.Fatalf("%q: got %v, want %v", c.choice, got, c.want)
+		}
+		for i := range c.want {
+			if got[i] != c.want[i] {
+				t.Fatalf("%q: got %v, want %v", c.choice, got, c.want)
+			}
+		}
+	}
+}
+
 func TestWizardCategoriesForProviders(t *testing.T) {
 	gitlab := wizardCategoriesForProviders([]string{"gitlab"})
 	hasCatVariables := false

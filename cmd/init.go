@@ -21,6 +21,7 @@ const (
 	// Provider selection (the first question — drives every later filter).
 	provGitLab = "GitLab (gitlab.com / self-hosted)"
 	provGitHub = "GitHub Actions (github.com / GHES)"
+	provBoth   = "Both (GitLab + GitHub Actions)"
 
 	catImages      = "Container image security (tags, trusted registries)"
 	catComposition = "Pipeline composition (includes, scripts, security jobs, DinD)"
@@ -204,20 +205,24 @@ func runInitWizard(skipAnalyzePrompt bool) (*initWizardState, error) {
 	// area, and which provider section(s) the resulting config gets
 	// written under. Auto-detect from the git remote when possible
 	// so the default lands on the right provider out of the box;
-	// multi-select still lets the user pick "both" for monorepos
-	// that ship to both platforms or for shared config repos.
-	providerOptions := []string{provGitLab, provGitHub}
-	providerDefault := autoDetectProviderForInit()
-	if err := survey.AskOne(&survey.MultiSelect{
-		Message:  "Which provider(s) do you want to configure?",
-		Help:     "Pick one to scope the wizard. Pick both for a config that targets a monorepo or a config file shared across repos. Auto-detection picks the default based on your git remote.",
+	// an explicit "Both" option still covers monorepos that ship to
+	// both platforms or shared config repos.
+	providerOptions := []string{provGitLab, provGitHub, provBoth}
+	providerDefault := provGitLab
+	if d := autoDetectProviderForInit(); len(d) > 0 {
+		providerDefault = d[0]
+	}
+	var providerChoice string
+	if err := survey.AskOne(&survey.Select{
+		Message:  "Which provider do you want to configure?",
+		Help:     "Pick the platform this config targets. Choose Both for a monorepo or a config file shared across repos. The default follows your git remote.",
 		Options:  providerOptions,
 		PageSize: 4,
 		Default:  providerDefault,
-	}, &st.Providers, survey.WithValidator(survey.Required)); err != nil {
+	}, &providerChoice); err != nil {
 		return nil, err
 	}
-	st.Providers = providersFromWizardLabels(st.Providers)
+	st.Providers = providersFromProviderChoice(providerChoice)
 
 	allCats := wizardCategoriesForProviders(st.Providers)
 	err := survey.AskOne(&survey.MultiSelect{
@@ -635,9 +640,22 @@ func providersFromWizardLabels(labels []string) []string {
 	return out
 }
 
+// providersFromProviderChoice maps the single provider-selection answer
+// (provGitLab / provGitHub / provBoth) to the canonical provider list.
+// A single-select replaces rather than accumulates, so picking GitHub
+// yields GitHub only; "Both" is the explicit multi-provider opt-in
+// (issue #256, where a pre-checked multi-select left GitLab in scope).
+func providersFromProviderChoice(choice string) []string {
+	labels := []string{choice}
+	if choice == provBoth {
+		labels = []string{provGitLab, provGitHub}
+	}
+	return providersFromWizardLabels(labels)
+}
+
 // autoDetectProviderForInit picks the default provider selection
 // based on the current git remote so the most common single-provider
-// case lands on the right pre-checked option without the user
+// case lands on the right highlighted default without the user
 // having to touch it. Falls back to GitLab when nothing matches —
 // preserves historical behaviour for the (still common) GitLab-only
 // case.
