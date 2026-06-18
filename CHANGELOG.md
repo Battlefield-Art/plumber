@@ -1,3 +1,16 @@
+## [0.3.63](https://github.com/getplumber/plumber/compare/v0.3.62...v0.3.63) (2026-06-18)
+
+
+### ✨ Features
+
+* **analyze,template:** add verbose env var and simplify CI template via env var delegation ([eb0f400](https://github.com/getplumber/plumber/commit/eb0f400b16801fc3a3e0cf12d17d545fc537798c))
+* **analyze:** support environment variables ([cd47fcd](https://github.com/getplumber/plumber/commit/cd47fcd329d85a4f9f346bc16c72e1fb911cec42))
+
+
+### 🐛 Bug Fixes
+
+* **lint:** replace spaces by tabs (gofmt) ([7ccc680](https://github.com/getplumber/plumber/commit/7ccc6806bc3450d2a4f6ac65ab18a4b47ecb9064))
+
 ## [0.3.62](https://github.com/getplumber/plumber/compare/v0.3.61...v0.3.62) (2026-06-17)
 
 
