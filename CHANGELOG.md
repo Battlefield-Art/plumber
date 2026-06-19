@@ -1,3 +1,10 @@
+## [0.3.65](https://github.com/getplumber/plumber/compare/v0.3.64...v0.3.65) (2026-06-19)
+
+
+### ♻️ Refactoring
+
+* **provider:** add provider abstraction, dissolve collector into gitlab/github ([c309d1d](https://github.com/getplumber/plumber/commit/c309d1ddca2622a1f360b05c6b71e79f55e136fd))
+
 ## [0.3.64](https://github.com/getplumber/plumber/compare/v0.3.62...v0.3.64) (2026-06-18)
 
 
