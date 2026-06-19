@@ -1,4 +1,4 @@
-package collector
+package github
 
 import (
 	"context"
@@ -39,15 +39,15 @@ const EnvMetadataToken = "PLUMBER_METADATA_TOKEN"
 //   - RefExists:        the ref (tag / branch / commit SHA) resolves.
 //   - RefKind:          "tag", "branch", "commit", "unknown".
 //   - TagSha:           when RefKind=="tag", the commit SHA the tag
-//                       currently points at.
+//     currently points at.
 //   - LatestTag:        the repo's newest release tag, "" when the
-//                       API returns no releases.
+//     API returns no releases.
 //   - LatestReleaseSha: the SHA that tag resolves to upstream.
 //   - RefIsAmbiguous:   the ref resolves as BOTH a tag and a branch
-//                       (ref-confusion).
+//     (ref-confusion).
 //   - Advisories:       security advisory identifiers from the
-//                       GitHub Advisory Database whose affected
-//                       version range covers this ref, if any.
+//     GitHub Advisory Database whose affected
+//     version range covers this ref, if any.
 //
 // Zero value (all fields empty / false) is explicitly "unknown" — it
 // is also what the policies see when the API call failed. They

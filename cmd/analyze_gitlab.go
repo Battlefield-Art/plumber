@@ -13,12 +13,11 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/getplumber/plumber/collector"
 	"github.com/getplumber/plumber/configuration"
 	"github.com/getplumber/plumber/control"
-	glabCI "github.com/getplumber/plumber/gitlab"
 	"github.com/getplumber/plumber/internal/defaultconfig"
-	"github.com/getplumber/plumber/pbom"
+	opaengine "github.com/getplumber/plumber/internal/engine/opa"
+	plumberprovider "github.com/getplumber/plumber/provider"
 	"github.com/getplumber/plumber/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -46,6 +45,14 @@ var (
 	controlsFilter    string
 	skipControls      string
 	ciConfigPath      string
+)
+
+const (
+	errConfigFileNotFound = "configuration file not found: %w. Create one with `plumber config generate` or `plumber config init`"
+	fmtIndentLine         = "  %s\n"
+	fmtIndentPara         = "  %s\n\n"
+	fmtIndentColored      = "  %s%s%s\n"
+	fmtColored            = "%s%s%s\n"
 )
 
 var analyzeCmd = &cobra.Command{
@@ -77,13 +84,11 @@ Optional flags:
   --pbom-cyclonedx   Write PBOM in CycloneDX format for integration with security tools
   --mr-comment       Post/update a compliance comment on the merge request (requires api scope, merge request pipeline only)
   --badge            Create/update a Plumber compliance badge on the project (requires api scope; only runs on default branch)
-  --score            Deprecated: the score is shown by default now. Kept as a no-op so existing invocations keep working; it has no effect.
-  --score-point      Add the full points breakdown to stdout and the MR comment (the score banner is shown by default)
+  --score            Letter score, points, bar, and counts in stdout (banner only); points + score in JSON/PBOM/CycloneDX; badge/MR use letter when set (optional)
+  --score-point      Same as --score plus full points breakdown in stdout and MR comment (optional; wins if both set)
   --controls         Run only listed controls (comma-separated)
   --skip-controls    Skip listed controls (comma-separated)
-  --fail-warnings    Fail on warnings: configuration warnings (exit 2) and
-                     could-not-verify warnings such as a skipped known-CVE
-                     check (exit 3)
+  --fail-warnings    Treat configuration warnings as errors (exit 2)
   --ci-config-path   Override the CI configuration file path (default: auto-detected from GitLab project settings, usually .gitlab-ci.yml)
 
 Exit codes:
@@ -113,31 +118,6 @@ Examples:
 	RunE: runAnalyze,
 }
 
-var envKeys = map[string]string{
-	"gitlab-url":     "PLUMBER_ANALYZE_GITLAB_URL",
-	"github-url":     "PLUMBER_ANALYZE_GITHUB_URL",
-	"project":        "PLUMBER_ANALYZE_PROJECT",
-	"provider":       "PLUMBER_ANALYZE_PROVIDER",
-	"branch":         "PLUMBER_ANALYZE_BRANCH",
-	"config":         "PLUMBER_ANALYZE_CONFIG",
-	"threshold":      "PLUMBER_ANALYZE_THRESHOLD",
-	"print":          "PLUMBER_ANALYZE_PRINT",
-	"output":         "PLUMBER_ANALYZE_OUTPUT",
-	"pbom":           "PLUMBER_ANALYZE_PBOM",
-	"pbom-cyclonedx": "PLUMBER_ANALYZE_PBOM_CYCLONEDX",
-	"sarif":          "PLUMBER_ANALYZE_SARIF",
-	"glsast":         "PLUMBER_ANALYZE_GLSAST",
-	"mr-comment":     "PLUMBER_ANALYZE_MR_COMMENT",
-	"badge":          "PLUMBER_ANALYZE_BADGE",
-	"score":          "PLUMBER_ANALYZE_SCORE",
-	"score-point":    "PLUMBER_ANALYZE_SCORE_POINT",
-	"controls":       "PLUMBER_ANALYZE_CONTROLS",
-	"skip-controls":  "PLUMBER_ANALYZE_SKIP_CONTROLS",
-	"fail-warnings":  "PLUMBER_ANALYZE_FAIL_WARNINGS",
-	"ci-config-path": "PLUMBER_ANALYZE_CI_CONFIG_PATH",
-	"verbose":        "PLUMBER_ANALYZE_VERBOSE",
-}
-
 func init() {
 	rootCmd.AddCommand(analyzeCmd)
 
@@ -159,7 +139,7 @@ func init() {
 	analyzeCmd.Flags().StringVar(&providerFlag, "provider", "", "Force provider: 'github' or 'gitlab' (overrides auto-detection; host still auto-detected)")
 
 	// Optional flags with defaults
-	analyzeCmd.Flags().StringVar(&configFile, "config", "", "Path to Plumber config file (default to `.plumber.yaml` if exists, `/.plumber.yaml` otherwise)")
+	analyzeCmd.Flags().StringVar(&configFile, "config", ".plumber.yaml", "Path to .plumber.yaml config file")
 	analyzeCmd.Flags().Float64Var(&threshold, "threshold", 100, "Minimum compliance percentage to pass, 0-100")
 	analyzeCmd.Flags().StringVar(&defaultBranch, "branch", "", "Branch to analyze (defaults to project's default branch)")
 	analyzeCmd.Flags().BoolVar(&printOutput, "print", true, "Print text output to stdout")
@@ -170,17 +150,11 @@ func init() {
 	analyzeCmd.Flags().StringVar(&glsastFile, "glsast", "", "Write a GitLab SAST report (gl-sast-report.json) to file (for the GitLab Security Dashboard / MR widget)")
 	analyzeCmd.Flags().BoolVar(&mrComment, "mr-comment", false, "Post/update a compliance comment on the merge request (requires api scope token; only works in merge request pipelines)")
 	analyzeCmd.Flags().BoolVar(&badge, "badge", false, "Create/update a Plumber compliance badge on the project (requires api scope; only runs on default branch)")
-	// The Plumber score is always shown now (issue #218). --score is kept as a
-	// silent no-op so existing invocations (and the GitLab component's `score`
-	// input) don't error with "unknown flag"; it no longer has any effect.
-	// Hidden rather than deprecation-warned so component users don't get a
-	// warning on every run. --score-point still adds the full points breakdown.
-	analyzeCmd.Flags().BoolVar(&showScore, "score", false, "Deprecated no-op: the score is shown by default")
-	_ = analyzeCmd.Flags().MarkHidden("score")
-	analyzeCmd.Flags().BoolVar(&showScorePoint, "score-point", false, "Add the full points breakdown to stdout and the MR comment (the score banner is shown by default)")
+	analyzeCmd.Flags().BoolVar(&showScore, "score", false, "Banner: letter score, points, bar, severity counts on stdout; points + score in JSON, PBOM, CycloneDX; badge shows letter when set")
+	analyzeCmd.Flags().BoolVar(&showScorePoint, "score-point", false, "Like --score plus full points breakdown in stdout and MR comment; overrides --score when both are set")
 	analyzeCmd.Flags().StringVar(&controlsFilter, "controls", "", "Run only listed controls (comma-separated)")
 	analyzeCmd.Flags().StringVar(&skipControls, "skip-controls", "", "Skip listed controls (comma-separated)")
-	analyzeCmd.Flags().BoolVar(&failWarnings, "fail-warnings", false, "Fail on warnings: configuration warnings (exit 2) and could-not-verify warnings, e.g. a skipped known-CVE check (exit 3)")
+	analyzeCmd.Flags().BoolVar(&failWarnings, "fail-warnings", false, "Treat configuration warnings as errors (exit 2)")
 	analyzeCmd.Flags().StringVar(&ciConfigPath, "ci-config-path", "", "Override the CI configuration file path (default: auto-detected from GitLab project settings, usually .gitlab-ci.yml)")
 
 	for flag, envKey := range envKeys {
@@ -229,18 +203,6 @@ func printProviderDetection(provider, reason string) {
 // spot (via the wizard or the default template) and then reloads it so the
 // calling analyze command can continue uninterrupted.
 func loadConfigOrOffer(cfgFile string) (*configuration.PlumberConfig, string, []string, error) {
-	if cfgFile == "" {
-		if _, err := os.Stat(".plumber.yaml"); err == nil {
-			// Use local config if available
-			cfgFile = ".plumber.yaml"
-		} else if _, err := os.Stat("/.plumber.yaml"); err == nil {
-			// Fallback to global config is available
-			cfgFile = "/.plumber.yaml"
-		} else {
-			// Back to local configuration to suggest interactive
-			cfgFile = ".plumber.yaml"
-		}
-	}
 	pc, path, warnings, err := configuration.LoadPlumberConfig(cfgFile)
 	if err == nil {
 		return pc, path, warnings, nil
@@ -252,7 +214,7 @@ func loadConfigOrOffer(cfgFile string) (*configuration.PlumberConfig, string, []
 
 	// Config file not found — in non-interactive mode just show the hint.
 	if !isInteractiveInit() {
-		return nil, "", nil, fmt.Errorf("configuration file not found: %w. Create one with `plumber config generate` or `plumber config init`", err)
+		return nil, "", nil, fmt.Errorf(errConfigFileNotFound, err)
 	}
 
 	fmt.Fprintf(os.Stderr, "\nNo configuration file found at %q.\n\n", cfgFile)
@@ -269,27 +231,11 @@ func loadConfigOrOffer(cfgFile string) (*configuration.PlumberConfig, string, []
 		Options: []string{choiceWizard, choiceGenerate, choiceNo},
 		Default: choiceWizard,
 	}, &choice); surveyErr != nil || choice == choiceNo {
-		return nil, "", nil, fmt.Errorf("configuration file not found: %w. Create one with `plumber config generate` or `plumber config init`", err)
+		return nil, "", nil, fmt.Errorf(errConfigFileNotFound, err)
 	}
 
-	switch choice {
-	case choiceWizard:
-		state, wizErr := runInitWizard(true) // skip "run analyze after?" — we're already in analyze
-		if wizErr != nil {
-			return nil, "", nil, fmt.Errorf("config init failed: %w", wizErr)
-		}
-		cfg := state.toPlumberConfig()
-		if writeErr := writeInitConfig(cfg, cfgFile, false, true, "plumber analyze"); writeErr != nil {
-			return nil, "", nil, fmt.Errorf("config init failed: %w", writeErr)
-		}
-		printInitNextSteps(cfgFile, state.Providers)
-	case choiceGenerate:
-		if writeErr := os.WriteFile(cfgFile, defaultconfig.Get(), 0644); writeErr != nil {
-			return nil, "", nil, fmt.Errorf("failed to write config file: %w", writeErr)
-		}
-		fmt.Fprintf(os.Stderr, "Generated %s\n", cfgFile)
-	default:
-		return nil, "", nil, fmt.Errorf("configuration file not found: %w. Create one with `plumber config generate` or `plumber config init`", err)
+	if genErr := handleConfigGeneration(choice, cfgFile, choiceWizard, choiceGenerate); genErr != nil {
+		return nil, "", nil, genErr
 	}
 
 	// Reload after generation.
@@ -298,6 +244,271 @@ func loadConfigOrOffer(cfgFile string) (*configuration.PlumberConfig, string, []
 		return nil, "", nil, fmt.Errorf("failed to reload config after generation: %w", err)
 	}
 	return pc, path, warnings, nil
+}
+
+// handleConfigGeneration runs the wizard or default-template generation path
+// chosen by the user in loadConfigOrOffer.
+func handleConfigGeneration(choice, cfgFile, choiceWizard, choiceGenerate string) error {
+	switch choice {
+	case choiceWizard:
+		state, wizErr := runInitWizard(true) // skip "run analyze after?" — we're already in analyze
+		if wizErr != nil {
+			return fmt.Errorf("config init failed: %w", wizErr)
+		}
+		cfg := state.toPlumberConfig()
+		if writeErr := writeInitConfig(cfg, cfgFile, false, true, "plumber analyze"); writeErr != nil {
+			return fmt.Errorf("config init failed: %w", writeErr)
+		}
+		printInitNextSteps(cfgFile, state.Providers)
+	case choiceGenerate:
+		if writeErr := os.WriteFile(cfgFile, defaultconfig.Get(), 0644); writeErr != nil {
+			return fmt.Errorf("failed to write config file: %w", writeErr)
+		}
+		fmt.Fprintf(os.Stderr, "Generated %s\n", cfgFile)
+	default:
+		return fmt.Errorf("unexpected choice: %s", choice)
+	}
+	return nil
+}
+
+// analyzeFlags bundles the parsed flag-changed booleans so they don't have to
+// be re-queried throughout the call chain.
+type analyzeFlags struct {
+	gitlabURLFromFlag bool
+	githubURLFromFlag bool
+	projectFromFlag   bool
+	branchFromFlag    bool
+}
+
+func readAnalyzeFlags(cmd *cobra.Command) analyzeFlags {
+	return analyzeFlags{
+		gitlabURLFromFlag: cmd.Flags().Changed("gitlab-url"),
+		githubURLFromFlag: cmd.Flags().Changed("github-url"),
+		projectFromFlag:   cmd.Flags().Changed("project"),
+		branchFromFlag:    cmd.Flags().Changed("branch"),
+	}
+}
+
+// validateProviderFlags returns an error for mutually exclusive or contradictory
+// provider flag combinations.
+func validateProviderFlags(flags analyzeFlags) error {
+	if flags.gitlabURLFromFlag && flags.githubURLFromFlag {
+		return fmt.Errorf("--gitlab-url and --github-url are mutually exclusive; pass one to select the provider explicitly")
+	}
+	switch providerFlag {
+	case "", "github", "gitlab":
+	default:
+		return fmt.Errorf("--provider must be 'github' or 'gitlab' (got %q)", providerFlag)
+	}
+	if providerFlag == "gitlab" && flags.githubURLFromFlag {
+		return fmt.Errorf("--provider gitlab conflicts with --github-url; use --gitlab-url to pin a GitLab host")
+	}
+	if providerFlag == "github" && flags.gitlabURLFromFlag {
+		return fmt.Errorf("--provider github conflicts with --gitlab-url; use --github-url to pin a GitHub host")
+	}
+	return nil
+}
+
+// parseControlsFilters validates and parses the --controls / --skip-controls flags.
+func parseControlsFilters() (includeOnly, skip []string, err error) {
+	if controlsFilter != "" && skipControls != "" {
+		return nil, nil, fmt.Errorf("--controls and --skip-controls cannot be used together")
+	}
+	includeOnly, err = parseControlsFilter(controlsFilter)
+	if err != nil {
+		return nil, nil, err
+	}
+	skip, err = parseControlsFilter(skipControls)
+	if err != nil {
+		return nil, nil, err
+	}
+	return includeOnly, skip, nil
+}
+
+// dispatchGitHub runs the GitHub analysis path and returns its result.
+// It is called after provider resolution confirms provider == "github".
+func dispatchGitHub(cmd *cobra.Command, flags analyzeFlags, remoteInfo *utils.GitRemoteInfo, controlsFilterList, skipControlsList []string) error {
+	if flags.projectFromFlag {
+		ref := ""
+		if flags.branchFromFlag {
+			ref = defaultBranch
+		}
+		return runGitHubAnalyzeRemote(githubURL, projectPath, ref, controlsFilterList, skipControlsList)
+	}
+	if remoteInfo == nil {
+		return fmt.Errorf("GitHub local scan needs a git repository (run inside a clone), or pass --project owner/repo for a remote scan")
+	}
+	return runGitHubAnalyze(remoteInfo, controlsFilterList, skipControlsList)
+}
+
+// gitLabRemoteInfo holds the three fields extracted from a GitRemoteInfo that
+// the GitLab path needs; avoids passing the full struct deep into helpers.
+type gitLabRemoteInfo struct {
+	repoRoot    string
+	remoteURL   string
+	projectPath string
+}
+
+// resolveGitLabTarget fills in gitlabURL and projectPath from flags / git remote
+// and returns the per-repo git metadata needed for local-project detection.
+func resolveGitLabTarget(flags analyzeFlags, remoteInfo *utils.GitRemoteInfo) (gitLabRemoteInfo, error) {
+	var info gitLabRemoteInfo
+	if remoteInfo != nil {
+		info.repoRoot = remoteInfo.RepoRoot
+		info.remoteURL = remoteInfo.URL
+		info.projectPath = remoteInfo.ProjectPath
+	}
+
+	if !flags.gitlabURLFromFlag {
+		if remoteInfo != nil {
+			gitlabURL = remoteInfo.URL
+		} else {
+			gitlabURL = "https://gitlab.com"
+		}
+		fmt.Fprintf(os.Stderr, "GitLab URL: %s\n", gitlabURL)
+	}
+	if !flags.projectFromFlag && remoteInfo != nil {
+		projectPath = remoteInfo.ProjectPath
+		fmt.Fprintf(os.Stderr, "Project: %s\n", projectPath)
+	}
+
+	if gitlabURL == "" {
+		return info, fmt.Errorf("GitLab URL is required: pass --gitlab-url <url> or run inside a git clone so it can be auto-detected")
+	}
+	if projectPath == "" {
+		return info, fmt.Errorf("--project is required (could not auto-detect from git remote)")
+	}
+	return info, nil
+}
+
+// resolveGitLabToken returns the GITLAB_TOKEN or an informative error.
+func resolveGitLabToken(flags analyzeFlags) (string, error) {
+	token := os.Getenv("GITLAB_TOKEN")
+	if token != "" {
+		return token, nil
+	}
+	// Only nudge toward GitHub when GitLab was auto-detected — if the user
+	// picked GitLab explicitly, the GHES hint is just noise.
+	if providerFlag == "" && !flags.gitlabURLFromFlag {
+		host := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSuffix(gitlabURL, "/"), "https://"), "http://")
+		return "", fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis. "+
+			"If %s is actually a GitHub Enterprise Server instance, scan it as GitHub instead with: plumber analyze --provider github (or --github-url %s)", host, host)
+	}
+	return "", fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis")
+}
+
+// applyConfigWarnings prints validation warnings and returns an error when
+// --fail-warnings is set.
+func applyConfigWarnings(warnings []string) error {
+	if len(warnings) == 0 {
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "Configuration validation warnings:\n")
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "  - %s\n", w)
+	}
+	if failWarnings {
+		return fmt.Errorf("configuration has %d warning(s) and --fail-warnings is set", len(warnings))
+	}
+	fmt.Fprintf(os.Stderr, "Please fix the warnings above for best results.\n\n")
+	return nil
+}
+
+// buildGitLabConf constructs the analysis Configuration from the already-resolved inputs.
+func buildGitLabConf(
+	cleanGitlabURL, gitlabToken string,
+	flags analyzeFlags,
+	remote gitLabRemoteInfo,
+	plumberConfig *configuration.PlumberConfig,
+	controlsFilterList, skipControlsList []string,
+) *configuration.Configuration {
+	conf := configuration.NewDefaultConfiguration()
+	conf.GitlabURL = cleanGitlabURL
+	conf.GitlabToken = gitlabToken
+	conf.ProjectPath = projectPath
+	conf.Branch = defaultBranch
+	conf.PlumberConfig = plumberConfig
+	conf.GitRepoRoot = remote.repoRoot
+	conf.ControlsFilter = controlsFilterList
+	conf.SkipControlsFilter = skipControlsList
+	conf.CIConfigPathOverride = ciConfigPath
+
+	// Local CI file support only applies when the local repo IS the analyzed
+	// project AND the user did not explicitly name a project on the CLI.
+	// Explicit project name = analyse exactly that project, ignore pwd.
+	// (Symmetric CLI semantics with the GitHub path.)
+	explicitProject := flags.gitlabURLFromFlag || flags.projectFromFlag
+	if !explicitProject && remote.repoRoot != "" && remote.remoteURL != "" {
+		conf.IsLocalProject = strings.TrimSuffix(remote.remoteURL, "/") == cleanGitlabURL &&
+			remote.projectPath == projectPath
+	}
+
+	if verbose {
+		conf.LogLevel = logrus.DebugLevel
+	}
+	return conf
+}
+
+// computeGitLabCompliance returns the overall compliance percentage and the
+// number of non-skipped controls that were evaluated.
+//
+// When the CI config is missing or invalid no findings were produced because
+// nothing could be analysed — not because the project is compliant. Those
+// cases short-circuit to 0 so an absent or broken .gitlab-ci.yml never scores
+// 100% and cannot be used to bypass the gate.
+func computeGitLabCompliance(result *control.AnalysisResult, conf *configuration.Configuration) (compliance float64, controlCount int) {
+	if result.CiMissing || !result.CiValid {
+		return 0.0, 0
+	}
+	findingCountsByControl := map[string]int{}
+	for _, f := range result.Findings {
+		if info := control.LookupCode(control.ErrorCode(f.Code)); info != nil {
+			findingCountsByControl[info.ControlName]++
+		}
+	}
+	passed := 0
+	entries := control.GitLabControls(conf.PlumberConfig)
+	control.MarkSkippedByFilter(entries, conf.ControlsFilter, conf.SkipControlsFilter)
+	for _, e := range entries {
+		if e.Skipped {
+			continue
+		}
+		controlCount++
+		if findingCountsByControl[e.ControlName] == 0 {
+			passed++
+		}
+	}
+	if controlCount > 0 {
+		compliance = float64(passed) * 100.0 / float64(controlCount)
+	}
+	return compliance, controlCount
+}
+
+// envKeys maps each analyze flag to the environment variable that overrides it
+// when the flag is not set explicitly on the command line (flags always win).
+var envKeys = map[string]string{
+	"gitlab-url":     "PLUMBER_ANALYZE_GITLAB_URL",
+	"github-url":     "PLUMBER_ANALYZE_GITHUB_URL",
+	"project":        "PLUMBER_ANALYZE_PROJECT",
+	"provider":       "PLUMBER_ANALYZE_PROVIDER",
+	"branch":         "PLUMBER_ANALYZE_BRANCH",
+	"config":         "PLUMBER_ANALYZE_CONFIG",
+	"threshold":      "PLUMBER_ANALYZE_THRESHOLD",
+	"print":          "PLUMBER_ANALYZE_PRINT",
+	"output":         "PLUMBER_ANALYZE_OUTPUT",
+	"pbom":           "PLUMBER_ANALYZE_PBOM",
+	"pbom-cyclonedx": "PLUMBER_ANALYZE_PBOM_CYCLONEDX",
+	"sarif":          "PLUMBER_ANALYZE_SARIF",
+	"glsast":         "PLUMBER_ANALYZE_GLSAST",
+	"mr-comment":     "PLUMBER_ANALYZE_MR_COMMENT",
+	"badge":          "PLUMBER_ANALYZE_BADGE",
+	"score":          "PLUMBER_ANALYZE_SCORE",
+	"score-point":    "PLUMBER_ANALYZE_SCORE_POINT",
+	"controls":       "PLUMBER_ANALYZE_CONTROLS",
+	"skip-controls":  "PLUMBER_ANALYZE_SKIP_CONTROLS",
+	"fail-warnings":  "PLUMBER_ANALYZE_FAIL_WARNINGS",
+	"ci-config-path": "PLUMBER_ANALYZE_CI_CONFIG_PATH",
+	"verbose":        "PLUMBER_ANALYZE_VERBOSE",
 }
 
 func envStringFallback(cmd *cobra.Command, flag, envKey string, dest *string) {
@@ -335,9 +546,6 @@ func envFloat64Fallback(cmd *cobra.Command, flag, envKey string, dest *float64) 
 }
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
-	// Set log level based on verbose flag or env var
-	// Default: WarnLevel (quiet output, only show warnings/errors)
-	// Verbose: DebugLevel (show all logs for troubleshooting)
 	if err := envBoolFallback(cmd, "verbose", envKeys["verbose"], &verbose); err != nil {
 		return err
 	} else if verbose {
@@ -375,415 +583,67 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Detect git remote info (used for auto-detection AND local CI file matching)
-	gitlabURLFromFlag := cmd.Flags().Changed("gitlab-url") || gitlabURL != ""
-	githubURLFromFlag := cmd.Flags().Changed("github-url") || githubURL != ""
-	projectFromFlag := cmd.Flags().Changed("project") || projectPath != ""
-	branchExplicitlySet := cmd.Flags().Changed("branch") || defaultBranch != ""
+	flags := readAnalyzeFlags(cmd)
 
-	if gitlabURLFromFlag && githubURLFromFlag {
-		return fmt.Errorf("--gitlab-url and --github-url are mutually exclusive; pass one to select the provider explicitly")
-	}
-
-	// --provider forces the provider without pinning a host. Validate the
-	// value and reject combinations that contradict an explicit host flag
-	// (a same-provider host flag is allowed — it just additionally pins the
-	// host).
-	switch providerFlag {
-	case "", "github", "gitlab":
-	default:
-		return fmt.Errorf("--provider must be 'github' or 'gitlab' (got %q)", providerFlag)
-	}
-	if providerFlag == "gitlab" && githubURLFromFlag {
-		return fmt.Errorf("--provider gitlab conflicts with --github-url; use --gitlab-url to pin a GitLab host")
-	}
-	if providerFlag == "github" && gitlabURLFromFlag {
-		return fmt.Errorf("--provider github conflicts with --gitlab-url; use --github-url to pin a GitHub host")
-	}
-
-	// Validate + parse --controls / --skip-controls before any provider
-	// dispatch — both providers honour the filter, so the lists must
-	// be available no matter which path runs. (Previously these were
-	// computed only on the GitLab branch, leaving the GitHub paths
-	// blind to the flags.)
-	if controlsFilter != "" && skipControls != "" {
-		return fmt.Errorf("--controls and --skip-controls cannot be used together")
-	}
-	controlsFilterList, err := parseControlsFilter(controlsFilter)
-	if err != nil {
+	if err := validateProviderFlags(flags); err != nil {
 		return err
 	}
-	skipControlsList, err := parseControlsFilter(skipControls)
+
+	controlsFilterList, skipControlsList, err := parseControlsFilters()
 	if err != nil {
 		return err
 	}
 
-	// Detect the git remote once. It feeds provider auto-detection, host
-	// resolution, and local CI-file matching.
 	remoteInfo := utils.DetectGitRemote()
 
-	// Resolve which provider to run, applying precedence:
-	//   1. --github-url / --gitlab-url  (pins the provider AND the host)
-	//   2. --provider                   (pins the provider; host auto-detected)
-	//   3. auto-detection from the git remote (host name + .github/workflows)
-	provider, reason := resolveProvider(providerFlag, gitlabURLFromFlag, githubURLFromFlag, remoteInfo)
-	if provider == "" {
+	providerName, reason := resolveProvider(providerFlag, flags.gitlabURLFromFlag, flags.githubURLFromFlag, remoteInfo)
+	if providerName == "" {
 		return fmt.Errorf("could not determine the provider: not in a git repository and no provider flag set. " +
 			"Pass --provider github|gitlab, or --github-url <host> / --gitlab-url <url> to target a specific instance")
 	}
-	printProviderDetection(provider, reason)
+	printProviderDetection(providerName, reason)
 
-	// GitHub: remote-fetch when --project names an upstream repo, else scan
-	// the local clone.
-	if provider == "github" {
-		if projectFromFlag {
-			ref := ""
-			if branchExplicitlySet {
-				ref = defaultBranch
-			}
-			return runGitHubAnalyzeRemote(cmd, githubURL, projectPath, ref, controlsFilterList, skipControlsList)
-		}
-		if remoteInfo == nil {
-			return fmt.Errorf("GitHub local scan needs a git repository (run inside a clone), or pass --project owner/repo for a remote scan")
-		}
-		return runGitHubAnalyze(cmd, remoteInfo, controlsFilterList, skipControlsList)
+	if providerName == "github" {
+		return dispatchGitHub(cmd, flags, remoteInfo, controlsFilterList, skipControlsList)
 	}
 
-	// GitLab path. Resolve host + project from flags, falling back to the git
-	// remote, then to the SaaS default when --provider gitlab is used outside
-	// a clone.
-	var gitRepoRoot string
-	var gitRemoteURL string
-	var gitRemoteProjectPath string
-	if remoteInfo != nil {
-		gitRepoRoot = remoteInfo.RepoRoot
-		gitRemoteURL = remoteInfo.URL
-		gitRemoteProjectPath = remoteInfo.ProjectPath
-	}
-	if !gitlabURLFromFlag {
-		if remoteInfo != nil {
-			gitlabURL = remoteInfo.URL
-		} else {
-			gitlabURL = "https://gitlab.com"
-		}
-		fmt.Fprintf(os.Stderr, "GitLab URL: %s\n", gitlabURL)
-	}
-	if !projectFromFlag && remoteInfo != nil {
-		projectPath = remoteInfo.ProjectPath
-		fmt.Fprintf(os.Stderr, "Project: %s\n", projectPath)
+	remote, err := resolveGitLabTarget(flags, remoteInfo)
+	if err != nil {
+		return err
 	}
 
-	if gitlabURL == "" {
-		return fmt.Errorf("GitLab URL is required: pass --gitlab-url <url> or run inside a git clone so it can be auto-detected")
-	}
-	if projectPath == "" {
-		return fmt.Errorf("--project is required (could not auto-detect from git remote)")
-	}
-
-	// Validate threshold
 	if threshold < 0 || threshold > 100 {
 		return fmt.Errorf("threshold must be between 0 and 100")
 	}
 
-	// The score is always shown now (issue #218); --score is a no-op kept only
-	// for backward compatibility. --score-point still adds the full breakdown.
-	scoreMode := true
-	scorePointMode := showScorePoint
-
-	// controlsFilterList / skipControlsList were parsed earlier so the
-	// GitHub dispatch sees them too — see the "Validate + parse" block
-	// above the dispatch.
-
-	// Get token from environment variable (required)
-	gitlabToken := os.Getenv("GITLAB_TOKEN")
-	if gitlabToken == "" {
-		// Only nudge toward GitHub when GitLab was *auto-detected* — if the
-		// user picked GitLab explicitly, the GHES hint is just noise.
-		if providerFlag == "" && !gitlabURLFromFlag {
-			host := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSuffix(gitlabURL, "/"), "https://"), "http://")
-			return fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis. "+
-				"If %s is actually a GitHub Enterprise Server instance, scan it as GitHub instead with: plumber analyze --provider github (or --github-url %s)", host, host)
-		}
-		return fmt.Errorf("GITLAB_TOKEN environment variable is required for GitLab analysis")
-	}
-
-	// Clean up URL
-	cleanGitlabURL := strings.TrimSuffix(gitlabURL, "/")
-
-	// Load Plumber configuration (required), offering to generate one if missing.
-	plumberConfig, configPath, configWarnings, err := loadConfigOrOffer(configFile)
+	gitlabToken, err := resolveGitLabToken(flags)
 	if err != nil {
 		return err
 	}
 
-	if len(configWarnings) > 0 {
-		fmt.Fprintf(os.Stderr, "Configuration validation warnings:\n")
-		for _, warning := range configWarnings {
-			fmt.Fprintf(os.Stderr, "  - %s\n", warning)
-		}
-		if failWarnings {
-			return fmt.Errorf("configuration has %d warning(s) and --fail-warnings is set", len(configWarnings))
-		}
-		fmt.Fprintf(os.Stderr, "Please fix the warnings above for best results.\n\n")
+	cleanGitlabURL := strings.TrimSuffix(gitlabURL, "/")
+
+	plumberConfig, configPath, configWarnings, err := loadConfigOrOffer(configFile)
+	if err != nil {
+		return err
+	}
+	if err := applyConfigWarnings(configWarnings); err != nil {
+		return err
 	}
 
-	// Print banner if output is enabled
 	if printOutput {
 		printBanner()
 	}
-
 	fmt.Fprintf(os.Stderr, "Using configuration: %s\n", configPath)
-
-	// Create configuration
-	conf := configuration.NewDefaultConfiguration()
-	conf.GitlabURL = cleanGitlabURL
-	conf.GitlabToken = gitlabToken
-	conf.ProjectPath = projectPath
-	conf.Branch = defaultBranch
-	conf.PlumberConfig = plumberConfig
-	conf.GitRepoRoot = gitRepoRoot
-	conf.ControlsFilter = controlsFilterList
-	conf.SkipControlsFilter = skipControlsList
-	conf.CIConfigPathOverride = ciConfigPath
-
-	// Determine if the local git repo matches the project being analyzed.
-	// Local CI file support only applies when the local repo IS the analyzed
-	// project AND the user did not explicitly name a project on the CLI.
-	// When --gitlab-url or --project is passed, treat the run the same way
-	// the GitHub path treats `--github-url + --project`: force remote-fetch
-	// of the CI YAML and emit remote source links, regardless of what
-	// clone happens to be in the current working directory. Symmetric CLI
-	// semantics across providers: explicit project name = analyse exactly
-	// that project, ignore my pwd.
-	explicitProject := gitlabURLFromFlag || projectFromFlag
-	if !explicitProject && gitRepoRoot != "" && gitRemoteURL != "" {
-		sameURL := strings.TrimSuffix(gitRemoteURL, "/") == cleanGitlabURL
-		samePath := gitRemoteProjectPath == projectPath
-		conf.IsLocalProject = sameURL && samePath
-	}
-
-	if verbose {
-		conf.LogLevel = logrus.DebugLevel
-	}
-
-	// Run analysis
 	fmt.Fprintf(os.Stderr, "Analyzing project: %s on %s\n", projectPath, cleanGitlabURL)
 
-	// Start progress spinner (only when printing output and not in verbose mode)
-	sp := newSpinner()
-	if printOutput && !verbose {
-		conf.ProgressFunc = func(step, total int, message string) {
-			sp.Update(step, total, message)
-		}
-		sp.InstallLogHook()
-		sp.Start()
+	conf := buildGitLabConf(cleanGitlabURL, gitlabToken, flags, remote, plumberConfig, controlsFilterList, skipControlsList)
+
+	p, ok := plumberprovider.Get("gitlab")
+	if !ok {
+		return fmt.Errorf("gitlab provider not registered")
 	}
-
-	result, err := control.RunAnalysis(conf)
-	sp.Stop()
-	if err != nil {
-		return fmt.Errorf("analysis failed: %w", err)
-	}
-
-	// Decorate every finding with a clickable link. In CI this is the
-	// host forge's web URL anchored to the analysed commit; locally
-	// it falls back to an absolute `<path>:<line>` reference that
-	// editors and terminals turn into a jump-to-source action. Done
-	// once, before any output writer runs, so terminal + JSON + SARIF
-	// + GitLab SAST all see the same value.
-	newLocationLinker(conf, result, "gitlab").Annotate(result.Findings)
-
-	// Overall compliance is the share of enabled controls that emitted
-	// no finding. One control = one unit, regardless of how many
-	// findings it produces. Skipped controls are excluded from both
-	// sides of the ratio so disabling a control does not change the
-	// score. When no controls are enabled the score falls back to 0 —
-	// same semantic as the legacy averaging loop: if nothing can be
-	// verified, nothing can be trusted.
-	//
-	// A missing or invalid CI configuration short-circuits to 0:
-	// the absence of findings under those conditions is evidence that
-	// nothing could be analysed, not that the project is compliant.
-	// Without this guard a project with no .gitlab-ci.yml or a
-	// syntactically broken one would score 100% — letting attackers
-	// pass the gate by deleting or breaking the CI file.
-	compliance := 0.0
-	controlCount := 0
-	if !result.CiMissing && result.CiValid {
-		findingCountsByControl := map[string]int{}
-		for _, f := range result.Findings {
-			if info := control.LookupCode(control.ErrorCode(f.Code)); info != nil {
-				findingCountsByControl[info.ControlName]++
-			}
-		}
-		passed := 0
-		entries := control.GitLabControls(conf.PlumberConfig)
-		control.MarkSkippedByFilter(entries, conf.ControlsFilter, conf.SkipControlsFilter)
-		for _, e := range entries {
-			if e.Skipped {
-				continue
-			}
-			controlCount++
-			if findingCountsByControl[e.ControlName] == 0 {
-				passed++
-			}
-		}
-		if controlCount > 0 {
-			compliance = float64(passed) * 100.0 / float64(controlCount)
-		}
-	}
-
-	var scoreResult *control.PlumberScoreResult
-	if scoreMode {
-		codeCounts := control.AggregateIssueCodeCounts(result)
-		s := control.ComputePlumberScore(codeCounts)
-		scoreResult = &s
-	}
-
-	// Print text output to stdout if enabled
-	if printOutput {
-		if err := outputText(result, conf.PlumberConfig, threshold, compliance, controlCount, scoreResult, scoreMode, scorePointMode, conf.ControlsFilter, conf.SkipControlsFilter); err != nil {
-			return err
-		}
-	}
-
-	// Artifacts are written even on a degraded run: they are local files the
-	// user explicitly requested, and the exit-3 gate (below) — not the
-	// file's absence — is what protects CI. Each format stamps itself as
-	// degraded (SARIF executionSuccessful=false, SAST status=failure, the
-	// JSON dataCollectionDegraded flag) so a dashboard does not treat a
-	// partial report as authoritative. Badge/MR, which mutate shared state,
-	// are still skipped (#220).
-	if result.DataCollectionDegraded && (outputFile != "" || pbomFile != "" || pbomCycloneDXFile != "" || sarifFile != "" || glsastFile != "") {
-		fmt.Fprintf(os.Stderr, "Note: data collection was incomplete — artifacts are written but marked degraded; treat them as partial.\n")
-	}
-
-	// Write JSON to file if specified
-	if outputFile != "" {
-		if err := writeJSONToFile(result, conf.PlumberConfig, threshold, compliance, outputFile, scoreResult, scoreMode, "gitlab", conf.ControlsFilter, conf.SkipControlsFilter); err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "Results written to: %s\n", outputFile)
-	}
-
-	// Write PBOM to file if specified
-	if pbomFile != "" {
-		if err := writePBOMToFile(result, cleanGitlabURL, defaultBranch, pbomFile, scoreResult, scoreMode); err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "PBOM written to: %s\n", pbomFile)
-	}
-
-	// Write CycloneDX PBOM to file if specified
-	if pbomCycloneDXFile != "" {
-		if err := writePBOMCycloneDXToFile(result, cleanGitlabURL, defaultBranch, pbomCycloneDXFile, scoreResult, scoreMode); err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "PBOM (CycloneDX) written to: %s\n", pbomCycloneDXFile)
-	}
-
-	// Write SARIF report to file if specified
-	if sarifFile != "" {
-		if err := writeSARIFToFile(result, sarifFile, "gitlab"); err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "SARIF written to: %s\n", sarifFile)
-	}
-
-	// Write GitLab SAST report to file if specified
-	if glsastFile != "" {
-		if err := writeGLSASTToFile(result, glsastFile, "gitlab"); err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "GitLab SAST report written to: %s\n", glsastFile)
-	}
-
-	// Post merge request comment if explicitly enabled and in a CI merge request pipeline
-	if mrComment {
-		if result.DataCollectionDegraded {
-			// A transient collection failure must not overwrite the MR
-			// comment with a partial result whose score reads as a clean
-			// A on an empty pipeline. Leave the existing comment in place
-			// (#220).
-			fmt.Fprintf(os.Stderr, "Skipping merge request comment: data collection was incomplete; not overwriting with a partial result.\n")
-		} else if mrIID := glabCI.DetectMergeRequestIID(); mrIID != 0 {
-			fmt.Fprintf(os.Stderr, "Merge request pipeline detected (MR !%d), posting compliance comment...\n", mrIID)
-			if err := control.ManageMergeRequestComment(result.ProjectID, mrIID, result, conf.PlumberConfig, compliance, threshold, conf, scoreResult, scoreMode, scorePointMode); err != nil {
-				// Log but don't fail the analysis for a comment error
-				fmt.Fprintf(os.Stderr, "Warning: failed to post merge request comment: %v\n", err)
-			} else {
-				fmt.Fprintf(os.Stderr, "Merge request comment posted successfully\n")
-			}
-		}
-	}
-
-	// Create/update project badge if explicitly enabled AND on default branch
-	// Badge should only reflect compliance of the default branch, not MRs or feature branches
-	if badge {
-		shouldUpdateBadge := false
-		skipReason := ""
-
-		if result.DataCollectionDegraded {
-			// Same reasoning as the MR comment: a network/rate-limit blip
-			// should leave the last good badge untouched, not replace it
-			// with a misleading score from an empty pipeline (#220).
-			skipReason = "data collection was incomplete; badge left unchanged to avoid overwriting the last good score"
-		} else if glabCI.IsRunningInCI() {
-			// In CI: use environment variables
-			if glabCI.IsOnDefaultBranchCI() {
-				shouldUpdateBadge = true
-			} else {
-				skipReason = "not on default branch in CI"
-			}
-		} else {
-			// Locally: check various conditions
-			if result.CIConfigSource == "local" {
-				// Using local CI files - don't update badge (user is testing locally)
-				skipReason = "using local CI files (testing mode)"
-			} else if !branchExplicitlySet {
-				// no branch override (flag or env) = analyzing default branch
-				shouldUpdateBadge = true
-			} else if conf.Branch == result.DefaultBranch {
-				// --branch specified and matches default branch
-				shouldUpdateBadge = true
-			} else {
-				skipReason = fmt.Sprintf("analyzing branch '%s', not default branch '%s'", conf.Branch, result.DefaultBranch)
-			}
-		}
-
-		if shouldUpdateBadge {
-			fmt.Fprintf(os.Stderr, "Updating project compliance badge...\n")
-			if err := control.ManageProjectBadge(result.ProjectID, compliance, threshold, conf, scoreResult, scoreMode); err != nil {
-				// Log but don't fail the analysis for a badge error
-				fmt.Fprintf(os.Stderr, "Warning: failed to update project badge: %v\n", err)
-			} else {
-				fmt.Fprintf(os.Stderr, "Project badge updated successfully\n")
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Skipping badge update (%s)\n", skipReason)
-		}
-	}
-
-	// A data-collection-degraded run ran on partial data, so the compliance
-	// number is not trustworthy. Fail at exit 3 ("could not fully verify")
-	// regardless of the measured compliance, so a CI gate cannot go green on
-	// an incomplete scan (#220). Checked before the threshold gate.
-	if result.DataCollectionDegraded {
-		return &IncompleteDataError{Reasons: result.DegradedReasons}
-	}
-
-	// A degraded check ("could not verify") fails the run only under
-	// --fail-warnings, at exit 3, checked before the threshold gate.
-	if failWarnings && len(result.Warnings) > 0 {
-		return &DegradedError{Count: len(result.Warnings)}
-	}
-
-	// Check compliance against threshold
-	if compliance < threshold {
-		return &ComplianceError{Compliance: compliance, Threshold: threshold}
-	}
-
-	return nil
+	return runWithProvider(p, cmd, conf, controlsFilterList, skipControlsList)
 }
 
 // parseControlsFilter parses and validates a comma separated control list.
@@ -849,7 +709,9 @@ func parseControlsFilter(raw string) ([]string, error) {
 	return controls, nil
 }
 
-func writeJSONToFile(result *control.AnalysisResult, pc *configuration.PlumberConfig, threshold, compliance float64, filePath string, score *control.PlumberScoreResult, scoreMode bool, provider string, includeOnly, skip []string) error {
+func writeJSONToFile(result *control.AnalysisResult, pc *configuration.PlumberConfig, s complianceSummary, p jsonOutputParams) error {
+	threshold, compliance, score, scoreMode, filePath, provider, includeOnly, skip :=
+		s.threshold, s.compliance, s.score, s.scoreMode, p.filePath, p.provider, p.includeOnly, p.skip
 	// Marshal AnalysisResult into a generic map so the per-control
 	// `*Result` legacy blocks can sit alongside its existing fields
 	// without forcing every consumer to follow the dev's flat-findings
@@ -960,7 +822,6 @@ var analysisJSONLegacyKeyHead = []string{
 	"ciConfigSource", "ciValid", "ciMissing", "ciErrors",
 	"pipelineOriginMetrics", "pipelineImageMetrics",
 	"compliance", "threshold", "passed", "plumberScore",
-	"warnings",
 }
 
 func legacyAnalysisJSONKeyOrder(m map[string]any) []string {
@@ -997,6 +858,39 @@ func legacyAnalysisJSONKeyOrder(m map[string]any) []string {
 	return order
 }
 
+// writeLegacyJSONValue writes the JSON encoding of v into buf, applying
+// pretty-print indentation for object and array values.
+func writeLegacyJSONValue(buf *bytes.Buffer, k string, v any, step string) error {
+	rawVal, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("%s value: %w", k, err)
+	}
+	if len(rawVal) == 0 || (rawVal[0] != '{' && rawVal[0] != '[') {
+		buf.Write(rawVal)
+		return nil
+	}
+	rawIndented, err := json.MarshalIndent(v, "", step)
+	if err != nil {
+		return fmt.Errorf("%s indentation: %w", k, err)
+	}
+	lines := bytes.Split(bytes.TrimSpace(rawIndented), []byte("\n"))
+	if len(lines) == 1 {
+		buf.Write(lines[0])
+		return nil
+	}
+	// Opening bracket on the same line as the key; body lines indented.
+	buf.Write(lines[0])
+	buf.WriteByte('\n')
+	for _, line := range lines[1 : len(lines)-1] {
+		buf.WriteString(step)
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+	buf.WriteString(step)
+	buf.Write(lines[len(lines)-1])
+	return nil
+}
+
 func marshalLegacyAnalysisJSONObject(output map[string]any) ([]byte, error) {
 	keys := legacyAnalysisJSONKeyOrder(output)
 	step := "  "
@@ -1017,169 +911,15 @@ func marshalLegacyAnalysisJSONObject(output map[string]any) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("key %s: %w", k, err)
 		}
-		rawVal, err := json.Marshal(v)
-		if err != nil {
-			return nil, fmt.Errorf("%s value: %w", k, err)
-		}
-
 		buf.WriteString(step)
 		buf.Write(keyBytes)
 		buf.WriteString(": ")
-		if len(rawVal) > 0 && (rawVal[0] == '{' || rawVal[0] == '[') {
-			rawIndented, err := json.MarshalIndent(v, "", step)
-			if err != nil {
-				return nil, fmt.Errorf("%s indentation: %w", k, err)
-			}
-			trimmed := bytes.TrimSpace(rawIndented)
-			lines := bytes.Split(trimmed, []byte("\n"))
-			if len(lines) == 1 {
-				buf.Write(lines[0])
-				continue
-			}
-			// Opening bracket on the same line as the key; body lines indented.
-			buf.Write(lines[0])
-			buf.WriteByte('\n')
-			for i := 1; i < len(lines)-1; i++ {
-				buf.WriteString(step)
-				buf.Write(lines[i])
-				buf.WriteByte('\n')
-			}
-			buf.WriteString(step)
-			buf.Write(lines[len(lines)-1])
-			continue
+		if err := writeLegacyJSONValue(&buf, k, v, step); err != nil {
+			return nil, err
 		}
-		buf.Write(rawVal)
 	}
 	buf.WriteString("\n}\n")
 	return buf.Bytes(), nil
-}
-
-// buildImageComplianceData extracts compliance results into a lookup map for the PBOM generator
-func buildImageComplianceData(result *control.AnalysisResult) *pbom.ImageComplianceData {
-	data := &pbom.ImageComplianceData{
-		ForbiddenTagImages: make(map[string]bool),
-		UnauthorizedImages: make(map[string]bool),
-	}
-	if result.PipelineImageData == nil {
-		return data
-	}
-	imagesByJob := make(map[string]string, len(result.PipelineImageData.Images))
-	for _, img := range result.PipelineImageData.Images {
-		imagesByJob[img.Job] = img.Link
-		data.ForbiddenTagImages[img.Link] = false
-		data.UnauthorizedImages[img.Link] = false
-	}
-	// Flip flags based on Rego findings. Image-pinning codes
-	// (ISSUE-102/103) mark forbidden-tag; ISSUE-101 marks unauthorized.
-	for _, f := range result.Findings {
-		link, ok := imagesByJob[f.Job]
-		if !ok {
-			continue
-		}
-		switch control.ErrorCode(f.Code) {
-		case control.CodeImageForbiddenTag, control.CodeImageNotPinnedByDigest:
-			data.ForbiddenTagImages[link] = true
-		case control.CodeImageUnauthorizedSource:
-			data.UnauthorizedImages[link] = true
-		}
-	}
-	return data
-}
-
-// buildIncludeOverrideData extracts override detection results into a lookup map for the PBOM generator.
-// Keys are clean include paths (without version/instance prefix). The data
-// now comes directly from the collector-enriched IR that the Rego engine
-// already uses — no dependency on the legacy Go controls.
-func buildIncludeOverrideData(result *control.AnalysisResult) *pbom.IncludeOverrideData {
-	data := &pbom.IncludeOverrideData{
-		Overrides: make(map[string][]utils.OverriddenJobDetail),
-	}
-	if result.PipelineOriginData == nil {
-		return data
-	}
-	for idx := range result.PipelineOriginData.Origins {
-		o := &result.PipelineOriginData.Origins[idx]
-		location := o.GitlabIncludeOrigin.Location
-		if location == "" {
-			location = o.GitlabComponent.ComponentIncludePath
-		}
-		if location == "" {
-			continue
-		}
-		key := utils.CleanOriginPath(location)
-		irJobs := collector.CollectOverriddenJobs(o, result.PipelineOriginData)
-		if len(irJobs) == 0 {
-			continue
-		}
-		details := make([]utils.OverriddenJobDetail, 0, len(irJobs))
-		for _, j := range irJobs {
-			details = append(details, utils.OverriddenJobDetail{JobName: j.Name, OverriddenKeys: j.Keys})
-		}
-		data.Overrides[key] = details
-	}
-	return data
-}
-
-func pbomPlumberScoreSummary(score *control.PlumberScoreResult, scoreMode bool) *pbom.PlumberScoreSummary {
-	if score == nil || !scoreMode {
-		return nil
-	}
-	return &pbom.PlumberScoreSummary{
-		ProfileID:            score.ProfileID,
-		RawPoints:            score.RawPoints,
-		FinalPoints:          score.FinalPoints,
-		Score:                score.Score,
-		CriticalMalusApplied: score.CriticalMalusApplied,
-		CriticalMalusMax:     score.CriticalMalusMax,
-		Counts: pbom.PlumberScoreCounts{
-			Critical: score.Counts.Critical,
-			High:     score.Counts.High,
-			Medium:   score.Counts.Medium,
-			Low:      score.Counts.Low,
-		},
-	}
-}
-
-func writePBOMToFile(result *control.AnalysisResult, gitlabURL, branch, filePath string, score *control.PlumberScoreResult, scoreMode bool) error {
-	complianceData := buildImageComplianceData(result)
-	overrideData := buildIncludeOverrideData(result)
-	generator := pbom.NewGenerator(result.ProjectPath, result.ProjectID, gitlabURL, branch).
-		WithComplianceData(complianceData).
-		WithIncludeOverrideData(overrideData)
-	pipelineBOM := generator.Generate(result.PipelineImageData, result.PipelineOriginData)
-	pipelineBOM.PlumberScore = pbomPlumberScoreSummary(score, scoreMode)
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create PBOM file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(pipelineBOM)
-}
-
-func writePBOMCycloneDXToFile(result *control.AnalysisResult, gitlabURL, branch, filePath string, score *control.PlumberScoreResult, scoreMode bool) error {
-	complianceData := buildImageComplianceData(result)
-	overrideData := buildIncludeOverrideData(result)
-	generator := pbom.NewGenerator(result.ProjectPath, result.ProjectID, gitlabURL, branch).
-		WithComplianceData(complianceData).
-		WithIncludeOverrideData(overrideData)
-	pipelineBOM := generator.Generate(result.PipelineImageData, result.PipelineOriginData)
-	pipelineBOM.PlumberScore = pbomPlumberScoreSummary(score, scoreMode)
-
-	cycloneDX := pipelineBOM.ToCycloneDX(Version)
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create CycloneDX PBOM file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(cycloneDX)
 }
 
 // ANSI color codes
@@ -1298,6 +1038,24 @@ func scoreBar(finalPoints float64, width int) string {
 	return full + track
 }
 
+// jsonOutputParams bundles the non-result arguments for writeJSONToFile.
+type jsonOutputParams struct {
+	filePath    string
+	provider    string
+	includeOnly []string
+	skip        []string
+}
+
+// complianceSummary bundles the computed compliance values passed to outputText.
+type complianceSummary struct {
+	compliance   float64
+	controlCount int
+	threshold    float64
+	score        *control.PlumberScoreResult
+	scoreMode    bool
+	scorePoint   bool
+}
+
 // controlSummary holds summary data for a control
 type controlSummary struct {
 	name       string
@@ -1412,164 +1170,44 @@ func printBanner() {
 	)
 }
 
-func outputText(result *control.AnalysisResult, pc *configuration.PlumberConfig, threshold, compliance float64, controlCount int, score *control.PlumberScoreResult, scoreMode, scorePointMode bool, controlsFilterList, skipControlsList []string) error {
-	// Collect control summaries for tables
-	var controls []controlSummary
-
-	// Header
-	fmt.Printf("\n%s %s\n\n", styleTitle.Render("Project:"), result.ProjectPath)
-
-	// Warning if no controls could be evaluated
-	if controlCount == 0 {
-		fmt.Printf("  %s\n", styleError.Render("⚠ WARNING: No controls could be evaluated!"))
-
-		if len(result.CiErrors) > 0 {
-			fmt.Printf("  %s\n", styleError.Render("CI configuration errors:"))
-			bullet := styleError.Render("•")
-			for _, e := range result.CiErrors {
-				fmt.Printf("    %s %s\n", bullet, e)
-			}
-			fmt.Println()
-		} else if len(result.DegradedReasons) > 0 {
-			// A later collection step (image/variable fetch, branch protection)
-			// failed on the network; name what was missed instead of the
-			// generic "data collection failed" (#220).
-			fmt.Printf("  %s\n", styleError.Render("Data collection was incomplete:"))
-			bullet := styleError.Render("•")
-			for _, r := range result.DegradedReasons {
-				fmt.Printf("    %s %s\n", bullet, r)
-			}
-			fmt.Println()
-		} else if result.CiMissing {
-			fmt.Printf("  %s\n\n", styleDim.Render("CI configuration file is missing from the project."))
-		} else {
-			fmt.Printf("  %s\n", styleDim.Render("Data collection failed - compliance defaults to 0%."))
-			fmt.Printf("  %s\n\n", styleDim.Render("Use --verbose for more info."))
+// printNoControlsWarning prints the warning block shown when zero controls
+// could be evaluated (CI missing, invalid, or data collection failure).
+func printNoControlsWarning(result *control.AnalysisResult) {
+	fmt.Printf(fmtIndentLine, styleError.Render("⚠ WARNING: No controls could be evaluated!"))
+	if len(result.CiErrors) > 0 {
+		fmt.Printf(fmtIndentLine, styleError.Render("CI configuration errors:"))
+		bullet := styleError.Render("•")
+		for _, e := range result.CiErrors {
+			fmt.Printf("    %s %s\n", bullet, e)
 		}
-	} else if result.DataCollectionDegraded {
-		// Partial run: some controls evaluated but a later collection step
-		// (branch protection, an include) failed, so the findings below are
-		// from incomplete data. Name what was missed up front — the
-		// controlCount==0 block above only covers total failures (#220).
-		renderDegradedCaveat(result.DegradedReasons)
+		fmt.Println()
+		return
 	}
-
-	// CI config source info
-	if result.CIConfigSource == "local" {
-		fmt.Printf("  %s\n\n", styleAccent.Render("CI Config Source: local file"))
+	if result.CiMissing {
+		fmt.Printf(fmtIndentPara, styleDim.Render("CI configuration file is missing from the project."))
+		return
 	}
+	fmt.Printf(fmtIndentLine, styleDim.Render("Data collection failed - compliance defaults to 0%."))
+	fmt.Printf(fmtIndentPara, styleDim.Render("Use --verbose for more info."))
+}
 
-	// Build control summaries and detailed-finding groups from the
-	// config-driven catalog (one entry per configured .plumber.yaml
-	// section) joined with the Rego Findings list. Compliance is
-	// binary: 100 when no finding matches the control, 0 otherwise.
-	// The unified renderer in render_details.go handles the printing
-	// (shared with the GitHub analyze path).
-	findingsByControl := control.FindingsByControl(result.Findings)
-	entries := control.GitLabControls(pc)
-	control.MarkSkippedByFilter(entries, controlsFilterList, skipControlsList)
-	// Same gitleaks-abstain routing as the GitHub side: when the scan
-	// could not complete on an enabled control, flip the entry to
-	// SKIPPED with the collector's reason so the operator does not
-	// see a misleading 100% green.
-	if result.GitleaksAbstainReason != "" {
-		for i := range entries {
-			if entries[i].ControlName == "pipelineMustNotLeakSecretsInConfig" && !entries[i].Skipped {
-				entries[i].Skipped = true
-				entries[i].SkipReason = result.GitleaksAbstainReason
-				break
-			}
-		}
-	}
-	groups := make([]findingGroup, 0, len(entries))
-	for _, e := range entries {
-		findings := findingsByControl[e.ControlName]
-		if e.ControlName == "branchMustBeProtected" {
-			sortBranchProtectionFindingsForDisplay(findings)
-		}
-		codes := make([]control.ErrorCode, 0, len(findings))
-		items := make([]detailedFinding, 0, len(findings))
-		for _, f := range findings {
-			code := control.ErrorCode(f.Code)
-			codes = append(codes, code)
-			items = append(items, detailedFinding{
-				Code:        code,
-				Message:     f.Message,
-				DocURL:      code.DocURL(),
-				Location:    formatFindingLocation(f),
-				DetailLines: detailLinesFromFinding(f),
-			})
-		}
-		compliance := 100.0
-		if !e.Skipped && len(items) > 0 {
-			compliance = 0.0
-		}
-		controls = append(controls, controlSummary{
-			name:       e.DisplayName,
-			compliance: compliance,
-			issues:     len(items),
-			skipped:    e.Skipped,
-			codes:      uniqueSortedIssueCodeStrings(codes),
-			bySeverity: control.SeverityCountsFromIssueCodes(codes),
-		})
-		groups = append(groups, findingGroup{
-			Title:      e.DisplayName,
-			Compliance: compliance,
-			Skipped:    e.Skipped,
-			SkipReason: e.SkipReason,
-			Stats:      buildGitLabControlStats(e.ControlName, result, pc, findings),
-			Findings:   items,
+// findingsToItems converts a slice of OPA findings into the parallel
+// (codes, items) slices used by the table and group renderers.
+func findingsToItems(findings []opaengine.Finding) ([]control.ErrorCode, []detailedFinding) {
+	codes := make([]control.ErrorCode, 0, len(findings))
+	items := make([]detailedFinding, 0, len(findings))
+	for _, f := range findings {
+		code := control.ErrorCode(f.Code)
+		codes = append(codes, code)
+		items = append(items, detailedFinding{
+			Code:        code,
+			Message:     f.Message,
+			DocURL:      code.DocURL(),
+			Location:    formatFindingLocation(f),
+			DetailLines: detailLinesFromFinding(f),
 		})
 	}
-	// On a degraded run the per-control verdict is untrustworthy (the
-	// pipeline is partial), so render only the findings we DID surface —
-	// a violation found on partial data is still real — and drop the
-	// green stat blocks, the compliance table and the score. The caveat
-	// above and the withheld score carry the honest signal (#220).
-	renderFindingGroups(filterGroupsForDegraded(groups, result.DataCollectionDegraded))
-	renderWarnings(result.Warnings)
-
-	// Summary Section
-	printSectionHeader("Summary")
-	fmt.Println()
-
-	if crit := control.CriticalIssueCodesSorted(result); len(crit) > 0 {
-		fmt.Printf("  %s▶ Critical issue codes:%s %s\n", colorRed, colorReset, strings.Join(crit, ", "))
-		fmt.Println()
-	}
-
-	// Status
-	switch {
-	case result.DataCollectionDegraded:
-		fmt.Printf("  Status: %s%sINCOMPLETE — data collection failed%s\n\n", colorBold, colorYellow, colorReset)
-	case compliance >= threshold:
-		fmt.Printf("  Status: %s%sPASSED ✓%s\n\n", colorBold, colorGreen, colorReset)
-	default:
-		fmt.Printf("  Status: %s%sFAILED ✗%s\n\n", colorBold, colorRed, colorReset)
-	}
-
-	// Issues Table (real findings). On a degraded run with no findings we
-	// skip it rather than print "(none with open issues)", which would
-	// imply a clean pipeline we never actually evaluated.
-	if !result.DataCollectionDegraded || len(result.Findings) > 0 {
-		printIssuesTable(controls)
-		fmt.Println()
-	}
-
-	// Compliance Table — suppressed on a degraded run: its per-control
-	// greens and total would present partial data as a verdict.
-	if !result.DataCollectionDegraded {
-		printComplianceTable(controls, compliance, threshold)
-		fmt.Println()
-	}
-
-	// Letter score + points breakdown last on stdout (--score / --score-point)
-	printSummaryScoreBanner(score, scoreMode, result.DataCollectionDegraded)
-	if scorePointMode && score != nil && !result.DataCollectionDegraded {
-		printScoreBreakdown(score)
-	}
-
-	return nil
+	return codes, items
 }
 
 // scoreBreakdownWidths are inner text widths (padding applied after; borders use w+2 dashes per column).
@@ -1648,66 +1286,68 @@ func scoreBreakdownSevColor(sev control.IssueSeverity) string {
 	}
 }
 
+// printCodeLossTable renders the per-code breakdown table and returns the total
+// loss so the caller can print the summary line.
+func printCodeLossTable(losses []control.CodeLoss) float64 {
+	fmt.Printf(fmtIndentColored, colorDim, scoreBreakdownBorderTop(), colorReset)
+	fmt.Printf("  %s│ %s │ %s │ %s │ %s │ %s │ %s │%s\n", colorDim,
+		padRunesRight("Code", sbWCode),
+		padRunesRight("Severity", sbWSev),
+		padRunesLeft("Count", sbWCnt),
+		padRunesLeft("Weight", sbWWgt),
+		padRunesLeft("Cap", sbWCap),
+		padRunesLeft("Loss", sbWLoss),
+		colorReset)
+	fmt.Printf(fmtIndentColored, colorDim, scoreBreakdownBorderMid(), colorReset)
+
+	var totalLoss float64
+	for _, l := range losses {
+		capPlain := "inf"
+		if l.Severity != control.SeverityCritical {
+			capPlain = fmt.Sprintf("%.0f", l.Cap)
+		}
+		sc := scoreBreakdownSevColor(l.Severity)
+		fmt.Printf("  %s│ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │%s\n", colorDim,
+			colorDim, padRunesRight(string(l.Code), sbWCode), colorReset,
+			sc, padRunesRight(string(l.Severity), sbWSev), colorReset,
+			colorDim, padRunesLeft(fmt.Sprintf("%d", l.Count), sbWCnt), colorReset,
+			colorDim, padRunesLeft(fmt.Sprintf("%.0f", l.Weight), sbWWgt), colorReset,
+			colorDim, padRunesLeft(capPlain, sbWCap), colorReset,
+			colorRed, padRunesLeft(fmt.Sprintf("-%.1f", l.CappedLoss), sbWLoss), colorReset,
+			colorReset)
+		totalLoss += l.CappedLoss
+	}
+
+	fmt.Printf(fmtIndentColored, colorDim, scoreBreakdownBorderMidFooter(), colorReset)
+	// Merge the first five columns for the Total row.
+	mergedW := sbWCode + 3 + sbWSev + 3 + sbWCnt + 3 + sbWWgt + 3 + sbWCap
+	tl := "Total loss"
+	tlPad := mergedW - utf8.RuneCountInString(tl)
+	if tlPad < 0 {
+		tlPad = 0
+	}
+	leftCell := colorBold + tl + colorReset + strings.Repeat(" ", tlPad)
+	fmt.Printf("  %s│ %s │ %s%s%s │%s\n", colorDim,
+		leftCell,
+		colorRed, padRunesLeft(fmt.Sprintf("-%.1f", totalLoss), sbWLoss), colorReset,
+		colorReset)
+	fmt.Printf(fmtIndentColored, colorDim, scoreBreakdownBorderBottom(), colorReset)
+	fmt.Println()
+	return totalLoss
+}
+
 func printScoreBreakdown(score *control.PlumberScoreResult) {
 	printSectionHeader("Points breakdown (beta)")
 	fmt.Println()
 	fmt.Printf("  %sProfile:%s %s\n\n", colorDim, colorReset, score.ProfileID)
 
-	var totalLoss float64
+	fmt.Printf("  Base points: %s100%s\n", colorGreen, colorReset)
 	if len(score.CodeLosses) > 0 {
-		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderTop(), colorReset)
-		fmt.Printf("  %s│ %s │ %s │ %s │ %s │ %s │ %s │%s\n", colorDim,
-			padRunesRight("Code", sbWCode),
-			padRunesRight("Severity", sbWSev),
-			padRunesLeft("Count", sbWCnt),
-			padRunesLeft("Weight", sbWWgt),
-			padRunesLeft("Cap", sbWCap),
-			padRunesLeft("Loss", sbWLoss),
-			colorReset)
-		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderMid(), colorReset)
-
-		for _, l := range score.CodeLosses {
-			capPlain := "inf"
-			if l.Severity != control.SeverityCritical {
-				capPlain = fmt.Sprintf("%.0f", l.Cap)
-			}
-			sc := scoreBreakdownSevColor(l.Severity)
-			lossStr := fmt.Sprintf("-%.1f", l.CappedLoss)
-			fmt.Printf("  %s│ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │ %s%s%s │%s\n", colorDim,
-				colorDim, padRunesRight(string(l.Code), sbWCode), colorReset,
-				sc, padRunesRight(string(l.Severity), sbWSev), colorReset,
-				colorDim, padRunesLeft(fmt.Sprintf("%d", l.Count), sbWCnt), colorReset,
-				colorDim, padRunesLeft(fmt.Sprintf("%.0f", l.Weight), sbWWgt), colorReset,
-				colorDim, padRunesLeft(capPlain, sbWCap), colorReset,
-				colorRed, padRunesLeft(lossStr, sbWLoss), colorReset,
-				colorReset)
-			totalLoss += l.CappedLoss
-		}
-		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderMidFooter(), colorReset)
-
-		// Merge first five columns ("Code", "Severity", "Count", "Weight", "Cap") for the Total row.
-		mergedW := sbWCode + 3 + sbWSev + 3 + sbWCnt + 3 + sbWWgt + 3 + sbWCap // " │ " between five columns
-		tl := "Total loss"
-		tlPad := mergedW - utf8.RuneCountInString(tl)
-		if tlPad < 0 {
-			tlPad = 0
-		}
-		leftCell := colorBold + tl + colorReset + strings.Repeat(" ", tlPad)
-		totalStr := fmt.Sprintf("-%.1f", totalLoss)
-		fmt.Printf("  %s│ %s │ %s%s%s │%s\n", colorDim,
-			leftCell,
-			colorRed, padRunesLeft(totalStr, sbWLoss), colorReset,
-			colorReset)
-		fmt.Printf("  %s%s%s\n", colorDim, scoreBreakdownBorderBottom(), colorReset)
-		fmt.Println()
-
-		fmt.Printf("  Base points: %s100%s\n", colorGreen, colorReset)
+		totalLoss := printCodeLossTable(score.CodeLosses)
 		fmt.Printf("  Total loss:  %s-%.1f%s\n", colorRed, totalLoss, colorReset)
-		fmt.Printf("  Raw points:  %.1f\n", score.RawPoints)
-	} else {
-		fmt.Printf("  Base points: %s100%s\n", colorGreen, colorReset)
-		fmt.Printf("  Raw points:  %.1f\n", score.RawPoints)
 	}
+	fmt.Printf("  Raw points:  %.1f\n", score.RawPoints)
+
 	if score.CriticalMalusApplied {
 		fmt.Printf("  %sCritical malus: final points capped at %.0f%s\n", colorRed, score.CriticalMalusMax, colorReset)
 	}
@@ -1727,7 +1367,7 @@ func printScoreBreakdown(score *control.PlumberScoreResult) {
 
 func printControlHeader(name string, compliance float64, skipped bool) {
 	line := strings.Repeat("─", 50)
-	fmt.Printf("%s%s%s\n", colorDim, line, colorReset)
+	fmt.Printf(fmtColored, colorDim, line, colorReset)
 	if skipped {
 		fmt.Printf("%s%s%s %s(skipped)%s\n", colorBold, name, colorReset, colorDim, colorReset)
 	} else {
@@ -1740,14 +1380,14 @@ func printControlHeader(name string, compliance float64, skipped bool) {
 		}
 		fmt.Printf("%s%s%s %s(%.1f%% compliant)%s\n", colorBold, name, colorReset, compColor, compliance, colorReset)
 	}
-	fmt.Printf("%s%s%s\n", colorDim, line, colorReset)
+	fmt.Printf(fmtColored, colorDim, line, colorReset)
 }
 
 func printSectionHeader(name string) {
 	line := strings.Repeat("─", 20)
-	fmt.Printf("%s%s%s\n", colorDim, line, colorReset)
-	fmt.Printf("%s%s%s\n", colorBold, name, colorReset)
-	fmt.Printf("%s%s%s\n", colorDim, line, colorReset)
+	fmt.Printf(fmtColored, colorDim, line, colorReset)
+	fmt.Printf(fmtColored, colorBold, name, colorReset)
+	fmt.Printf(fmtColored, colorDim, line, colorReset)
 }
 
 // scoreLetterBadgeLines returns 5 pre-colored lines drawing a double-bordered badge
@@ -1770,10 +1410,9 @@ func printSummaryScoreBanner(score *control.PlumberScoreResult, scoreMode, degra
 		return
 	}
 
-	// When data collection was degraded the run scored against incomplete
-	// data, so the letter grade would be meaningless (an empty pipeline
-	// reads as a clean A). Withhold the badge and say so plainly instead
-	// of presenting a green grade over missing data (#220).
+	// When data collection was degraded the score ran on incomplete data, so
+	// the letter grade would be meaningless (an empty pipeline reads as a clean
+	// A). Withhold the badge and say so plainly (#220).
 	if degraded {
 		sep := styleRule.Render(strings.Repeat("─", hrWidth))
 		fmt.Println()
@@ -1851,6 +1490,21 @@ func severityChip(sev, label string, n int) string {
 	return severityIcon(sev) + " " + styleMuted.Render(label) + " " + countStyle.Render(fmt.Sprintf("%d", n))
 }
 
+// issueTableCells returns the (codes, severity, count) cell strings for one
+// issues-table row. Skipped controls and controls with no severity data show
+// placeholder dashes.
+func issueTableCells(ctrl controlSummary) (codesStr, sevLabel, issueStr string) {
+	if ctrl.skipped {
+		return "-", highestSeverityLabel(control.SeverityCounts{}, 10), "-"
+	}
+	noSev := ctrl.bySeverity.Critical+ctrl.bySeverity.High+ctrl.bySeverity.Medium+ctrl.bySeverity.Low == 0
+	sev := ctrl.bySeverity
+	if noSev {
+		sev = control.SeverityCounts{}
+	}
+	return strings.Join(ctrl.codes, ", "), highestSeverityLabel(sev, 10), fmt.Sprintf("%d", ctrl.issues)
+}
+
 func printIssuesTable(controls []controlSummary) {
 	var rows []controlSummary
 	for _, c := range controls {
@@ -1859,9 +1513,9 @@ func printIssuesTable(controls []controlSummary) {
 		}
 	}
 
-	fmt.Printf("  %s\n", styleTitle.Render("Controls"))
+	fmt.Printf(fmtIndentLine, styleTitle.Render("Controls"))
 	if len(rows) == 0 {
-		fmt.Printf("  %s\n", styleDim.Render("(none with open issues)"))
+		fmt.Printf(fmtIndentLine, styleDim.Render("(none with open issues)"))
 		return
 	}
 
@@ -1882,23 +1536,12 @@ func printIssuesTable(controls []controlSummary) {
 		})
 
 	for _, ctrl := range rows {
-		issueStr := "-"
-		if !ctrl.skipped {
-			issueStr = fmt.Sprintf("%d", ctrl.issues)
-		}
-		codesStr := strings.Join(ctrl.codes, ", ")
-		if ctrl.skipped {
-			codesStr = "-"
-		}
-		sevLabel := highestSeverityLabel(ctrl.bySeverity, 10)
-		if ctrl.skipped || ctrl.bySeverity.Critical+ctrl.bySeverity.High+ctrl.bySeverity.Medium+ctrl.bySeverity.Low == 0 {
-			sevLabel = highestSeverityLabel(control.SeverityCounts{}, 10)
-		}
+		codesStr, sevLabel, issueStr := issueTableCells(ctrl)
 		tbl.Row(ctrl.name, codesStr, sevLabel, issueStr)
 	}
 
 	fmt.Println(indentBlock(tbl.String(), "  "))
-	fmt.Printf("  %s\n", styleDim.Render("↳ docs: https://getplumber.io/docs/cli/issues/<code>"))
+	fmt.Printf(fmtIndentLine, styleDim.Render("↳ docs: https://getplumber.io/docs/cli/issues/<code>"))
 }
 
 // indentBlock prefixes every line of s with prefix. Used because
@@ -1911,81 +1554,87 @@ func indentBlock(s, prefix string) string {
 	return strings.Join(lines, "\n")
 }
 
-func printComplianceTable(controls []controlSummary, overallCompliance, threshold float64) {
-	fmt.Printf("  %s\n", styleTitle.Render("Compliance"))
+// complianceTableRow is a single row in the compliance summary table.
+type complianceTableRow struct {
+	isTotal bool
+	name    string
+	compStr string
+	status  string
+	compOK  bool
+}
 
+func complianceStatusEmoji(ok bool) string {
+	if ok {
+		return "🟢"
+	}
+	return "🔴"
+}
+
+func buildComplianceRows(controls []controlSummary, overallCompliance, threshold float64) []complianceTableRow {
 	sorted := append([]controlSummary(nil), controls...)
 	sortControlSummariesForComplianceTable(sorted)
 
-	// Total line rendered as an extra row at the bottom. We remember its
-	// index so StyleFunc can make it bold.
-	type rowKind int
-	const (
-		rowControl rowKind = iota
-		rowTotal
-	)
-	type tblRow struct {
-		kind    rowKind
-		name    string
-		compStr string
-		status  string
-		compOK  bool
-	}
-
-	var rows []tblRow
+	rows := make([]complianceTableRow, 0, len(sorted)+1)
 	for _, ctrl := range sorted {
-		r := tblRow{kind: rowControl, name: ctrl.name, compStr: "-", status: "-"}
+		r := complianceTableRow{name: ctrl.name, compStr: "-", status: "-"}
 		if !ctrl.skipped {
-			r.compStr = fmt.Sprintf("%.1f%%", ctrl.compliance)
 			r.compOK = ctrl.compliance >= 100
-			if r.compOK {
-				r.status = "🟢"
-			} else {
-				r.status = "🔴"
-			}
+			r.compStr = fmt.Sprintf("%.1f%%", ctrl.compliance)
+			r.status = complianceStatusEmoji(r.compOK)
 		}
 		rows = append(rows, r)
 	}
-	totalRow := tblRow{
-		kind:    rowTotal,
+	totalOK := overallCompliance >= threshold
+	rows = append(rows, complianceTableRow{
+		isTotal: true,
 		name:    fmt.Sprintf("Total (required: %.0f%%)", threshold),
 		compStr: fmt.Sprintf("%.1f%%", overallCompliance),
-		compOK:  overallCompliance >= threshold,
+		compOK:  totalOK,
+		status:  complianceStatusEmoji(totalOK),
+	})
+	return rows
+}
+
+func complianceValueStyle(base lipgloss.Style, r complianceTableRow) lipgloss.Style {
+	if r.compStr == "-" {
+		return base.Faint(true)
 	}
-	if totalRow.compOK {
-		totalRow.status = "🟢"
-	} else {
-		totalRow.status = "🔴"
+	if r.compOK {
+		return base.Inherit(styleSuccess)
 	}
-	rows = append(rows, totalRow)
+	return base.Inherit(styleError)
+}
+
+func complianceTableStyleFunc(rows []complianceTableRow) func(int, int) lipgloss.Style {
+	return func(row, col int) lipgloss.Style {
+		if row == table.HeaderRow {
+			return styleHeader
+		}
+		if row < 0 || row >= len(rows) {
+			return styleCell
+		}
+		r := rows[row]
+		style := styleCell
+		if r.isTotal {
+			style = style.Bold(true)
+		}
+		if col == 1 || col == 2 {
+			return complianceValueStyle(style, r)
+		}
+		return style
+	}
+}
+
+func printComplianceTable(controls []controlSummary, overallCompliance, threshold float64) {
+	fmt.Printf(fmtIndentLine, styleTitle.Render("Compliance"))
+
+	rows := buildComplianceRows(controls, overallCompliance, threshold)
 
 	tbl := table.New().
 		Border(lipgloss.RoundedBorder()).
 		BorderStyle(styleAccent).
 		Headers("Control", "Compliance", "Status").
-		StyleFunc(func(row, col int) lipgloss.Style {
-			if row == table.HeaderRow {
-				return styleHeader
-			}
-			if row < 0 || row >= len(rows) {
-				return styleCell
-			}
-			r := rows[row]
-			style := styleCell
-			if r.kind == rowTotal {
-				style = style.Bold(true)
-			}
-			if col == 1 || col == 2 {
-				if r.compStr == "-" {
-					return style.Faint(true)
-				}
-				if r.compOK {
-					return style.Inherit(styleSuccess)
-				}
-				return style.Inherit(styleError)
-			}
-			return style
-		})
+		StyleFunc(complianceTableStyleFunc(rows))
 
 	for _, r := range rows {
 		tbl.Row(r.name, r.compStr, r.status)

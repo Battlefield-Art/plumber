@@ -1,4 +1,4 @@
-package collector
+package github
 
 import (
 	"encoding/base64"
@@ -303,4 +303,3 @@ func isNotFound(err error) bool {
 	_ = httpError(nil)
 	return strings.Contains(err.Error(), "HTTP 404")
 }
-

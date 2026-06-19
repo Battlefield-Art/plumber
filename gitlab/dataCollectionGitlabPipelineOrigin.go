@@ -1,4 +1,4 @@
-package collector
+package gitlab
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/getplumber/plumber/configuration"
-	"github.com/getplumber/plumber/gitlab"
 	"github.com/getplumber/plumber/utils"
 	gover "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
@@ -67,10 +66,10 @@ type GitlabPipelineOriginMetrics struct {
 type GitlabPipelineOriginData struct {
 
 	// Gitlab CI configuration
-	Conf            *gitlab.GitlabCIConf
+	Conf            *GitlabCIConf
 	ConfString      string
-	MergedConf      *gitlab.GitlabCIConf
-	MergedResponse  *gitlab.MergedCIConfResponse
+	MergedConf      *GitlabCIConf
+	MergedResponse  *MergedCIConfResponse
 	CiValid         bool
 	CiMissing       bool
 	CiErrors        []string // Specific CI config errors for output
@@ -98,7 +97,7 @@ type GitlabPipelineOriginDataGeneric struct {
 	FromPlumber         bool                             `json:"fromPlumber"`
 	FromGitlabCatalog   bool                             `json:"fromGitlabCatalog"`
 	PlumberOrigin       GitlabPipelineJobPlumberOrigin   `json:"plumberOrigin"`
-	GitlabIncludeOrigin gitlab.IncludeOriginWithoutRef   `json:"gitlabIncludeOrigin"`
+	GitlabIncludeOrigin IncludeOriginWithoutRef          `json:"gitlabIncludeOrigin"`
 	GitlabComponent     GitlabPipelineJobGitlabComponent `json:"gitlabComponent"`
 	OriginHash          uint64                           `json:"originHash"`
 }
@@ -218,7 +217,7 @@ func latestSemver(versions []string) string {
 // still carries the named component. Components are versioned with their
 // project, but a component can be added or removed across releases, so we only
 // consider versions that actually contain it.
-func latestCatalogVersion(resource *gitlab.CICatalogResource, component string) string {
+func latestCatalogVersion(resource *CICatalogResource, component string) string {
 	if resource == nil {
 		return ""
 	}
@@ -241,7 +240,7 @@ func extractInputsFromInclude(includeEntry interface{}, instanceURL string) (uin
 	// If it's a string, create a simple include origin
 	if includeStr, ok := includeEntry.(string); ok {
 		// Simple string includes are typically templates or remote URLs
-		includeOrigin := gitlab.IncludeOriginWithoutRef{
+		includeOrigin := IncludeOriginWithoutRef{
 			Location: includeStr,
 			Type:     "", // Will be empty for simple strings
 			Project:  "",
@@ -252,7 +251,7 @@ func extractInputsFromInclude(includeEntry interface{}, instanceURL string) (uin
 
 	// If it's a map, extract location, type, project and inputs
 	if includeMap, ok := includeEntry.(map[interface{}]interface{}); ok {
-		var includeOrigin gitlab.IncludeOriginWithoutRef
+		var includeOrigin IncludeOriginWithoutRef
 		var inputs map[string]interface{}
 
 		// Check each possible include type and populate IncludeOriginWithoutRef
@@ -316,7 +315,7 @@ func extractInputsFromInclude(includeEntry interface{}, instanceURL string) (uin
 
 // generateIncludeHash generates a hash from an IncludeOriginWithoutRef
 // This uses the same logic as the main loop for consistency
-func generateIncludeHash(includeOrigin gitlab.IncludeOriginWithoutRef) (uint64, error) {
+func generateIncludeHash(includeOrigin IncludeOriginWithoutRef) (uint64, error) {
 	gitlabIncludeOriginByte, err := json.Marshal(includeOrigin)
 	if err != nil {
 		return 0, err
@@ -327,7 +326,7 @@ func generateIncludeHash(includeOrigin gitlab.IncludeOriginWithoutRef) (uint64, 
 // buildIncludeInputsMap builds a map of include hash to inputs from the GitLab CI configuration
 // The map is used to pass the correct inputs when fetching includes
 // Uses the same hash mechanism as the main origin detection loop for consistency
-func buildIncludeInputsMap(gitlabConf *gitlab.GitlabCIConf, instanceURL string) map[uint64]map[string]interface{} {
+func buildIncludeInputsMap(gitlabConf *GitlabCIConf, instanceURL string) map[uint64]map[string]interface{} {
 	includeInputsMap := make(map[uint64]map[string]interface{})
 
 	if gitlabConf == nil || gitlabConf.Include == nil {
@@ -354,7 +353,7 @@ func buildIncludeInputsMap(gitlabConf *gitlab.GitlabCIConf, instanceURL string) 
 // DataCollection run //
 ////////////////////////
 
-func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, token string, conf *configuration.Configuration) (*GitlabPipelineOriginData, *GitlabPipelineOriginMetrics, error) {
+func (dc *GitlabPipelineOriginDataCollection) Run(project *ProjectInfo, token string, conf *configuration.Configuration) (*GitlabPipelineOriginData, *GitlabPipelineOriginMetrics, error) {
 	l := l.WithFields(logrus.Fields{
 		"dataCollection":        "GitlabPipelineOrigin",
 		"dataCollectionVersion": DataCollectionTypeGitlabPipelineOriginVersion,
@@ -389,7 +388,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 
 	// Get all infos about the CI configuration
 	// Use project.AnalyzeBranch as ref (set via --branch CLI flag, defaults to DefaultBranch)
-	data.Conf, data.MergedConf, data.MergedResponse, data.ConfString, _, err = gitlab.GetFullGitlabCI(project, project.AnalyzeBranch, token, conf.GitlabURL, conf)
+	data.Conf, data.MergedConf, data.MergedResponse, data.ConfString, _, err = GetFullGitlabCI(project, project.AnalyzeBranch, token, conf.GitlabURL, conf)
 	if err != nil {
 		data.LimitedAnalysis = true
 		data.CiValid = false
@@ -404,7 +403,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			// 100/100 score (#222). A branch probe that itself fails (auth,
 			// network) falls through to the limited-data path rather than
 			// masking the original error.
-			if exists, berr := gitlab.BranchExists(project.ID, project.AnalyzeBranch, token, conf.GitlabURL, conf); berr == nil && !exists {
+			if exists, berr := BranchExists(project.ID, project.AnalyzeBranch, token, conf.GitlabURL, conf); berr == nil && !exists {
 				return nil, nil, fmt.Errorf("branch or ref %q not found in %s", project.AnalyzeBranch, project.Path)
 			}
 			// In this case, it's CI missing rather than an analysis error
@@ -455,13 +454,13 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 	// ciCatalogResource(fullPath:) lookup (cheap and complete). Results are
 	// cached per project so repeated includes from the same project share one
 	// query.
-	catalogCache := map[string]*gitlab.CICatalogResource{}
+	catalogCache := map[string]*CICatalogResource{}
 	catalogTried := map[string]bool{}
 	resolveComponentLatest := func(project, component string) (latest, webPath, repoName string) {
 		webPath = "/" + project
 		repoName = component
 		if !catalogTried[project] {
-			r, qerr := gitlab.GetGitlabCIComponentResource(project, token, conf.GitlabURL, conf)
+			r, qerr := GetGitlabCIComponentResource(project, token, conf.GitlabURL, conf)
 			if qerr != nil {
 				l.WithError(qerr).WithField("project", project).Debug("catalog resource lookup failed")
 			}
@@ -510,8 +509,8 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			lJob.Debug("Start to analyze a job from merged conf")
 
 			// Parse the job
-			var job *gitlab.GitlabJob
-			job, err = gitlab.ParseGitlabCIJob(content)
+			var job *GitlabJob
+			job, err = ParseGitlabCIJob(content)
 			if err != nil {
 				l.WithError(err).Error("Unable to parse the job retrieved from CI conf")
 				return data, metrics, err
@@ -520,7 +519,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			// Get the extends value
 			extends := []string{}
 			if job.Extends != nil {
-				extendsResult, err := gitlab.GetExtends(job.Extends)
+				extendsResult, err := GetExtends(job.Extends)
 				if err != nil {
 					lJob.WithError(err).WithField("extends", job.Extends).Error("Unable to parse job extends")
 					continue
@@ -602,7 +601,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			originData.Nested = isNested
 			originData.PlumberOrigin = GitlabPipelineJobPlumberOrigin{}
 			originData.GitlabComponent = GitlabPipelineJobGitlabComponent{}
-			originData.GitlabIncludeOrigin = gitlab.IncludeOriginWithoutRef{
+			originData.GitlabIncludeOrigin = IncludeOriginWithoutRef{
 				Location: include.Location,
 				Type:     include.Type,
 				Project:  include.Extra.Project,
@@ -666,7 +665,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 						ComponentIncludePath:   instance + "/" + cleanPath,
 						ComponentLatestVersion: latestVersion,
 					}
-					originData.UpToDate = gitlab.IsUpToDate(version, latestVersion, latestRefs)
+					originData.UpToDate = IsUpToDate(version, latestVersion, latestRefs)
 					lInclude.WithFields(logrus.Fields{
 						"cleanPath":     cleanPath,
 						"componentName": componentName,
@@ -705,12 +704,12 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 							}).Debug("Fetching tags to check for outdated version")
 
 							// Fetch source project info to get default branch (for forbidden version check)
-							sourceProject, errProject := gitlab.FetchProjectDetails(include.Extra.Project, token, conf.GitlabURL, conf)
+							sourceProject, errProject := FetchProjectDetails(include.Extra.Project, token, conf.GitlabURL, conf)
 							if errProject == nil && sourceProject != nil {
 								originData.PlumberOrigin.RepoDefaultBranch = sourceProject.DefaultBranch
 							}
 
-							tags, errPlatform, err := gitlab.SearchTags(include.Extra.Project, token, conf.GitlabURL, conf)
+							tags, errPlatform, err := SearchTags(include.Extra.Project, token, conf.GitlabURL, conf)
 							if err != nil || errPlatform != nil {
 								lInclude.WithFields(logrus.Fields{
 									"err":         err,
@@ -748,7 +747,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 									originData.FromPlumber = true
 
 									// Check if up to date
-									originData.UpToDate = gitlab.IsUpToDate(currentVersion, latestVersion, latestRefs)
+									originData.UpToDate = IsUpToDate(currentVersion, latestVersion, latestRefs)
 
 									lInclude.WithFields(logrus.Fields{
 										"currentVersion":   currentVersion,
@@ -810,7 +809,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 			// Fetch the include with inputs and stages from the merged configuration
 			// Stages are needed because components may reference custom stages defined at the root level
 			var jobsFromInclude []string
-			jobsFromInclude, err = gitlab.FetchGitlabInclude(include, project.Path, token, conf.GitlabURL, project.LatestHeadCommitSha, conf, includeInputs, data.MergedConf.Stages)
+			jobsFromInclude, err = FetchGitlabInclude(include, project.Path, token, conf.GitlabURL, project.LatestHeadCommitSha, conf, includeInputs, data.MergedConf.Stages)
 			if err != nil {
 				lInclude.WithError(err).Error("Unable to fetch include from GitLab")
 				// Record the dropped include so the caller can flag the run
@@ -917,7 +916,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *gitlab.ProjectInfo, t
 		originData := GitlabPipelineOriginDataFull{}
 		originData.PlumberOrigin = GitlabPipelineJobPlumberOrigin{}
 		originData.GitlabComponent = GitlabPipelineJobGitlabComponent{}
-		originData.GitlabIncludeOrigin = gitlab.IncludeOriginWithoutRef{}
+		originData.GitlabIncludeOrigin = IncludeOriginWithoutRef{}
 		originData.OriginType = originHardcoded
 		originData.Jobs = make([]GitlabPipelineJobData, 0, len(data.JobHardcodedMap))
 

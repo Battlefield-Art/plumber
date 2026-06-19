@@ -164,9 +164,9 @@ var benchedControls = map[string]map[string]struct{}{
 		// findings on GitLab — they're only benched on GitHub.
 		"includesMustBeUpToDate":                      {},
 		"includesMustNotUseForbiddenVersions":         {},
-		"pipelineMustIncludeComponent":            {},
-		"pipelineMustIncludeTemplate":             {},
-		"pipelineMustNotIncludeHardcodedJobs":     {},
+		"pipelineMustIncludeComponent":                {},
+		"pipelineMustIncludeTemplate":                 {},
+		"pipelineMustNotIncludeHardcodedJobs":         {},
 		"pipelineMustNotOverrideJobVariables":         {},
 		"pipelineMustNotUseUnsafeVariableExpansion":   {},
 		"containerImageMustComeFromAuthorizedSources": {},

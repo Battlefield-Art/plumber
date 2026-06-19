@@ -1,4 +1,4 @@
-package collector
+package github
 
 import (
 	"io"

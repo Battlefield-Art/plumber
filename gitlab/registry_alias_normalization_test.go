@@ -1,4 +1,4 @@
-package collector
+package gitlab
 
 // Tests for Docker Hub registry-host alias normalisation in the image
 // parsers (GitLab parseImageLink + GitHub splitImageRef) and end-to-end
@@ -10,9 +10,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/getplumber/plumber/github"
 	opaengine "github.com/getplumber/plumber/internal/engine/opa"
 	"github.com/getplumber/plumber/internal/ir"
 	"github.com/getplumber/plumber/policies"
+	"github.com/getplumber/plumber/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,8 +30,8 @@ func TestCanonicalizeDockerHubRegistry(t *testing.T) {
 		"unknown":                 "unknown",
 	}
 	for in, want := range cases {
-		if got := canonicalizeDockerHubRegistry(in); got != want {
-			t.Errorf("canonicalizeDockerHubRegistry(%q) = %q, want %q", in, got, want)
+		if got := utils.CanonicalizeDockerHubRegistry(in); got != want {
+			t.Errorf("CanonicalizeDockerHubRegistry(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -43,8 +45,8 @@ func TestFoldDockerHubAliasInName(t *testing.T) {
 		"library/node":                         "library/node",
 	}
 	for in, want := range cases {
-		if got := foldDockerHubAliasInName(in); got != want {
-			t.Errorf("foldDockerHubAliasInName(%q) = %q, want %q", in, got, want)
+		if got := utils.FoldDockerHubAliasInName(in); got != want {
+			t.Errorf("FoldDockerHubAliasInName(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -84,9 +86,9 @@ func TestSplitImageRef_FoldsHubAliases(t *testing.T) {
 		{"alpine:3.20", "alpine", "3.20"},
 	}
 	for _, tc := range cases {
-		got := splitImageRef(tc.ref)
+		got := github.SplitImageRef(tc.ref)
 		if got.Name != tc.wantName || got.Tag != tc.wantTag {
-			t.Errorf("splitImageRef(%q) = {name:%q tag:%q}, want {name:%q tag:%q}",
+			t.Errorf("SplitImageRef(%q) = {name:%q tag:%q}, want {name:%q tag:%q}",
 				tc.ref, got.Name, got.Tag, tc.wantName, tc.wantTag)
 		}
 	}
@@ -128,8 +130,8 @@ func TestAliasNormalization_E2E(t *testing.T) {
 		t.Errorf("GitLab: registry.hub.docker.com/library/node:alpine should be authorized via docker.io/library/* after alias fold")
 	}
 
-	// GitHub path through splitImageRef
-	if !eval(splitImageRef("registry.hub.docker.com/library/node:alpine")) {
+	// GitHub path through SplitImageRef
+	if !eval(github.SplitImageRef("registry.hub.docker.com/library/node:alpine")) {
 		t.Errorf("GitHub: registry.hub.docker.com/library/node:alpine should be authorized via docker.io/library/* after alias fold")
 	}
 

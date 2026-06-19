@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/getplumber/plumber/collector"
 	"github.com/getplumber/plumber/configuration"
+	githubpkg "github.com/getplumber/plumber/github"
+	"github.com/getplumber/plumber/gitlab"
 	"github.com/getplumber/plumber/internal/ir"
 	"github.com/getplumber/plumber/utils"
 	"github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ func enrichGitHubBranches(l *logrus.Entry, pipeline *ir.NormalizedPipeline, host
 	// or empty), and the targeted-fetch loop simply skips an empty
 	// name.
 	if pipeline.DefaultBranch == "" {
-		if def, derr := collector.FetchGitHubDefaultBranch(host, parts[0], parts[1]); derr == nil && def != "" {
+		if def, derr := githubpkg.FetchGitHubDefaultBranch(host, parts[0], parts[1]); derr == nil && def != "" {
 			pipeline.DefaultBranch = def
 		}
 	}
@@ -97,7 +98,7 @@ func enrichGitHubBranches(l *logrus.Entry, pipeline *ir.NormalizedPipeline, host
 		return false
 	}
 
-	branches, err := collector.FetchGitHubBranchProtection(host, parts[0], parts[1], collector.BranchFetchOptions{
+	branches, err := githubpkg.FetchGitHubBranchProtection(host, parts[0], parts[1], githubpkg.BranchFetchOptions{
 		ExactNames: exact,
 		Listing:    listing,
 		OnProgress: onProgress,
@@ -123,7 +124,7 @@ func isBranchGlob(p string) bool {
 // embedded Rego policies against the resulting IR, and returns an
 // AnalysisResult whose only populated fields are the project metadata
 // and Findings. No legacy Go control fields are set — GitHub support is
-// Rego-only by design (see docs/REFACTOR_MULTI_PROVIDER.md §4).
+// Rego-only by design.
 func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, error) {
 	l := logrus.WithFields(logrus.Fields{
 		"action":      "RunGitHubAnalysis",
@@ -137,11 +138,11 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 	// phase. The collector's progress contract is ProgressFunc(step,
 	// total, message); we map directly onto the same-shape callback
 	// conf exposes.
-	var progressFn collector.ProgressFunc
+	var progressFn githubpkg.ProgressFunc
 	if conf.ProgressFunc != nil {
-		progressFn = collector.ProgressFunc(conf.ProgressFunc)
+		progressFn = githubpkg.ProgressFunc(conf.ProgressFunc)
 	}
-	pipeline, partial, err := collector.ScanGitHubWorkflowsWithProgress(
+	pipeline, partial, err := githubpkg.ScanGitHubWorkflowsWithProgress(
 		conf.ProjectPath,
 		conf.Branch,
 		conf.GitRepoRoot,
@@ -159,7 +160,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 
 	branchFetchFailed := false
 	if shouldRunControl(controlBranchMustBeProtected, conf) {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		if conf.ProgressFunc != nil {
 			conf.ProgressFunc(total-2, total, "Resolving branch protection")
 		}
@@ -176,7 +177,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 	}
 
 	if conf.ProgressFunc != nil {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		conf.ProgressFunc(total-1, total, "Evaluating policies")
 	}
 	defaultBranch := conf.Branch
@@ -191,7 +192,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 	// materialised on disk, so gitleaks has nothing to scan).
 	if conf.GitRepoRoot != "" {
 		workflowsDir := filepath.Join(conf.GitRepoRoot, ".github", "workflows")
-		_ = collector.ScanGitleaksForGitHub(l, conf, workflowsDir, ".github/workflows", pipeline)
+		_ = gitlab.ScanGitleaksForGitHub(l, conf, workflowsDir, ".github/workflows", pipeline)
 	}
 	result := &AnalysisResult{
 		ProjectPath:           conf.ProjectPath,
@@ -220,7 +221,7 @@ func RunGitHubAnalysis(conf *configuration.Configuration) (*AnalysisResult, erro
 	}
 	ApplyGitHubFindingCounts(result.GitHubStats, result.Findings)
 	if conf.ProgressFunc != nil {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		conf.ProgressFunc(total, total, "Analysis complete")
 	}
 
@@ -254,11 +255,11 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 	})
 	l.Info("Starting GitHub Actions analysis (remote fetch)")
 
-	var progressFn collector.ProgressFunc
+	var progressFn githubpkg.ProgressFunc
 	if conf.ProgressFunc != nil {
-		progressFn = collector.ProgressFunc(conf.ProgressFunc)
+		progressFn = githubpkg.ProgressFunc(conf.ProgressFunc)
 	}
-	pipeline, partial, err := collector.ScanGitHubWorkflowsRemote(
+	pipeline, partial, err := githubpkg.ScanGitHubWorkflowsRemote(
 		conf.GithubAPIHost,
 		owner, repo, ref,
 		configuration.ProviderNeedsActionMetadata("github"),
@@ -269,7 +270,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 		// a logrus.Error here would print it once through the structured
 		// log formatter (newlines escaped, key=value frame around it),
 		// then cobra prints it again cleanly. One copy is enough.
-		if !errors.Is(err, collector.ErrAuthRequired) {
+		if !errors.Is(err, githubpkg.ErrAuthRequired) {
 			l.WithError(err).Error("Failed to fetch GitHub workflows")
 		}
 		return nil, err
@@ -280,7 +281,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 
 	branchFetchFailed := false
 	if shouldRunControl(controlBranchMustBeProtected, conf) {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		if conf.ProgressFunc != nil {
 			conf.ProgressFunc(total-2, total, "Resolving branch protection")
 		}
@@ -294,7 +295,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 	}
 
 	if conf.ProgressFunc != nil {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		conf.ProgressFunc(total-1, total, "Evaluating policies")
 	}
 	defaultBranch := ref
@@ -316,7 +317,7 @@ func RunGitHubAnalysisRemote(conf *configuration.Configuration, owner, repo, ref
 	applyGitHubDegraded(result, len(partial), branchFetchFailed)
 	ApplyGitHubFindingCounts(result.GitHubStats, result.Findings)
 	if conf.ProgressFunc != nil {
-		total := collector.TotalProgressStepsForPipeline(pipeline)
+		total := githubpkg.TotalProgressStepsForPipeline(pipeline)
 		conf.ProgressFunc(total, total, "Analysis complete")
 	}
 

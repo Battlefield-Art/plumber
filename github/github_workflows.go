@@ -1,4 +1,4 @@
-package collector
+package github
 
 import (
 	"fmt"
@@ -11,9 +11,15 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/getplumber/plumber/internal/ir"
+	"github.com/getplumber/plumber/utils"
 )
 
 const githubWorkflowsSubdir = ".github/workflows"
+
+const (
+	fmtReadErr = "read %s: %w"
+	fmtFileErr = "%s: %w"
+)
 
 // ScanGitHubWorkflows reads every .yml/.yaml file under
 // <rootDir>/.github/workflows/ and aggregates them into a single
@@ -38,7 +44,7 @@ func ScanGitHubWorkflows(projectPath, defaultBranch, rootDir, apiHost string, en
 		if os.IsNotExist(err) {
 			return pipeline, nil, nil
 		}
-		return nil, nil, fmt.Errorf("read %s: %w", dir, err)
+		return nil, nil, fmt.Errorf(fmtReadErr, dir, err)
 	}
 
 	for _, entry := range entries {
@@ -52,12 +58,12 @@ func ScanGitHubWorkflows(projectPath, defaultBranch, rootDir, apiHost string, en
 		path := filepath.Join(dir, name)
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
-			partialErrors = append(partialErrors, fmt.Errorf("%s: %w", name, readErr))
+			partialErrors = append(partialErrors, fmt.Errorf(fmtFileErr, name, readErr))
 			continue
 		}
 		jobs, parseErr := parseGitHubWorkflowJobs(data, workflowBaseName(name), path)
 		if parseErr != nil {
-			partialErrors = append(partialErrors, fmt.Errorf("%s: %w", name, parseErr))
+			partialErrors = append(partialErrors, fmt.Errorf(fmtFileErr, name, parseErr))
 			continue
 		}
 		pipeline.Jobs = append(pipeline.Jobs, jobs...)
@@ -107,7 +113,7 @@ func ScanGitHubWorkflowsWithProgress(projectPath, defaultBranch, rootDir, apiHos
 		if os.IsNotExist(err) {
 			return pipeline, nil, nil
 		}
-		return nil, nil, fmt.Errorf("read %s: %w", dir, err)
+		return nil, nil, fmt.Errorf(fmtReadErr, dir, err)
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -120,12 +126,12 @@ func ScanGitHubWorkflowsWithProgress(projectPath, defaultBranch, rootDir, apiHos
 		path := filepath.Join(dir, name)
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
-			partialErrors = append(partialErrors, fmt.Errorf("%s: %w", name, readErr))
+			partialErrors = append(partialErrors, fmt.Errorf(fmtFileErr, name, readErr))
 			continue
 		}
 		jobs, parseErr := parseGitHubWorkflowJobs(data, workflowBaseName(name), path)
 		if parseErr != nil {
-			partialErrors = append(partialErrors, fmt.Errorf("%s: %w", name, parseErr))
+			partialErrors = append(partialErrors, fmt.Errorf(fmtFileErr, name, parseErr))
 			continue
 		}
 		pipeline.Jobs = append(pipeline.Jobs, jobs...)
@@ -356,7 +362,7 @@ func scanDependabotConfig(rootDir string) (*ir.DependabotConfig, error) {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return nil, fmt.Errorf("read %s: %w", path, err)
+			return nil, fmt.Errorf(fmtReadErr, path, err)
 		}
 		var cfg ghDependabotConfig
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
@@ -401,6 +407,103 @@ type ghWorkflowHeader struct {
 // propagated to every job that does not override them; `on:` triggers
 // are propagated uniformly so trigger-focused policies can see them at
 // the job level.
+// workflowContext holds the workflow-level values that are shared across every
+// job in the workflow. Grouping them avoids passing many parameters to the
+// per-job builder.
+type workflowContext struct {
+	perms          any
+	env            map[string]string
+	triggers       []string
+	name           string
+	hasConcurrency bool
+	jobLines       map[string]int
+	usesLines      map[string][]int
+	usesComments   map[string]string
+}
+
+// mergedEnv combines workflow-level, job-level, and step-level env maps into
+// one map. Later entries win on key collision, mirroring GitHub's runtime
+// precedence (step > job > workflow).
+func mergedEnv(workflowEnv map[string]string, section map[string]any) map[string]string {
+	var out map[string]string
+	for _, src := range []map[string]string{
+		workflowEnv,
+		normalizeGitHubEnv(section["env"]),
+		extractGitHubStepEnvs(section["steps"]),
+	} {
+		for k, v := range src {
+			if out == nil {
+				out = map[string]string{}
+			}
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// annotateUses attaches line numbers and comment pins to extracted uses refs.
+func annotateUses(uses []ir.Action, usesLines []int, usesComments map[string]string) {
+	for k := range uses {
+		if c, ok := usesComments[uses[k].Uses]; ok {
+			uses[k].Comment = c
+		}
+		if k < len(usesLines) {
+			uses[k].Line = usesLines[k]
+		}
+	}
+}
+
+// buildJob converts one raw YAML job section into an ir.Job.
+func buildJob(jobName string, section map[string]any, wfCtx workflowContext, namespace, originFile string) ir.Job {
+	job := ir.Job{
+		Name:                   namespace + "/" + jobName,
+		OriginFile:             originFile,
+		OriginLine:             wfCtx.jobLines[jobName],
+		Triggers:               wfCtx.triggers,
+		WorkflowName:           wfCtx.name,
+		WorkflowHasConcurrency: wfCtx.hasConcurrency,
+	}
+	if _, ok := section["concurrency"]; ok {
+		job.JobHasConcurrency = true
+	}
+	// continue-on-error: true maps to allowFailure. Only literal booleans
+	// are honoured — runtime expressions are unpredictable statically.
+	if v, ok := section["continue-on-error"].(bool); ok && v {
+		job.AllowFailure = true
+	}
+	if img, ok := parseGitHubContainer(section["container"]); ok {
+		job.Image = &img
+	}
+	if jobPerms, present := section["permissions"]; present {
+		job.Permissions = normalizeGitHubPermissions(jobPerms)
+	} else if wfCtx.perms != nil {
+		job.Permissions = normalizeGitHubPermissions(wfCtx.perms)
+	}
+	if scripts := extractGitHubRunScripts(section["steps"]); len(scripts) > 0 {
+		job.Scripts = scripts
+	}
+	if env := mergedEnv(wfCtx.env, section); env != nil {
+		job.Variables = env
+	}
+	if uses := extractGitHubUses(section["steps"]); len(uses) > 0 {
+		annotateUses(uses, wfCtx.usesLines[jobName], wfCtx.usesComments)
+		job.Uses = uses
+	}
+	if jobUses, ok := section["uses"].(string); ok && jobUses != "" {
+		job.ReusableWorkflowUses = jobUses
+		if secretsVal, ok := section["secrets"].(string); ok && secretsVal == "inherit" {
+			job.SecretsInherit = true
+		}
+	}
+	if conds := collectGitHubJobConditions(section); len(conds) > 0 {
+		job.Conditions = conds
+	}
+	if env := extractGitHubJobEnvironment(section["environment"]); env != "" {
+		job.Environment = env
+	}
+	return job
+}
+
 func parseGitHubWorkflowJobs(data []byte, namespace, originFile string) ([]ir.Job, error) {
 	var wf ghWorkflowHeader
 	if err := yaml.Unmarshal(data, &wf); err != nil {
@@ -410,13 +513,16 @@ func parseGitHubWorkflowJobs(data []byte, namespace, originFile string) ([]ir.Jo
 		return nil, nil
 	}
 
-	workflowPerms := normalizeGitHubPermissions(wf.Permissions)
-	workflowEnv := normalizeGitHubEnv(wf.Env)
-	triggers := extractGitHubTriggers(wf.On)
-	jobLines := scanGitHubJobLines(data)
-	usesLines := scanGitHubUsesLines(data)
-	usesComments := scanGitHubUsesComments(data)
-	workflowHasConcurrency := wf.Concurrency != nil
+	wfCtx := workflowContext{
+		perms:          wf.Permissions,
+		env:            normalizeGitHubEnv(wf.Env),
+		triggers:       extractGitHubTriggers(wf.On),
+		name:           wf.Name,
+		hasConcurrency: wf.Concurrency != nil,
+		jobLines:       scanGitHubJobLines(data),
+		usesLines:      scanGitHubUsesLines(data),
+		usesComments:   scanGitHubUsesComments(data),
+	}
 
 	jobs := make([]ir.Job, 0, len(wf.Jobs))
 	for jobName, v := range wf.Jobs {
@@ -424,96 +530,7 @@ func parseGitHubWorkflowJobs(data []byte, namespace, originFile string) ([]ir.Jo
 		if !ok {
 			continue
 		}
-		job := ir.Job{
-			Name:                   namespace + "/" + jobName,
-			OriginFile:             originFile,
-			OriginLine:             jobLines[jobName],
-			Triggers:               triggers,
-			WorkflowName:           wf.Name,
-			WorkflowHasConcurrency: workflowHasConcurrency,
-		}
-		if _, hasJobConcurrency := section["concurrency"]; hasJobConcurrency {
-			job.JobHasConcurrency = true
-		}
-		// `continue-on-error: true` at the job level is GitHub's
-		// equivalent of GitLab's `allow_failure: true`: the workflow
-		// reports green even if the job's exit code is non-zero. The
-		// security_jobs_weakened rego rule reads job.allowFailure
-		// without a provider distinction, so map directly. Only the
-		// literal boolean is honoured — a `${{ matrix.experimental
-		// }}` expression evaluates at runtime and we cannot say
-		// statically whether it weakens the job, so we stay quiet.
-		if v, ok := section["continue-on-error"].(bool); ok && v {
-			job.AllowFailure = true
-		}
-		if img, ok := parseGitHubContainer(section["container"]); ok {
-			job.Image = &img
-		}
-		if jobPerms, present := section["permissions"]; present {
-			job.Permissions = normalizeGitHubPermissions(jobPerms)
-		} else if workflowPerms != nil {
-			job.Permissions = workflowPerms
-		}
-		if scripts := extractGitHubRunScripts(section["steps"]); len(scripts) > 0 {
-			job.Scripts = scripts
-		}
-		// Aggregate workflow-level + job-level `env:` with every
-		// step-level `env:` into a single Variables map. The runtime
-		// semantics differ (workflow env is inherited by every job;
-		// job env extends that; step env applies to one step), but
-		// the rego policies pattern-match over template expressions
-		// in value strings — not over runtime scope — so folding them
-		// together gives a complete surface to scan. Later entries
-		// overwrite earlier ones on collisions, mirroring GitHub's
-		// runtime precedence (step > job > workflow); the policies we
-		// care about flag patterns regardless of which binding wins.
-		var envVars map[string]string
-		for k, v := range workflowEnv {
-			if envVars == nil {
-				envVars = map[string]string{}
-			}
-			envVars[k] = v
-		}
-		for k, v := range normalizeGitHubEnv(section["env"]) {
-			if envVars == nil {
-				envVars = map[string]string{}
-			}
-			envVars[k] = v
-		}
-		for k, v := range extractGitHubStepEnvs(section["steps"]) {
-			if envVars == nil {
-				envVars = map[string]string{}
-			}
-			envVars[k] = v
-		}
-		if envVars != nil {
-			job.Variables = envVars
-		}
-		if uses := extractGitHubUses(section["steps"]); len(uses) > 0 {
-			jobUsesLines := usesLines[jobName]
-			for k := range uses {
-				if c, ok := usesComments[uses[k].Uses]; ok {
-					uses[k].Comment = c
-				}
-				if k < len(jobUsesLines) {
-					uses[k].Line = jobUsesLines[k]
-				}
-			}
-			job.Uses = uses
-		}
-		if jobUses, ok := section["uses"].(string); ok && jobUses != "" {
-			job.ReusableWorkflowUses = jobUses
-			if secretsVal, ok := section["secrets"].(string); ok && secretsVal == "inherit" {
-				job.SecretsInherit = true
-			}
-		}
-		if conds := collectGitHubJobConditions(section); len(conds) > 0 {
-			job.Conditions = conds
-		}
-		if env := extractGitHubJobEnvironment(section["environment"]); env != "" {
-			job.Environment = env
-		}
-		jobs = append(jobs, job)
+		jobs = append(jobs, buildJob(jobName, section, wfCtx, namespace, originFile))
 	}
 	return jobs, nil
 }
@@ -861,12 +878,18 @@ func parseGitHubContainer(v any) (ir.Image, bool) {
 	return ir.Image{}, false
 }
 
+// SplitImageRef parses a GitHub Actions image reference into an ir.Image,
+// folding Docker Hub registry-host aliases to docker.io.
+func SplitImageRef(ref string) ir.Image {
+	return splitImageRef(ref)
+}
+
 func splitImageRef(ref string) ir.Image {
 	// Fold Docker Hub registry-host aliases (registry.hub.docker.com,
 	// index.docker.io, registry-1.docker.io) to docker.io so trustedUrls
 	// patterns match regardless of which Hub hostname was used. GitHub refs
 	// keep the registry host inside Name, so we normalise the name string.
-	ref = foldDockerHubAliasInName(ref)
+	ref = utils.FoldDockerHubAliasInName(ref)
 	// Digest form takes precedence: "alpine@sha256:..."
 	if at := strings.Index(ref, "@"); at > 0 {
 		return ir.Image{Name: ref[:at], Digest: ref[at+1:]}

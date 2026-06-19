@@ -165,6 +165,7 @@ func sarifSecuritySeverity(sev string) string {
 // are enabled and which is always committed for a run to happen. When
 // fallbackURI is itself empty the result is emitted location-less (still
 // valid SARIF; only Code Scanning is that strict).
+
 func buildSARIF(findings []opaengine.Finding, fallbackURI, provider string) sarifLog {
 	rulesByID := map[string]sarifRule{}
 	results := make([]sarifResult, 0, len(findings))

@@ -340,8 +340,8 @@ func buildTemplateInjectionBlock(c legacyCommon, result *control.AnalysisResult,
 	return map[string]any{
 		"issues": projectFindings(findings, "jobName"),
 		"metrics": map[string]any{
-			"workflowsScanned":     s.WorkflowsTotal,
-			"scriptLinesChecked":   s.ScriptLinesTotal,
+			"workflowsScanned":        s.WorkflowsTotal,
+			"scriptLinesChecked":      s.ScriptLinesTotal,
 			"templateInjectionsFound": len(findings),
 		},
 		"compliance": c.Compliance,
@@ -467,10 +467,10 @@ func _resolveRequiredActionGroups(groups [][]string, result *control.AnalysisRes
 			satisfied++
 		}
 		out = append(out, map[string]any{
-			"required":     group,
-			"present":      present,
-			"missing":      missing,
-			"satisfied":    allPresent,
+			"required":  group,
+			"present":   present,
+			"missing":   missing,
+			"satisfied": allPresent,
 		})
 	}
 	return out, satisfied

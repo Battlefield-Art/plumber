@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/getplumber/plumber/collector"
 	"github.com/getplumber/plumber/configuration"
 	"github.com/getplumber/plumber/gitlab"
 	opaengine "github.com/getplumber/plumber/internal/engine/opa"
@@ -82,11 +81,11 @@ func runRegoEngine(
 	l *logrus.Entry,
 	conf *configuration.Configuration,
 	project *gitlab.Project,
-	originData *collector.GitlabPipelineOriginData,
-	imageData *collector.GitlabPipelineImageData,
-	protectionData *collector.GitlabProtectionAnalysisData,
+	originData *gitlab.GitlabPipelineOriginData,
+	imageData *gitlab.GitlabPipelineImageData,
+	protectionData *gitlab.GitlabProtectionAnalysisData,
 ) ([]opaengine.Finding, string) {
-	pipeline := collector.ToNormalizedPipeline(
+	pipeline := gitlab.ToNormalizedPipeline(
 		conf.ProjectPath,
 		project.DefaultBranch,
 		project.CiConfPath,
@@ -100,7 +99,7 @@ func runRegoEngine(
 	// warn level and never fail the run. The second return carries the
 	// abstain reason (if any) so the caller can mark the control SKIPPED
 	// instead of letting the empty-hits default render as 100% green.
-	if err := collector.ScanGitleaksForGitlab(l, conf, originData, pipeline); err != nil {
+	if err := gitlab.ScanGitleaksForGitlab(l, conf, originData, pipeline); err != nil {
 		l.WithError(err).Warn("gitleaks scan failed; ISSUE-301 will not fire")
 	}
 	return evaluatePolicies(l, conf, "gitlab", pipeline), pipeline.GitleaksAbstainReason
@@ -241,7 +240,7 @@ func buildEngineConfig(controls *configuration.ControlsConfig) map[string]any {
 			trustOfficial = *c.TrustDockerHubOfficialImages
 		}
 		cfg["imageAuthorizedSources"] = map[string]any{
-			"trustedUrls":           c.TrustedUrls,
+			"trustedUrls":            c.TrustedUrls,
 			"trustDockerHubOfficial": trustOfficial,
 		}
 	}
@@ -456,7 +455,7 @@ func RunAnalysis(conf *configuration.Configuration) (*AnalysisResult, error) {
 	// 1. Run Pipeline Origin data collection
 	reportProgress(conf, 2, analysisStepCount, "Collecting pipeline origins")
 	l.Info("Running Pipeline Origin data collection")
-	originDC := &collector.GitlabPipelineOriginDataCollection{}
+	originDC := &gitlab.GitlabPipelineOriginDataCollection{}
 	pipelineOriginData, pipelineOriginMetrics, err := originDC.Run(projectInfo, conf.GitlabToken, conf)
 	if err != nil {
 		// Network/timeout → degrade (exit 3); a definitive error still hard-
@@ -527,7 +526,7 @@ func RunAnalysis(conf *configuration.Configuration) (*AnalysisResult, error) {
 	// 2. Run Pipeline Image data collection
 	reportProgress(conf, 3, analysisStepCount, "Collecting pipeline images")
 	l.Info("Running Pipeline Image data collection")
-	imageDC := &collector.GitlabPipelineImageDataCollection{}
+	imageDC := &gitlab.GitlabPipelineImageDataCollection{}
 	pipelineImageData, pipelineImageMetrics, err := imageDC.Run(projectInfo, conf.GitlabToken, conf, pipelineOriginData)
 	if err != nil {
 		// Network/timeout during image/variable collection → degrade (exit 3)
@@ -557,11 +556,11 @@ func RunAnalysis(conf *configuration.Configuration) (*AnalysisResult, error) {
 	// Fetch branch-protection metadata when the user configured the
 	// corresponding control — the Rego policy needs the protection
 	// settings to check every branch against the declared bar.
-	var protectionData *collector.GitlabProtectionAnalysisData
+	var protectionData *gitlab.GitlabProtectionAnalysisData
 	if shouldRunControl(controlBranchMustBeProtected, conf) {
 		if cfg := conf.PlumberConfig.GetBranchMustBeProtectedConfig(); cfg != nil && cfg.IsEnabled() {
 			reportProgress(conf, 9, analysisStepCount, "Checking branch protection")
-			protectionDC := &collector.GitlabProtectionDataCollection{}
+			protectionDC := &gitlab.GitlabProtectionDataCollection{}
 			pData, _, pErr := protectionDC.Run(projectInfo, conf.GitlabToken, conf)
 			if pErr != nil {
 				// A network failure here leaves branchMustBeProtected with zero

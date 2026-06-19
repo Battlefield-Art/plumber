@@ -1,9 +1,7 @@
-package collector
+package gitlab
 
 import (
 	"testing"
-
-	"github.com/getplumber/plumber/gitlab"
 )
 
 func TestSplitComponentPath(t *testing.T) {
@@ -43,10 +41,10 @@ func TestLatestSemver(t *testing.T) {
 }
 
 func TestLatestCatalogVersion(t *testing.T) {
-	res := &gitlab.CICatalogResource{Versions: []gitlab.CICatalogResourceVersion{
-		{Name: "8.2.1", Components: []gitlab.CIComponent{{Name: "commits"}}},
-		{Name: "8.2.0", Components: []gitlab.CIComponent{{Name: "commits"}}},
-		{Name: "8.1.0", Components: []gitlab.CIComponent{{Name: "commits"}}},
+	res := &CICatalogResource{Versions: []CICatalogResourceVersion{
+		{Name: "8.2.1", Components: []CIComponent{{Name: "commits"}}},
+		{Name: "8.2.0", Components: []CIComponent{{Name: "commits"}}},
+		{Name: "8.1.0", Components: []CIComponent{{Name: "commits"}}},
 	}}
 	if got := latestCatalogVersion(res, "commits"); got != "8.2.1" {
 		t.Errorf("got %q want 8.2.1", got)
@@ -56,9 +54,9 @@ func TestLatestCatalogVersion(t *testing.T) {
 		t.Errorf("absent component: got %q want \"\"", got)
 	}
 	// Component removed in the newest release -> latest version that still has it.
-	removed := &gitlab.CICatalogResource{Versions: []gitlab.CICatalogResourceVersion{
-		{Name: "8.2.1", Components: []gitlab.CIComponent{{Name: "other"}}},
-		{Name: "8.2.0", Components: []gitlab.CIComponent{{Name: "commits"}}},
+	removed := &CICatalogResource{Versions: []CICatalogResourceVersion{
+		{Name: "8.2.1", Components: []CIComponent{{Name: "other"}}},
+		{Name: "8.2.0", Components: []CIComponent{{Name: "commits"}}},
 	}}
 	if got := latestCatalogVersion(removed, "commits"); got != "8.2.0" {
 		t.Errorf("removed-in-latest: got %q want 8.2.0", got)

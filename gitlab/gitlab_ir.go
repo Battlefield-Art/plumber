@@ -1,4 +1,4 @@
-package collector
+package gitlab
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/getplumber/plumber/gitlab"
 	"github.com/getplumber/plumber/internal/ir"
 	"github.com/getplumber/plumber/utils"
 )
@@ -80,7 +79,7 @@ func buildBranches(protection *GitlabProtectionAnalysisData) []ir.Branch {
 		branch := ir.Branch{Name: name, ProtectionDetailsKnown: true}
 		for i := range protection.BranchProtections {
 			p := &protection.BranchProtections[i]
-			if !gitlab.BranchMatchesPattern(p.ProtectionPattern, name) {
+			if !BranchMatchesPattern(p.ProtectionPattern, name) {
 				continue
 			}
 			branch.Protected = true
@@ -105,7 +104,7 @@ func buildBranches(protection *GitlabProtectionAnalysisData) []ir.Branch {
 // _minAccessLevel returns the smallest accessLevel found in the list,
 // matching how GitLab itself surfaces the "minimum required level"
 // for push or merge rules. Returns 0 when the list is empty.
-func _minAccessLevel(levels []gitlab.BranchProtectionAccessLevel) int {
+func _minAccessLevel(levels []BranchProtectionAccessLevel) int {
 	min := 0
 	for i, l := range levels {
 		if i == 0 || l.AccessLevel < min {
@@ -538,7 +537,7 @@ func indexJobOriginKind(origin *GitlabPipelineOriginData) map[string]string {
 // catalogs already ship. When the project did not declare a local
 // `variables:` block on this job (or did not redeclare the job at
 // all), the field is left nil.
-func enrichLocalVariables(job *ir.Job, name string, conf *gitlab.GitlabCIConf) {
+func enrichLocalVariables(job *ir.Job, name string, conf *GitlabCIConf) {
 	if conf == nil {
 		return
 	}
@@ -550,7 +549,7 @@ func enrichLocalVariables(job *ir.Job, name string, conf *gitlab.GitlabCIConf) {
 	if err != nil {
 		return
 	}
-	var parsed gitlab.GitlabJob
+	var parsed GitlabJob
 	if err := yaml.Unmarshal(data, &parsed); err != nil {
 		return
 	}
@@ -562,8 +561,8 @@ func enrichLocalVariables(job *ir.Job, name string, conf *gitlab.GitlabCIConf) {
 // enrichFromMergedConf harvests the GitLab CI merged configuration to
 // populate job.Services, job.Variables and job.Scripts. The merged
 // conf holds each job as an opaque interface{}; we YAML-round-trip it
-// into gitlab.GitlabJob so we can read the typed fields.
-func enrichFromMergedConf(job *ir.Job, name string, conf *gitlab.GitlabCIConf) {
+// into GitlabJob so we can read the typed fields.
+func enrichFromMergedConf(job *ir.Job, name string, conf *GitlabCIConf) {
 	if conf == nil {
 		return
 	}
@@ -575,7 +574,7 @@ func enrichFromMergedConf(job *ir.Job, name string, conf *gitlab.GitlabCIConf) {
 	if err != nil {
 		return
 	}
-	var parsed gitlab.GitlabJob
+	var parsed GitlabJob
 	if err := yaml.Unmarshal(data, &parsed); err != nil {
 		return
 	}

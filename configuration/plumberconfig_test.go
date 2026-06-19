@@ -313,7 +313,6 @@ controls: {}
 	}
 }
 
-
 func TestValidControlNames(t *testing.T) {
 	names := ValidControlNames()
 

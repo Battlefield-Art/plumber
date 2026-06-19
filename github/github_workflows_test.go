@@ -1,4 +1,4 @@
-package collector
+package github
 
 import (
 	"os"
@@ -57,8 +57,8 @@ jobs:
 	notWorkflow := `this is not yaml workflow`
 
 	for name, content := range map[string]string{
-		"ci.yml":           ci,
-		"release.yaml":     release,
+		"ci.yml":            ci,
+		"release.yaml":      release,
 		"not-a-workflow.md": notWorkflow,
 	} {
 		if err := os.WriteFile(filepath.Join(wfDir, name), []byte(content), 0o644); err != nil {

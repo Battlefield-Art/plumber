@@ -1,11 +1,11 @@
-package collector
+package gitlab
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/getplumber/plumber/configuration"
-	"github.com/getplumber/plumber/gitlab"
+	"github.com/getplumber/plumber/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,46 +16,6 @@ const (
 	dockerHubDomain = "docker.io"
 	unknownRegistry = "unknown"
 )
-
-// dockerHubRegistryAliases are alternative hostnames that all resolve to
-// Docker Hub. Pipeline authors may write any of them, but the
-// image_authorized_sources policy does a literal glob match and performs no
-// host canonicalisation — so we fold them to the canonical dockerHubDomain
-// here, at parse time, so trustedUrls patterns written against docker.io/*
-// match regardless of which Hub hostname was used.
-var dockerHubRegistryAliases = map[string]string{
-	"index.docker.io":         dockerHubDomain,
-	"registry-1.docker.io":    dockerHubDomain,
-	"registry.hub.docker.com": dockerHubDomain,
-}
-
-// canonicalizeDockerHubRegistry maps any known Docker Hub registry-host alias
-// to the canonical "docker.io". Non-Hub hosts (and "", "unknown") pass through
-// unchanged.
-func canonicalizeDockerHubRegistry(host string) string {
-	if canon, ok := dockerHubRegistryAliases[host]; ok {
-		return canon
-	}
-	return host
-}
-
-// foldDockerHubAliasInName rewrites the leading registry-host segment of an
-// image name when that segment is a Docker Hub alias. GitHub Actions image
-// references are parsed without splitting out the registry (the host stays in
-// Name), so this operates on the name string rather than a separate registry
-// field. Names without a leading host segment (e.g. bare "alpine") are
-// returned unchanged.
-func foldDockerHubAliasInName(name string) string {
-	slash := strings.Index(name, "/")
-	if slash <= 0 {
-		return name
-	}
-	host := name[:slash]
-	if canon, ok := dockerHubRegistryAliases[host]; ok {
-		return canon + name[slash:]
-	}
-	return name
-}
 
 ////////////////////////////
 // DataCollection results //
@@ -73,7 +33,7 @@ type GitlabPipelineImageMetrics struct {
 
 type GitlabPipelineImageData struct {
 	// Gitlab CI configuration
-	MergedConf *gitlab.GitlabCIConf
+	MergedConf *GitlabCIConf
 	CiValid    bool
 	CiMissing  bool
 
@@ -607,7 +567,7 @@ func (i *GitlabPipelineImageInfo) handlePresenceOfVariables() {
 // consistent across every code path.
 func (i *GitlabPipelineImageInfo) parseImageLink(l *logrus.Entry) {
 	i.parseImageReference(l)
-	i.Registry = canonicalizeDockerHubRegistry(i.Registry)
+	i.Registry = utils.CanonicalizeDockerHubRegistry(i.Registry)
 }
 
 func (i *GitlabPipelineImageInfo) parseImageReference(l *logrus.Entry) {
@@ -673,7 +633,7 @@ func (i *GitlabPipelineImageInfo) parseImageReference(l *logrus.Entry) {
 // DataCollection run //
 ////////////////////////
 
-func (dc *GitlabPipelineImageDataCollection) Run(project *gitlab.ProjectInfo, token string, conf *configuration.Configuration, pipelineOriginData *GitlabPipelineOriginData) (*GitlabPipelineImageData, *GitlabPipelineImageMetrics, error) {
+func (dc *GitlabPipelineImageDataCollection) Run(project *ProjectInfo, token string, conf *configuration.Configuration, pipelineOriginData *GitlabPipelineOriginData) (*GitlabPipelineImageData, *GitlabPipelineImageMetrics, error) {
 
 	// Check if project is nil first
 	if project == nil {
@@ -731,14 +691,14 @@ func (dc *GitlabPipelineImageDataCollection) Run(project *gitlab.ProjectInfo, to
 	//////////////////
 
 	// Get the default or global image of the configuration
-	data.DefaultImage, err = gitlab.ParseDefaultImage(data.MergedConf)
+	data.DefaultImage, err = ParseDefaultImage(data.MergedConf)
 	if err != nil {
 		l.WithError(err).Error("Unable to retrieve default image from the project's CI conf")
 		return data, metrics, err
 	}
 
 	// Get all global variables in the conf
-	data.GlobalVars, err = gitlab.ParseGlobalVariables(data.MergedConf)
+	data.GlobalVars, err = ParseGlobalVariables(data.MergedConf)
 	if err != nil {
 		l.WithError(err).Error("Unable to retrieve global variables from the project's CI conf")
 		return data, metrics, err
@@ -746,32 +706,32 @@ func (dc *GitlabPipelineImageDataCollection) Run(project *gitlab.ProjectInfo, to
 
 	// Get instance variables only if it's an instance wide organization (not a group)
 	if !project.IsGroup {
-		instanceVarsResult, err := gitlab.GetGitlabInstanceVariables(token, conf.GitlabURL, conf)
+		instanceVarsResult, err := GetGitlabInstanceVariables(token, conf.GitlabURL, conf)
 		if err != nil {
 			l.WithError(err).Error("Unable to retrieve instance variables")
 			return data, metrics, err
 		}
-		data.InstanceVars = gitlab.ConvertCICDVariableToMap(instanceVarsResult)
-		l.WithField("instanceVarKeys", gitlab.GetMapKeys(data.InstanceVars)).Debug("Instance vars found")
+		data.InstanceVars = ConvertCICDVariableToMap(instanceVarsResult)
+		l.WithField("instanceVarKeys", GetMapKeys(data.InstanceVars)).Debug("Instance vars found")
 	}
 
 	// Get value of variables inherited from group(s)
-	groupVarsResult, err := gitlab.GetGitlabProjectInheritedVariables(project.Path, token, conf.GitlabURL, conf)
+	groupVarsResult, err := GetGitlabProjectInheritedVariables(project.Path, token, conf.GitlabURL, conf)
 	if err != nil {
 		l.WithError(err).Error("Unable to retrieve project inherited variables")
 		return data, metrics, err
 	}
-	data.GroupVars = gitlab.ConvertCICDVariableToMap(groupVarsResult)
-	l.WithField("groupVarKeys", gitlab.GetMapKeys(data.GroupVars)).Debug("Group vars found")
+	data.GroupVars = ConvertCICDVariableToMap(groupVarsResult)
+	l.WithField("groupVarKeys", GetMapKeys(data.GroupVars)).Debug("Group vars found")
 
 	// Get project variables
-	projectVarsResult, err := gitlab.GetGitlabProjectVariables(project.Path, token, conf.GitlabURL, conf)
+	projectVarsResult, err := GetGitlabProjectVariables(project.Path, token, conf.GitlabURL, conf)
 	if err != nil {
 		l.WithError(err).Error("Unable to retrieve project variables")
 		return data, metrics, err
 	}
-	data.ProjectVars = gitlab.ConvertCICDVariableToMap(projectVarsResult)
-	l.WithField("projectVarKeys", gitlab.GetMapKeys(data.ProjectVars)).Debug("Project vars found")
+	data.ProjectVars = ConvertCICDVariableToMap(projectVarsResult)
+	l.WithField("projectVarKeys", GetMapKeys(data.ProjectVars)).Debug("Project vars found")
 
 	// Set predefined variables
 	predefinedVars := map[string]string{
@@ -786,21 +746,21 @@ func (dc *GitlabPipelineImageDataCollection) Run(project *gitlab.ProjectInfo, to
 		jobLogger := l.WithField("jobName", name)
 
 		// Parse the job
-		job, err := gitlab.ParseGitlabCIJob(content)
+		job, err := ParseGitlabCIJob(content)
 		if err != nil {
 			jobLogger.WithError(err).Error("Unable to parse Gitlab CI job")
 			return data, metrics, err
 		}
 
 		//  Get job variables
-		jobVars, err := gitlab.ParseJobVariables(job)
+		jobVars, err := ParseJobVariables(job)
 		if err != nil {
 			jobLogger.WithError(err).Error("Unable to parse Gitlab CI job's variables")
 			return data, metrics, err
 		}
 
 		// Retrieve job image
-		imageUnresolved, err := gitlab.GetImageName(job.Image)
+		imageUnresolved, err := GetImageName(job.Image)
 		if err != nil {
 			jobLogger.WithError(err).Error("Unable to parse the image name from job")
 		}
@@ -812,7 +772,7 @@ func (dc *GitlabPipelineImageDataCollection) Run(project *gitlab.ProjectInfo, to
 		}
 
 		// Resolve variables in image
-		imageLink := gitlab.ReplaceVariable(imageUnresolved, data.ProjectVars, data.GroupVars, data.InstanceVars, jobVars, data.GlobalVars, predefinedVars)
+		imageLink := ReplaceVariable(imageUnresolved, data.ProjectVars, data.GroupVars, data.InstanceVars, jobVars, data.GlobalVars, predefinedVars)
 
 		// Add logging
 		jobLogger = jobLogger.WithField("imageLink", imageLink)

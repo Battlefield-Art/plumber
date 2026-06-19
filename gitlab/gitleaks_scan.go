@@ -10,7 +10,7 @@
 // before the entry is appended to pipeline.GitleaksHits. The rego
 // rule and every downstream output (terminal, JSON, SARIF, GitLab
 // SAST, MR comment) see only the redacted form.
-package collector
+package gitlab
 
 import (
 	"bytes"

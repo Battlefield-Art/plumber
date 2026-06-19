@@ -148,10 +148,10 @@ type DependabotConfig struct {
 
 // Job is a single pipeline unit of work.
 type Job struct {
-	Name         string            `json:"name"`
-	Image        *Image            `json:"image,omitempty"`
-	Services     []Image           `json:"services,omitempty"`
-	Scripts      []string          `json:"scripts,omitempty"`
+	Name     string   `json:"name"`
+	Image    *Image   `json:"image,omitempty"`
+	Services []Image  `json:"services,omitempty"`
+	Scripts  []string `json:"scripts,omitempty"`
 	// ScriptBlocks names the source block ("before_script", "script",
 	// "after_script") for each entry of Scripts, in the same order.
 	// Lets script-scanning policies surface where the offending line
@@ -178,10 +178,10 @@ type Job struct {
 	// about effective execution (security-job weakening) read this
 	// list and reject any rule whose terminal `when` would prevent
 	// the job from running.
-	Rules []map[string]any `json:"rules,omitempty"`
-	OriginFile   string            `json:"originFile,omitempty"`
-	OriginLine   int               `json:"originLine,omitempty"`
-	OriginKind   string            `json:"originKind,omitempty"`
+	Rules      []map[string]any `json:"rules,omitempty"`
+	OriginFile string           `json:"originFile,omitempty"`
+	OriginLine int              `json:"originLine,omitempty"`
+	OriginKind string           `json:"originKind,omitempty"`
 	// Overridden is true when the job inherits from an upstream
 	// component or template but the project locally redefined some of
 	// its keys. Lets policies distinguish "user-authored override" from
