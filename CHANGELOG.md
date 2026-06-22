@@ -1,3 +1,16 @@
+## [0.3.69](https://github.com/getplumber/plumber/compare/v0.3.68...v0.3.69) (2026-06-22)
+
+
+### 🐛 Bug Fixes
+
+* **template:** avoid circular GITLAB_TOKEN/PLUMBER_TOKEN reference ([d78e21e](https://github.com/getplumber/plumber/commit/d78e21ea3b588c604c46d1fffb198e4584df4217))
+
+
+### 👷 CI/CD
+
+* **release:** add all commit type in release notes ([db81766](https://github.com/getplumber/plumber/commit/db81766e0ab08a47f0cddf800d7b336368659b5d))
+* **release:** pin v0.3.68 refs [skip ci] ([67fe2fc](https://github.com/getplumber/plumber/commit/67fe2fc08a3a8308b7712ceda1c9f60451b38de1))
+
 ## [0.3.68](https://github.com/getplumber/plumber/compare/v0.3.67...v0.3.68) (2026-06-19)
 
 ## [0.3.67](https://github.com/getplumber/plumber/compare/v0.3.66...v0.3.67) (2026-06-19)
