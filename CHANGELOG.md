@@ -1,3 +1,15 @@
+## [0.3.70](https://github.com/getplumber/plumber/compare/v0.3.69...v0.3.70) (2026-06-22)
+
+
+### ✨ Features
+
+* **controls:** Issue-184. Add controls for github and gitlab that detect if actions/components versions also exist as branches, causing confusion ([da6d2c4](https://github.com/getplumber/plumber/commit/da6d2c4bcbdc8dea3288a010266a87e2f081de19))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.69 refs [skip ci] ([d617406](https://github.com/getplumber/plumber/commit/d617406ae6961cda533f27784fb17504d40790e0))
+
 ## [0.3.69](https://github.com/getplumber/plumber/compare/v0.3.68...v0.3.69) (2026-06-22)
 
 
