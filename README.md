@@ -351,4 +351,4 @@ Contributing guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 
 ## License
 
-Plumber is licensed under the [Mozilla Public License 2.0](LICENSE).
+Plumber is licensed under the [Mozilla Public License 2.0](LICENSE). 
