@@ -1,3 +1,16 @@
+## [0.3.71](https://github.com/getplumber/plumber/compare/v0.3.70...v0.3.71) (2026-06-24)
+
+
+### 🔧 Chores
+
+* **ci:** bump actions/checkout from 6.0.3 to 7.0.0 ([b9ad7a3](https://github.com/getplumber/plumber/commit/b9ad7a350370f9129652119b8e1682a8cb5f9385))
+* **ci:** Fix trigger ci ([0641e69](https://github.com/getplumber/plumber/commit/0641e69b0064470e507f0d579c524df1b604fd70))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.70 refs [skip ci] ([18a8265](https://github.com/getplumber/plumber/commit/18a82651361aae6b23a12694d5954fef28569bd9))
+
 ## [0.3.70](https://github.com/getplumber/plumber/compare/v0.3.69...v0.3.70) (2026-06-22)
 
 
