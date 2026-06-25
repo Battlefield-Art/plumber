@@ -34,6 +34,12 @@ RUN apk --no-cache upgrade && apk --no-cache add ca-certificates git
 # Copy binary from builder
 COPY --from=builder /app/plumber /plumber
 
+# Symlink the binary onto $PATH so the bare `plumber` command resolves. The
+# GitLab CI component overrides the ENTRYPOINT and runs `plumber analyze` from a
+# shell, where /plumber alone is not on $PATH. `docker run` keeps using /plumber
+# via the ENTRYPOINT below. /usr/local/bin may not exist on alpine, so create it.
+RUN mkdir -p /usr/local/bin && ln -s /plumber /usr/local/bin/plumber
+
 # Copy default config file
 COPY .plumber.yaml /.plumber.yaml
 
