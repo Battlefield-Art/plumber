@@ -216,7 +216,7 @@ type ControlsConfig struct {
 
 	// ExternalRefsMustNotCollide control configuration (GitLab + GitHub).
 	// Flags external CI references whose symbolic ref resolves upstream as
-	// BOTH a tag and a branch (ref-confusion, ISSUE-710): GitHub `uses:`
+	// BOTH a tag and a branch (ref-confusion, ISSUE-402): GitHub `uses:`
 	// action refs and GitLab `include:` project `ref:` / component
 	// `@version` refs. Driven by a per-ref tag+branch API probe.
 	// Config-free; toggle via `enabled`.

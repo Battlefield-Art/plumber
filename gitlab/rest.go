@@ -227,7 +227,7 @@ func BranchExists(projectID int, branch string, token string, APIURL string, con
 // project identifier, so callers pass the include's resolved project path
 // directly. A 404 means "not that kind of ref" (false); any other error is
 // returned so the caller abstains rather than guessing. ref-confusion
-// (ISSUE-710) fires only on a confirmed tag-AND-branch collision, so an
+// (ISSUE-402) fires only on a confirmed tag-AND-branch collision, so an
 // indeterminate probe (auth, network, rate limit) must never assert
 // ambiguity — the error path leaves both false and surfaces err.
 func RefResolvesAsTagAndBranch(projectPath string, ref string, token string, APIURL string, conf *configuration.Configuration) (tagExists bool, branchExists bool, err error) {

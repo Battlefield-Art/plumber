@@ -657,7 +657,7 @@ func buildOutdatedIncludesBlock(c legacyCommon, result *control.AnalysisResult, 
 	}
 }
 
-// buildIncludeRefConfusionBlock — ISSUE-710. Denominator is the number of
+// buildIncludeRefConfusionBlock — ISSUE-402. Denominator is the number of
 // external includes scanned (same as the outdated block), numerator the
 // finding count, one per include whose ref resolves as both a tag and a
 // branch. Mirrors buildOutdatedIncludesBlock, including the precise

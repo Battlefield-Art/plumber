@@ -11,7 +11,7 @@ import (
 	"github.com/getplumber/plumber/configuration"
 )
 
-// TestRefResolvesAsTagAndBranch covers the ref-confusion (ISSUE-710) probe:
+// TestRefResolvesAsTagAndBranch covers the ref-confusion (ISSUE-402) probe:
 // it must report tag/branch existence independently and, critically, fire
 // "both true" only when the ref genuinely resolves as a tag AND a branch.
 // A 404 on either namespace is "not that kind of ref" (false, no error),

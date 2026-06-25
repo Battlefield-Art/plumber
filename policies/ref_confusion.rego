@@ -1,4 +1,4 @@
-# ref-confusion (ISSUE-710) — flag external CI references whose symbolic
+# ref-confusion (ISSUE-402) — flag external CI references whose symbolic
 # name exists upstream as BOTH a tag and a branch. Covers two surfaces:
 #   - GitHub Actions `uses:` refs (jobs[].uses[].metadata.refIsAmbiguous)
 #   - GitLab `include:` project `ref:` / component `@version` refs
@@ -23,7 +23,7 @@ deny contains finding if {
 	action := job.uses[j]
 	action.metadata.refIsAmbiguous == true
 	finding := {
-		"code":     "ISSUE-710",
+		"code":     "ISSUE-402",
 		"severity": "medium",
 		"message":  sprintf("job %q references %q — the ref name resolves as both a tag AND a branch upstream, which revision runs is ambiguous", [job.name, action.uses]),
 		"job":      job.name,
@@ -38,7 +38,7 @@ deny contains finding if {
 	inc := input.pipeline.includes[i]
 	inc.refIsAmbiguous == true
 	finding := {
-		"code":                  "ISSUE-710",
+		"code":                  "ISSUE-402",
 		"severity":              "medium",
 		"message":               sprintf("%s pins ref '%s' — it resolves as both a tag AND a branch in the source project, so which revision runs is ambiguous; pin to a commit SHA to disambiguate", [inc.source, inc.ref]),
 		"job":                   inc.source,

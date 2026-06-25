@@ -131,7 +131,7 @@ func AggregateGitHubStats(pipeline *ir.NormalizedPipeline, pc *configuration.Plu
 
 		// Action refs — count steps[].uses, exclude trustedOwners for
 		// the pin-by-SHA accounting. Supply-chain checks (ISSUE-702
-		// archived, ISSUE-703 known CVEs, ISSUE-710 ref-confusion)
+		// archived, ISSUE-703 known CVEs, ISSUE-402 ref-confusion)
 		// inspect EVERY ref because the rules themselves don't exempt
 		// trusted owners; in
 		// practice the API enrichment phase skips first-party refs,

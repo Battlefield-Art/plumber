@@ -248,7 +248,7 @@ func (c *GitHubMetadataClient) resolveUncached(owner, repo, ref string) GitHubMe
 	// Probe in order: tag → branch → commit. First hit wins, but
 	// when we match a tag we still check whether a same-named branch
 	// exists upstream — that cross-existence is what ref-confusion
-	// (ISSUE-710) is about.
+	// (ISSUE-402) is about.
 	if sha, ok := c.resolveTag(owner, repo, ref); ok {
 		m.RefKind = "tag"
 		m.TagSha = sha

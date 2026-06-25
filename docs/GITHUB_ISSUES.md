@@ -23,7 +23,7 @@ reading the upstream docs.
 | [ISSUE-708](#issue-110--ref-version-mismatch) | `ref-version-mismatch` | medium _(API)_ |
 | [ISSUE-709](#issue-111--stale-action-ref) | `stale-action-ref` | low _(API)_ |
 | [ISSUE-712](#issue-112--release-workflow-unsigned) | `release-workflow-unsigned` | medium |
-| [ISSUE-710](#issue-113--ref-confusion) | `ref-confusion` | medium _(API)_ |
+| [ISSUE-402](#issue-402--ref-confusion) | `ref-confusion` | medium _(API)_ |
 | [ISSUE-703](#issue-114--known-vulnerable-action) | `known-vulnerable-action` | **critical** _(API)_ |
 | [ISSUE-711](#issue-115--superfluous-action) | `superfluous-action` | low |
 
@@ -488,7 +488,7 @@ silent.
 
 ---
 
-## ISSUE-710 — `ref-confusion`
+## ISSUE-402 — `ref-confusion`
 
 **Severity:** `medium` _(API)_ • **Control:** `externalRefsMustNotCollide`
 
@@ -1808,7 +1808,7 @@ and in `.plumber.yaml`) is declared in
 | ISSUE-713 | `githubActionMustComeFromAuthorizedSources` _(`minimumStars` requires the GitHub API)_ |
 | ISSUE-706 | `dockerfilesMustPinBaseImageByDigest` |
 | ISSUE-712 | `releaseWorkflowsMustSignArtefacts` |
-| ISSUE-710 | `externalRefsMustNotCollide` |
+| ISSUE-402 | `externalRefsMustNotCollide` |
 | ISSUE-703 | `actionsMustNotCarryKnownCVEs` |
 | ISSUE-711 | `actionsMustNotDuplicateRunnerBuiltins` |
 | ISSUE-213 | `workflowMustNotExportEntireGitHubContext` |

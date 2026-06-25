@@ -558,7 +558,7 @@ func buildAuthorizedActionSourcesBlock(c legacyCommon, result *control.AnalysisR
 	}
 }
 
-// buildRefConfusionBlock — ISSUE-710. Denominator is the number of
+// buildRefConfusionBlock — ISSUE-402. Denominator is the number of
 // action refs scanned (same denominator the archived/CVE blocks use),
 // so a "X of Y" ratio stays meaningful even when the GitHub API
 // metadata enrichment hit a quota and some refs went unresolved.

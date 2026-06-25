@@ -39,8 +39,6 @@ const (
 	CodeRefVersionMismatch ErrorCode = "ISSUE-708"
 	// ISSUE-709: Action pinned by SHA is stale vs the latest upstream release
 	CodeStaleActionRef ErrorCode = "ISSUE-709"
-	// ISSUE-710: Symbolic ref collides with both a tag and a branch upstream
-	CodeRefConfusion ErrorCode = "ISSUE-710"
 	// ISSUE-703: Action version carries a published security advisory
 	CodeKnownVulnerableAction ErrorCode = "ISSUE-703"
 	// ISSUE-711: Third-party action duplicates a runner built-in (gh CLI, etc.)
@@ -112,6 +110,9 @@ const (
 const (
 	// ISSUE-401: Job is hardcoded (not sourced from include/component)
 	CodeJobHardcoded ErrorCode = "ISSUE-401"
+	// ISSUE-402: External CI ref collides with both a tag and a branch upstream
+	// (GitLab include/component @ref, GitHub action/reusable-workflow @ref)
+	CodeRefConfusion ErrorCode = "ISSUE-402"
 	// ISSUE-403: Include uses an outdated version
 	CodeIncludeOutdated ErrorCode = "ISSUE-403"
 	// ISSUE-404: Include uses a forbidden version
@@ -319,15 +320,6 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 		DocURL:      docsBaseURL + string(CodeStaleActionRef),
 		ControlName: "actionPinsMustNotBeStale",
 	},
-	CodeRefConfusion: {
-		Code:        CodeRefConfusion,
-		Severity:    SeverityMedium,
-		Title:       "Reference collides with both a tag and a branch",
-		Description: "An external CI reference is pinned to a name that exists upstream **as both a tag and a branch** (classic case: a tag `v1` kept in parallel with a branch `v1`). This covers GitHub Actions `uses:` refs and GitLab `include:` project `ref:` / component `@version` refs. The platform resolves the tag first, so today the pinned, tagged revision runs — but a maintainer rename, a typo, or a parameter that drops a character can switch the binding to the branch, which tracks every push. The ambiguity makes the reference fundamentally unreliable: the reviewer cannot tell from the YAML alone which of the two upstream revisions will execute, and the referenced code runs in the pipeline with its secrets and tokens.",
-		Remediation: "Pin the reference to a 40-character commit SHA (preferred), which is unambiguous. Alternatively, ask the upstream maintainer to remove one of the two colliding refs; keeping both is a supply-chain landmine for every caller.",
-		DocURL:      docsBaseURL + string(CodeRefConfusion),
-		ControlName: "externalRefsMustNotCollide",
-	},
 	CodeKnownVulnerableAction: {
 		Code:        CodeKnownVulnerableAction,
 		Severity:    SeverityCritical,
@@ -412,6 +404,15 @@ var errorCodeRegistry = map[ErrorCode]ErrorCodeInfo{
 		Remediation: "Replace the hardcoded job with a CI/CD component or an include from an approved catalog. Use 'include:' or 'component:' directives in your .gitlab-ci.yml.",
 		DocURL:      docsBaseURL + string(CodeJobHardcoded),
 		ControlName: "pipelineMustNotIncludeHardcodedJobs",
+	},
+	CodeRefConfusion: {
+		Code:        CodeRefConfusion,
+		Severity:    SeverityMedium,
+		Title:       "Reference collides with both a tag and a branch",
+		Description: "An external CI reference is pinned to a name that exists upstream **as both a tag and a branch** (classic case: a tag `v1` kept in parallel with a branch `v1`). This covers GitHub Actions `uses:` refs and GitLab `include:` project `ref:` / component `@version` refs. The platform resolves the tag first, so today the pinned, tagged revision runs — but a maintainer rename, a typo, or a parameter that drops a character can switch the binding to the branch, which tracks every push. The ambiguity makes the reference fundamentally unreliable: the reviewer cannot tell from the YAML alone which of the two upstream revisions will execute, and the referenced code runs in the pipeline with its secrets and tokens.",
+		Remediation: "Pin the reference to a 40-character commit SHA (preferred), which is unambiguous. Alternatively, ask the upstream maintainer to remove one of the two colliding refs; keeping both is a supply-chain landmine for every caller.",
+		DocURL:      docsBaseURL + string(CodeRefConfusion),
+		ControlName: "externalRefsMustNotCollide",
 	},
 	CodeIncludeOutdated: {
 		Code:        CodeIncludeOutdated,

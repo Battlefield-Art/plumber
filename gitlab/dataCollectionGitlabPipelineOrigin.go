@@ -116,7 +116,7 @@ type GitlabPipelineOriginDataProjectSpecific struct {
 	UpToDate bool   `json:"upToDate"`
 	Nested   bool   `json:"nested"`
 	// RefIsAmbiguous: the pinned Version resolves upstream as both a
-	// tag and a branch (ref-confusion, ISSUE-710). Set by the origin
+	// tag and a branch (ref-confusion, ISSUE-402). Set by the origin
 	// collector's tag+branch probe; false unless both are confirmed.
 	RefIsAmbiguous bool `json:"refIsAmbiguous"`
 
@@ -199,7 +199,7 @@ func splitComponentPath(cleanPath string) (project string, component string) {
 }
 
 // isFullCommitSHA reports whether s is a 40-character lowercase hex commit
-// SHA. SHA-pinned includes are unambiguous, so ref-confusion (ISSUE-710)
+// SHA. SHA-pinned includes are unambiguous, so ref-confusion (ISSUE-402)
 // skips them.
 func isFullCommitSHA(s string) bool {
 	if len(s) != 40 {
@@ -215,7 +215,7 @@ func isFullCommitSHA(s string) bool {
 
 // shouldProbeRefAmbiguity reports whether a pinned include version is a
 // literal symbolic ref worth probing for a tag/branch collision
-// (ref-confusion, ISSUE-710). Exempt: empty (local include, no ref),
+// (ref-confusion, ISSUE-402). Exempt: empty (local include, no ref),
 // ~latest / latest (catalog-resolved, not a literal ref), HEAD, and full
 // commit SHAs (unambiguous by construction).
 func shouldProbeRefAmbiguity(version string) bool {
@@ -708,7 +708,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *ProjectInfo, token st
 					lInclude.WithField("cleanPath", cleanPath).Debug("Could not resolve latest version for component (not in catalog and no semver tags)")
 				}
 
-				// ref-confusion (ISSUE-710): a component pinned to a name that
+				// ref-confusion (ISSUE-402): a component pinned to a name that
 				// resolves upstream as BOTH a tag and a branch is ambiguous.
 				// Fail-safe — only a confirmed tag+branch double-hit sets the
 				// flag; a SHA / ~latest / failed probe leaves it false.
@@ -727,7 +727,7 @@ func (dc *GitlabPipelineOriginDataCollection) Run(project *ProjectInfo, token st
 				// Set version from ref
 				originData.Version = include.Extra.Ref
 
-				// ref-confusion (ISSUE-710): a project include whose ref
+				// ref-confusion (ISSUE-402): a project include whose ref
 				// resolves as BOTH a tag and a branch in the source project is
 				// ambiguous. Fail-safe — confirmed tag+branch double-hit only.
 				if include.Extra.Project != "" && shouldProbeRefAmbiguity(include.Extra.Ref) {

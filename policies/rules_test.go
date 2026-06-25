@@ -3271,13 +3271,13 @@ func TestIssue308_SecretsDynamicIndex(t *testing.T) {
 // test harness (PLUMBER_DISABLE_GITHUB_API is set in TestMain).
 // The test checks that the policy fires exactly when RefIsAmbiguous
 // is true on an Action.
-// TestIssue710_RefConfusion flags action refs whose symbolic name
+// TestIssue402_RefConfusion flags action refs whose symbolic name
 // resolves upstream as BOTH a tag and a branch (the collector sets
 // metadata.RefIsAmbiguous). The rule fires only on a positive
 // double-hit; an unambiguous ref and a ref with no metadata at all
 // both stay silent — fail-safe, so a degraded API probe never invents
 // a finding.
-func TestIssue710_RefConfusion(t *testing.T) {
+func TestIssue402_RefConfusion(t *testing.T) {
 	engine := opaengine.New()
 	if err := engine.LoadFromFS(policies.FS); err != nil {
 		t.Fatalf("load embedded policies: %v", err)
@@ -3317,23 +3317,23 @@ func TestIssue710_RefConfusion(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-710" {
+				if f.Code == "ISSUE-402" {
 					hits++
 				}
 			}
 			if hits != tc.wantHits {
-				t.Fatalf("%s: expected %d ISSUE-710 finding(s), got %d", tc.name, tc.wantHits, hits)
+				t.Fatalf("%s: expected %d ISSUE-402 finding(s), got %d", tc.name, tc.wantHits, hits)
 			}
 		})
 	}
 }
 
-// TestIssue710_GitLabRefConfusion flags GitLab includes whose ref
+// TestIssue402_GitLabRefConfusion flags GitLab includes whose ref
 // resolves upstream as both a tag and a branch (the collector sets
 // Include.RefIsAmbiguous). Fires only on a positive double-hit; a clean
 // tag pin and a SHA pin both stay silent — fail-safe, so a degraded
 // probe never invents a finding.
-func TestIssue710_GitLabRefConfusion(t *testing.T) {
+func TestIssue402_GitLabRefConfusion(t *testing.T) {
 	engine := opaengine.New()
 	if err := engine.LoadFromFS(policies.FS); err != nil {
 		t.Fatalf("load embedded policies: %v", err)
@@ -3373,12 +3373,12 @@ func TestIssue710_GitLabRefConfusion(t *testing.T) {
 			}
 			hits := 0
 			for _, f := range findings {
-				if f.Code == "ISSUE-710" {
+				if f.Code == "ISSUE-402" {
 					hits++
 				}
 			}
 			if hits != tc.wantHits {
-				t.Fatalf("%s: expected %d ISSUE-710 finding(s), got %d", tc.name, tc.wantHits, hits)
+				t.Fatalf("%s: expected %d ISSUE-402 finding(s), got %d", tc.name, tc.wantHits, hits)
 			}
 		})
 	}

@@ -342,7 +342,7 @@ type Include struct {
 	ComponentName string `json:"componentName,omitempty"`
 	// RefIsAmbiguous is set by the collector when the include's
 	// symbolic ref resolves upstream as BOTH a tag and a branch
-	// (ref-confusion, ISSUE-710). Zero-valued when the ref is a SHA,
+	// (ref-confusion, ISSUE-402). Zero-valued when the ref is a SHA,
 	// `~latest`, or when the API probe could not confirm both — the
 	// rule fires only on a positive double-hit, so a degraded probe
 	// never invents a finding.

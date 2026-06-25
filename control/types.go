@@ -118,7 +118,7 @@ type GitHubAnalysisStats struct {
 	ActionRefsUnpinned int
 	ActionRefsExempt   int
 
-	// Actions supply-chain (ISSUE-702, ISSUE-703, ISSUE-710). Counted
+	// Actions supply-chain (ISSUE-702, ISSUE-703, ISSUE-402). Counted
 	// across every `uses:` entry that has API metadata, regardless of
 	// the pin-by-SHA trusted-owner exemption — the rules themselves do
 	// not exempt. In practice trusted-owner refs have nil metadata
