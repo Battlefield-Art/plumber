@@ -1,3 +1,15 @@
+## [0.3.72](https://github.com/getplumber/plumber/compare/v0.3.71...v0.3.72) (2026-06-25)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Fix new control's (externalRefsMustNotCollide) schema and issue ([c5364bd](https://github.com/getplumber/plumber/commit/c5364bdd1a26c069395eb1f434ac002c7ee7ff0c))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.71 refs [skip ci] ([81b8ea2](https://github.com/getplumber/plumber/commit/81b8ea29b253131db36f07382a2d3e1ec66997f6))
+
 ## [0.3.71](https://github.com/getplumber/plumber/compare/v0.3.70...v0.3.71) (2026-06-24)
 
 
