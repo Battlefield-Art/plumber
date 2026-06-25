@@ -1,3 +1,15 @@
+## [0.3.73](https://github.com/getplumber/plumber/compare/v0.3.72...v0.3.73) (2026-06-25)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Symlink the binary unto path inside the docker image so that it can run from anywhere ([94728a5](https://github.com/getplumber/plumber/commit/94728a50dac172c021393d66538eafe653be0770))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.72 refs [skip ci] ([8aba973](https://github.com/getplumber/plumber/commit/8aba973ea51820a2001d4171eaabe9cd0e1d1339))
+
 ## [0.3.72](https://github.com/getplumber/plumber/compare/v0.3.71...v0.3.72) (2026-06-25)
 
 
