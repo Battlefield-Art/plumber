@@ -1,3 +1,25 @@
+## [0.3.74](https://github.com/getplumber/plumber/compare/v0.3.73...v0.3.74) (2026-06-26)
+
+
+### ✨ Features
+
+* add opt-in to push results on score.getplumber.io from CI ([175fc8c](https://github.com/getplumber/plumber/commit/175fc8c85146ccf4a87424f4feadb37247a14fd1))
+
+
+### 🐛 Bug Fixes
+
+* **build:** rebuild the runtime layer every release so apk upgrade ships current OS security fixes ([83eff9b](https://github.com/getplumber/plumber/commit/83eff9bf0f77040d645dd3e604ed32ba51e71542))
+
+
+### 🔧 Chores
+
+* **action:** rename Marketplace action to "Plumber Score" ([0fc9e8d](https://github.com/getplumber/plumber/commit/0fc9e8d2a60e8b10f3b1ebae5e6c89219d2a1203))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.73 refs [skip ci] ([1012f9c](https://github.com/getplumber/plumber/commit/1012f9c83589e7b23470eeaa01c79a39aebab2f6))
+
 ## [0.3.73](https://github.com/getplumber/plumber/compare/v0.3.72...v0.3.73) (2026-06-25)
 
 
