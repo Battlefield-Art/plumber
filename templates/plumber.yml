@@ -60,7 +60,7 @@ spec:
       default: .pre
     image:
       description: "Docker image to use for the job"
-      default: "getplumber/plumber@sha256:71f840f8f9d5f94d23e3722f174314d920e76eb85c8865675922fa1a1a424645" #v0.3.75
+      default: "getplumber/plumber@sha256:4555e8876277fc82b97b6e07714f30492a4be5c1762a8fb0d6074cae93ca05d4" #v0.3.76
     allow_failure:
       description: Allow the job to fail without failing the pipeline
       default: false
