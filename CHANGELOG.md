@@ -1,3 +1,21 @@
+## [0.3.75](https://github.com/getplumber/plumber/compare/v0.3.74...v0.3.75) (2026-06-26)
+
+
+### 🐛 Bug Fixes
+
+* **action:** default points breakdown (beta) off ([06d3628](https://github.com/getplumber/plumber/commit/06d3628d1d94481a436aab0d45bd3410cb8a4473))
+* **score:** skip push when the scan targets a foreign repo ([627129d](https://github.com/getplumber/plumber/commit/627129db5f3301a82d37787232421dc6d1b87756))
+
+
+### ✅ Tests
+
+* **score:** assert disabled score-push never publishes ([71d9589](https://github.com/getplumber/plumber/commit/71d9589dbc7452ed1254ec72c0048a9a42fa0d5d))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.74 refs [skip ci] ([b147582](https://github.com/getplumber/plumber/commit/b147582378568fe285ad487810c1f2549558df88))
+
 ## [0.3.74](https://github.com/getplumber/plumber/compare/v0.3.73...v0.3.74) (2026-06-26)
 
 
