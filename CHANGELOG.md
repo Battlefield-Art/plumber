@@ -1,3 +1,21 @@
+## [0.3.76](https://github.com/getplumber/plumber/compare/v0.3.75...v0.3.76) (2026-06-26)
+
+
+### 🔧 Chores
+
+* **score:** show the badge nudge in CI too and simplify its wording ([ac4111a](https://github.com/getplumber/plumber/commit/ac4111aa6c831c73cb30f468438d23b9bd6d809c))
+
+
+### 📚 Documentation
+
+* **readme:** add support contact tech@getplumber.io ([db3aba4](https://github.com/getplumber/plumber/commit/db3aba4327448877340c8228634c880a5bb6a26e))
+* **readme:** security framing, drop 'compliance' wording ([a8b873a](https://github.com/getplumber/plumber/commit/a8b873af460c42823a44e2ccc833c268b66dbe1c))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.75 refs [skip ci] ([d79c2e9](https://github.com/getplumber/plumber/commit/d79c2e9b2a0eceabf87052c4298f0b616de0119d))
+
 ## [0.3.75](https://github.com/getplumber/plumber/compare/v0.3.74...v0.3.75) (2026-06-26)
 
 
