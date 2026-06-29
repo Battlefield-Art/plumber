@@ -1,3 +1,15 @@
+## [0.3.78](https://github.com/getplumber/plumber/compare/v0.3.77...v0.3.78) (2026-06-29)
+
+
+### 🔧 Chores
+
+* **action:** rename GitHub Action to "Plumber Security" ([044b9c6](https://github.com/getplumber/plumber/commit/044b9c641cdc9512081cfa1644b11fa93314b367))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.77 refs [skip ci] ([60f574c](https://github.com/getplumber/plumber/commit/60f574c11b70dce9670548a8cf0f4ef7b5a6572b))
+
 ## [0.3.77](https://github.com/getplumber/plumber/compare/v0.3.76...v0.3.77) (2026-06-29)
 
 
