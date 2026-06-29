@@ -1,3 +1,21 @@
+## [0.3.77](https://github.com/getplumber/plumber/compare/v0.3.76...v0.3.77) (2026-06-29)
+
+
+### 🔧 Chores
+
+* **action:** rename GitHub Action to "Plumber" ([1f315d6](https://github.com/getplumber/plumber/commit/1f315d634be146e0efeaf0496b2533c5cf60ad37))
+
+
+### 📚 Documentation
+
+* **readme:** update doc links for getplumber.io docs restructuring ([bb11d13](https://github.com/getplumber/plumber/commit/bb11d139091551ed113bb14549b71dff8055dbbc)), closes [#199](https://github.com/getplumber/plumber/issues/199)
+
+
+### 👷 CI/CD
+
+* align self-scan workflow/job names to 'Plumber' ([371344e](https://github.com/getplumber/plumber/commit/371344ee63c840f17d6ff35001d273eacc2f2de7))
+* **release:** pin v0.3.76 refs [skip ci] ([9c53473](https://github.com/getplumber/plumber/commit/9c534733f4cdbb78c8070b63567f277628066b90))
+
 ## [0.3.76](https://github.com/getplumber/plumber/compare/v0.3.75...v0.3.76) (2026-06-26)
 
 
