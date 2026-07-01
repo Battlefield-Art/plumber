@@ -1,3 +1,15 @@
+## [0.3.82](https://github.com/getplumber/plumber/compare/v0.3.81...v0.3.82) (2026-07-01)
+
+
+### 🔧 Chores
+
+* **ci:** bump actions/setup-go from 6.4.0 to 6.5.0 ([e8fe5cf](https://github.com/getplumber/plumber/commit/e8fe5cfeb9713f817bdddf38851bc72400e13617))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.81 refs [skip ci] ([471ca8a](https://github.com/getplumber/plumber/commit/471ca8a1aaf6855203abf92bfb0b27dd7a3e12d2))
+
 ## [0.3.81](https://github.com/getplumber/plumber/compare/v0.3.80...v0.3.81) (2026-07-01)
 
 
