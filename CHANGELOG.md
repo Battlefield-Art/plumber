@@ -1,3 +1,15 @@
+## [0.3.83](https://github.com/getplumber/plumber/compare/v0.3.82...v0.3.83) (2026-07-01)
+
+
+### 🔧 Chores
+
+* **ci:** bump actions/attest-build-provenance from 4.1.0 to 4.1.1 ([8e6b863](https://github.com/getplumber/plumber/commit/8e6b863ba3b9b0c6b9367cbee9452815f719af90))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.82 refs [skip ci] ([4f57fd7](https://github.com/getplumber/plumber/commit/4f57fd70b31a69f065cb5fdcbd099f2412700525))
+
 ## [0.3.82](https://github.com/getplumber/plumber/compare/v0.3.81...v0.3.82) (2026-07-01)
 
 
