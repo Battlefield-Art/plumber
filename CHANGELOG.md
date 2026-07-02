@@ -1,3 +1,15 @@
+## [0.3.84](https://github.com/getplumber/plumber/compare/v0.3.83...v0.3.84) (2026-07-02)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Fix false positive hardcoded job ([15e484c](https://github.com/getplumber/plumber/commit/15e484cbaa3719a3f087082fcd96496ea5743fba))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.83 refs [skip ci] ([9945938](https://github.com/getplumber/plumber/commit/99459381ea8a9c1e0a0fc7fcbe1e0fb3d48d9bfc))
+
 ## [0.3.83](https://github.com/getplumber/plumber/compare/v0.3.82...v0.3.83) (2026-07-01)
 
 
