@@ -1,3 +1,21 @@
+## [0.3.85](https://github.com/getplumber/plumber/compare/v0.3.84...v0.3.85) (2026-07-02)
+
+
+### ✨ Features
+
+* **control:** [#185](https://github.com/getplumber/plumber/issues/185) Add Control workflowMustNotWriteUntrustedContentToGitHubEnv ISSUE-207 ([8829586](https://github.com/getplumber/plumber/commit/88295861bde0d1efed6686c63806f35875abc558))
+
+
+### 🐛 Bug Fixes
+
+* **control:** Cover more of the attack surface ([bcd1076](https://github.com/getplumber/plumber/commit/bcd10767283156242872b043ff20a697a345e7c5))
+* **readme:** Documentation about issue-209 ([a0e3e65](https://github.com/getplumber/plumber/commit/a0e3e65899f126f5fa982d93dcff06c3baf1c74a))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.84 refs [skip ci] ([0b7107f](https://github.com/getplumber/plumber/commit/0b7107f1c598a92c420748b7bc5b4c5df7baaaae))
+
 ## [0.3.84](https://github.com/getplumber/plumber/compare/v0.3.83...v0.3.84) (2026-07-02)
 
 
