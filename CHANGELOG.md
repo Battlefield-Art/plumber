@@ -1,3 +1,15 @@
+## [0.3.86](https://github.com/getplumber/plumber/compare/v0.3.85...v0.3.86) (2026-07-02)
+
+
+### 🐛 Bug Fixes
+
+* **gitleaks:** disable secret scanning ([e41475e](https://github.com/getplumber/plumber/commit/e41475ec20b10ff7e48dfc3010d5877d97a3dc3e))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.85 refs [skip ci] ([12df9db](https://github.com/getplumber/plumber/commit/12df9dba94f64e97763943d6583484f0a3a39115))
+
 ## [0.3.85](https://github.com/getplumber/plumber/compare/v0.3.84...v0.3.85) (2026-07-02)
 
 
