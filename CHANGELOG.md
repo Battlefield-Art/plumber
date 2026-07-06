@@ -1,3 +1,26 @@
+## [0.3.87](https://github.com/getplumber/plumber/compare/v0.3.86...v0.3.87) (2026-07-06)
+
+
+### 🐛 Bug Fixes
+
+* **collect:** contain local CI-config reads and skip symlinked Dockerfiles ([ef9c275](https://github.com/getplumber/plumber/commit/ef9c2751f9853831e8b208e6cf9e2df1fc7d076f))
+* **gitlab:** harden local include resolution ([729e259](https://github.com/getplumber/plumber/commit/729e25937f01a417444b7d00f946bfa046c2d6e1))
+
+
+### ♻️ Refactoring
+
+* **render:** sanitize repo-derived text and bound resource use ([17ed05e](https://github.com/getplumber/plumber/commit/17ed05eaaca3efc00c6b7092794d1303b4c527c4))
+* **score:** resolve the score endpoint from CLI/env only ([0a89351](https://github.com/getplumber/plumber/commit/0a89351c4098d2b2dd639281c7bd5d25810447c2))
+
+
+### 👷 CI/CD
+
+* **grype:** install pinned grype by checksum, drop scan-action ([a275cdf](https://github.com/getplumber/plumber/commit/a275cdff60a9abe189b5833dbdafbec7ef19124e)), closes [#294](https://github.com/getplumber/plumber/issues/294)
+* pin runtime tool installs to immutable versions ([a203b7f](https://github.com/getplumber/plumber/commit/a203b7f1fbd3e2ac4aeaf55c4425cd215a138c1a))
+* **release:** pin v0.3.86 refs [skip ci] ([101cd21](https://github.com/getplumber/plumber/commit/101cd2168b4eb5bc5d2944b57f28394f8d536a84))
+* **release:** stop persisting credentials in the pin-refs checkout ([8f0f261](https://github.com/getplumber/plumber/commit/8f0f2619b9d725666209c2b42601d8d7ba871fa7)), closes [#293](https://github.com/getplumber/plumber/issues/293)
+* **scorecard:** document the action's mutable-image gap ([61c8cdd](https://github.com/getplumber/plumber/commit/61c8cdd59edb8919d1d8ada375c6e21c4e598a59))
+
 ## [0.3.86](https://github.com/getplumber/plumber/compare/v0.3.85...v0.3.86) (2026-07-02)
 
 
