@@ -1,3 +1,15 @@
+## [0.3.88](https://github.com/getplumber/plumber/compare/v0.3.87...v0.3.88) (2026-07-06)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Fix typo in ci to always rebuild runtime allowing update to layers. Necessary for security updates ([99d9e61](https://github.com/getplumber/plumber/commit/99d9e615fbc91a00bc82f1aeb27f2e3bc73f7e98))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.87 refs [skip ci] ([4dd1ec3](https://github.com/getplumber/plumber/commit/4dd1ec3e1bd8c3218894f9e311f2b371c30d2b80))
+
 ## [0.3.87](https://github.com/getplumber/plumber/compare/v0.3.86...v0.3.87) (2026-07-06)
 
 
