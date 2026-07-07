@@ -1,3 +1,25 @@
+## [0.3.89](https://github.com/getplumber/plumber/compare/v0.3.88...v0.3.89) (2026-07-07)
+
+
+### 🐛 Bug Fixes
+
+* **config:** warn when a present local CI config is unreadable ([a099337](https://github.com/getplumber/plumber/commit/a099337ba6230632b9b8975c7d1980d9accbed5f))
+* **github:** keep scanning repo artifacts when the workflows dir is rejected ([2a0fcb1](https://github.com/getplumber/plumber/commit/2a0fcb18d70c8190e21f6eb1f341b8e818fdbebf))
+
+
+### 🔧 Chores
+
+* **config:** bound configuration and CI-config file reads ([aff1f01](https://github.com/getplumber/plumber/commit/aff1f018c1923e08f62c205add7b05a853aa2578))
+* **github:** harden workflow and dependabot file collection ([7ccfa4c](https://github.com/getplumber/plumber/commit/7ccfa4ce46672ee3fab3e45fcacf8ebda91b321a))
+* **mrcomment:** harden comment text escaping ([52b1985](https://github.com/getplumber/plumber/commit/52b19853c740d635a9c8478c1dbc35280ea91a9b))
+* **render:** harden degraded-reason and CI-error output ([2d785b8](https://github.com/getplumber/plumber/commit/2d785b8450178f659fafa139c7f02ca090e2e519))
+* **render:** harden verification-warning output ([8179ff6](https://github.com/getplumber/plumber/commit/8179ff61cdb09ac5ce3c6aeeb311e15f3debbdc5))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.88 refs [skip ci] ([beb8d19](https://github.com/getplumber/plumber/commit/beb8d19655162ae1336eaa176c55f316b87cd2ce))
+
 ## [0.3.88](https://github.com/getplumber/plumber/compare/v0.3.87...v0.3.88) (2026-07-06)
 
 
