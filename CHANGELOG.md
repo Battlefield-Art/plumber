@@ -1,3 +1,10 @@
+## [0.3.94](https://github.com/getplumber/plumber/compare/v0.3.93...v0.3.94) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **ci:** bump docker/setup-qemu-action from 4.1.0 to 4.2.0 ([c733df7](https://github.com/getplumber/plumber/commit/c733df7096f009bd5b3047ac951e55a222e3b103))
+
 ## [0.3.93](https://github.com/getplumber/plumber/compare/v0.3.92...v0.3.93) (2026-07-08)
 
 
