@@ -1,3 +1,16 @@
+## [0.3.96](https://github.com/getplumber/plumber/compare/v0.3.95...v0.3.96) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **ci:** bump docker/setup-buildx-action from 4.1.0 to 4.2.0 ([1a91876](https://github.com/getplumber/plumber/commit/1a918760d64f9780246d4358b39fddc73560dba1))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.94 refs [skip ci] ([b682530](https://github.com/getplumber/plumber/commit/b6825301279e905030af84bb25a6c8b63ff4dcbb))
+* **release:** pin v0.3.95 refs [skip ci] ([f521eaf](https://github.com/getplumber/plumber/commit/f521eaf69aea4657be89031407e45813f7a92c55))
+
 ## [0.3.95](https://github.com/getplumber/plumber/compare/v0.3.94...v0.3.95) (2026-07-08)
 
 
