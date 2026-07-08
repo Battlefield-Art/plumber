@@ -1,3 +1,15 @@
+## [0.3.98](https://github.com/getplumber/plumber/compare/v0.3.97...v0.3.98) (2026-07-08)
+
+
+### 🐛 Bug Fixes
+
+* **build:** bump Go toolchain to 1.26.5 / 1.25.12 for GO-2026-5856 ([868b45e](https://github.com/getplumber/plumber/commit/868b45ebe51cf48ddf4c1feb9e96d3d030bb9e10))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.97 refs [skip ci] ([3f0c5d9](https://github.com/getplumber/plumber/commit/3f0c5d900738857d02d9adbdebd5a396ffb85fb4))
+
 ## [0.3.97](https://github.com/getplumber/plumber/compare/v0.3.96...v0.3.97) (2026-07-08)
 
 
