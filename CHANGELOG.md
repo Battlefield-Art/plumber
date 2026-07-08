@@ -1,3 +1,15 @@
+## [0.3.97](https://github.com/getplumber/plumber/compare/v0.3.96...v0.3.97) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **ci:** bump docker/login-action from 4.2.0 to 4.4.0 ([ae7e389](https://github.com/getplumber/plumber/commit/ae7e38900ec45d6fb6ad43b1ce9732f4d5932839))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.96 refs [skip ci] ([71c411f](https://github.com/getplumber/plumber/commit/71c411f1b351f3e169578faa87e12e90c2a3917a))
+
 ## [0.3.96](https://github.com/getplumber/plumber/compare/v0.3.95...v0.3.96) (2026-07-08)
 
 
