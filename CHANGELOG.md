@@ -1,3 +1,15 @@
+## [0.3.95](https://github.com/getplumber/plumber/compare/v0.3.94...v0.3.95) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **ci:** bump docker/build-push-action from 7.2.0 to 7.3.0 ([b5a767b](https://github.com/getplumber/plumber/commit/b5a767b0eefbfcef41b1cb231195a997480045fa))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.93 refs [skip ci] ([9344075](https://github.com/getplumber/plumber/commit/93440757b463896e276b3c19a930fa9720e5cb8b))
+
 ## [0.3.94](https://github.com/getplumber/plumber/compare/v0.3.93...v0.3.94) (2026-07-08)
 
 
