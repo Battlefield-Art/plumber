@@ -1,3 +1,15 @@
+## [0.3.99](https://github.com/getplumber/plumber/compare/v0.3.98...v0.3.99) (2026-07-08)
+
+
+### 🐛 Bug Fixes
+
+* **control:** Update control rendered display name for workflowMustNotExportEntireSecretsContext ([253822e](https://github.com/getplumber/plumber/commit/253822e4ce81b91f5ef1715cdca17d3153c009d0))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.98 refs [skip ci] ([adbdb12](https://github.com/getplumber/plumber/commit/adbdb12b03c95cf8faddf3ec44e44cdd2af86765))
+
 ## [0.3.98](https://github.com/getplumber/plumber/compare/v0.3.97...v0.3.98) (2026-07-08)
 
 
