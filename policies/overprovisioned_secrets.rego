@@ -33,7 +33,7 @@ deny contains finding if {
 	finding := {
 		"code":     "ISSUE-309",
 		"severity": "critical",
-		"message":  sprintf("job %q exports the entire secrets context via toJson(secrets) — pass secrets by name instead", [job.name]),
+		"message":  sprintf("job %q exposes all its secrets at once via toJson(secrets) — pass secrets by name instead", [job.name]),
 		"job":      job.name,
 	}
 }

@@ -202,7 +202,7 @@ func GitHubControls(pc *configuration.PlumberConfig) []ControlEntry {
 		Skipped:     c.ReusableWorkflowsMustNotInheritSecrets == nil || !c.ReusableWorkflowsMustNotInheritSecrets.IsEnabled(),
 	})
 	entries = append(entries, ControlEntry{
-		DisplayName: "Workflows must not export the entire secrets context",
+		DisplayName: "Workflows must not expose all secrets at once",
 		ControlName: "workflowMustNotExportEntireSecretsContext",
 		Skipped:     c.WorkflowMustNotExportEntireSecretsContext == nil || !c.WorkflowMustNotExportEntireSecretsContext.IsEnabled(),
 	})
