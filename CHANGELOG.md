@@ -1,3 +1,15 @@
+## [0.3.91](https://github.com/getplumber/plumber/compare/v0.3.90...v0.3.91) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **deps:** bump github.com/open-policy-agent/opa from 1.18.1 to 1.18.2 ([edd7d9a](https://github.com/getplumber/plumber/commit/edd7d9a3396fbfefb0230f84c7a44a6bf00aaf4e))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.90 refs [skip ci] ([fd41b0e](https://github.com/getplumber/plumber/commit/fd41b0e67d33d2f6557d09d7d089843b0a894775))
+
 ## [0.3.90](https://github.com/getplumber/plumber/compare/v0.3.89...v0.3.90) (2026-07-08)
 
 
