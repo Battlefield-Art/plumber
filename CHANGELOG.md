@@ -1,3 +1,16 @@
+## [0.3.93](https://github.com/getplumber/plumber/compare/v0.3.92...v0.3.93) (2026-07-08)
+
+
+### 🔧 Chores
+
+* **deps:** bump github.com/schollz/progressbar/v3 ([93df998](https://github.com/getplumber/plumber/commit/93df99856ae537e1f802b65f6c903203f322d1ca))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.91 refs [skip ci] ([d562715](https://github.com/getplumber/plumber/commit/d562715497640eaf6332b7d6fb15e91140999b98))
+* **release:** pin v0.3.92 refs [skip ci] ([2c39b14](https://github.com/getplumber/plumber/commit/2c39b140460ee42978dec9dd6f7b79800a6079ca))
+
 ## [0.3.92](https://github.com/getplumber/plumber/compare/v0.3.91...v0.3.92) (2026-07-08)
 
 
