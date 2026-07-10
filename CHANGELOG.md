@@ -1,3 +1,21 @@
+## [0.3.101](https://github.com/getplumber/plumber/compare/v0.3.100...v0.3.101) (2026-07-10)
+
+
+### ✨ Features
+
+* **control:** Add control to check for cache poisoning releaseWorkflowsMustNotRestoreUntrustedCache ([2272c47](https://github.com/getplumber/plumber/commit/2272c47479e1cd53e0c684e2804d4f07cceb0f9d))
+
+
+### 🐛 Bug Fixes
+
+* **control:** close review FP/FN gaps in cache-poisoning control ([6b3a01b](https://github.com/getplumber/plumber/commit/6b3a01b1bce0de1bc26c995b921ec64aa5f495ef))
+* **control:** Fix init to contain more default values ([3b37256](https://github.com/getplumber/plumber/commit/3b37256855fb15fb1c13abaf34f16e1bce4e9c81))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.3.100 refs [skip ci] ([3baf582](https://github.com/getplumber/plumber/commit/3baf582fea1f3240979cacfc03435410006c847a))
+
 ## [0.3.100](https://github.com/getplumber/plumber/compare/v0.3.99...v0.3.100) (2026-07-09)
 
 
