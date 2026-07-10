@@ -1,3 +1,30 @@
+## [0.4.0](https://github.com/getplumber/plumber/compare/v0.3.101...v0.4.0) (2026-07-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **gate:** the JSON report and the GitHub Action no longer expose
+'compliance'; 'passed' is redefined as 'score gate met'; the default
+artifact name changed to plumber-report. Runs with nothing scoreable
+now fail closed (exit 1): on GitHub, a repository with no workflows
+previously passed the compliance gate and now fails, and a
+configuration that enables zero controls for the scanned provider (or
+a skip-all filter) also fails instead of passing with a perfect
+score. Skip Plumber or use soft-fail on repos that intentionally have
+no CI.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+### ✨ Features
+
+* **gate:** gate runs on the Plumber Score, drop the compliance percentage ([2bd2639](https://github.com/getplumber/plumber/commit/2bd26393123ebe29f2d6c04c4acbc5f54c055413)), closes [#320](https://github.com/getplumber/plumber/issues/320) [#320](https://github.com/getplumber/plumber/issues/320)
+
+
+### 👷 CI/CD
+
+* **claude:** use claude-opus-4-8 for PR review checks ([0c65684](https://github.com/getplumber/plumber/commit/0c65684441d67fcc9fe10ba07b4f4a25c73e9f48))
+* **release:** pin v0.3.101 refs [skip ci] ([e209f31](https://github.com/getplumber/plumber/commit/e209f31449268f99df14022cc39a0e20b5768d6c))
+
 ## [0.3.101](https://github.com/getplumber/plumber/compare/v0.3.100...v0.3.101) (2026-07-10)
 
 
