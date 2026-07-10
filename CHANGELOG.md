@@ -1,3 +1,15 @@
+## [0.4.2](https://github.com/getplumber/plumber/compare/v0.4.1...v0.4.2) (2026-07-10)
+
+
+### 🐛 Bug Fixes
+
+* **gate:** restore the pre-0.4.0 pass for GitHub repositories without (usable) workflows ([f22f5ef](https://github.com/getplumber/plumber/commit/f22f5efbf3115db3af0c17ec00f7329e936fd803))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.1 refs [skip ci] ([b885b8b](https://github.com/getplumber/plumber/commit/b885b8b7848ec3050932b658e06c368b79825287))
+
 ## [0.4.1](https://github.com/getplumber/plumber/compare/v0.4.0...v0.4.1) (2026-07-10)
 
 
