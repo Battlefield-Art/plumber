@@ -1,3 +1,15 @@
+## [0.4.1](https://github.com/getplumber/plumber/compare/v0.4.0...v0.4.1) (2026-07-10)
+
+
+### ✨ Features
+
+* **control:** Add control actionRefsMustExistUpstream that emits issue 707 ([b9817e3](https://github.com/getplumber/plumber/commit/b9817e3a9d5a907ae70c089bc75bc74a00afaf3e))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.0 refs [skip ci] ([ddcfee6](https://github.com/getplumber/plumber/commit/ddcfee676cb4ed67dc920460259b79ea0e4bd732))
+
 ## [0.4.0](https://github.com/getplumber/plumber/compare/v0.3.101...v0.4.0) (2026-07-10)
 
 
