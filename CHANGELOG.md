@@ -1,3 +1,16 @@
+## [0.4.3](https://github.com/getplumber/plumber/compare/v0.4.2...v0.4.3) (2026-07-14)
+
+
+### 🔧 Chores
+
+* use issue types instead of labels/title prefixes in bug_report.md ([989ff04](https://github.com/getplumber/plumber/commit/989ff0413d6ca786592fb4d0272dffeaa98a6089))
+* use issue types instead of labels/title prefixes in feature_request.md ([488592f](https://github.com/getplumber/plumber/commit/488592f0625d6b0cbebe30103d7308f338b5ed53))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.2 refs [skip ci] ([2276ce6](https://github.com/getplumber/plumber/commit/2276ce66e45b5abfcca13a22fa971efff518d322))
+
 ## [0.4.2](https://github.com/getplumber/plumber/compare/v0.4.1...v0.4.2) (2026-07-10)
 
 
