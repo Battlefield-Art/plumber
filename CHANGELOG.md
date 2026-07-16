@@ -1,3 +1,15 @@
+## [0.4.8](https://github.com/getplumber/plumber/compare/v0.4.7...v0.4.8) (2026-07-16)
+
+
+### 🔧 Chores
+
+* **ci:** bump actions/setup-node from 6.4.0 to 7.0.0 ([97ddc98](https://github.com/getplumber/plumber/commit/97ddc985aea3d4df10684d102fe420a65ec6c811))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.7 refs [skip ci] ([0d2e256](https://github.com/getplumber/plumber/commit/0d2e2565c73e0ea0ec223eef61b07f371d9bfdf3))
+
 ## [0.4.7](https://github.com/getplumber/plumber/compare/v0.4.6...v0.4.7) (2026-07-16)
 
 
