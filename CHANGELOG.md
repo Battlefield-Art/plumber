@@ -1,3 +1,15 @@
+## [0.4.5](https://github.com/getplumber/plumber/compare/v0.4.4...v0.4.5) (2026-07-16)
+
+
+### 🔧 Chores
+
+* **deps:** bump golang.org/x/term from 0.44.0 to 0.45.0 ([81627ba](https://github.com/getplumber/plumber/commit/81627ba4f58b6d8fb8e2145e07f65e377ed74ff8))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.4 refs [skip ci] ([aafbcee](https://github.com/getplumber/plumber/commit/aafbceed9f01d77beabd6e910dadccae7a64ece1))
+
 ## [0.4.4](https://github.com/getplumber/plumber/compare/v0.4.3...v0.4.4) (2026-07-16)
 
 
