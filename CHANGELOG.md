@@ -1,3 +1,16 @@
+## [0.4.6](https://github.com/getplumber/plumber/compare/v0.4.5...v0.4.6) (2026-07-16)
+
+
+### 🔧 Chores
+
+* **ci:** bump github/codeql-action/autobuild from 4.36.2 to 4.37.0 ([ba7655e](https://github.com/getplumber/plumber/commit/ba7655e999c794f77c219a251213a07e6aec3c69))
+* **ci:** bump github/codeql-action/init from 4.36.2 to 4.37.0 and bump github/codeql-action/analyze from 4.36.2 to 4.37.0 ([4c18e43](https://github.com/getplumber/plumber/commit/4c18e43380848976576a6dc4aab075acf2e1fa77))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.5 refs [skip ci] ([4100ab7](https://github.com/getplumber/plumber/commit/4100ab787380b16237b62ac794b5faf357e3b656))
+
 ## [0.4.5](https://github.com/getplumber/plumber/compare/v0.4.4...v0.4.5) (2026-07-16)
 
 
