@@ -1,3 +1,15 @@
+## [0.4.9](https://github.com/getplumber/plumber/compare/v0.4.8...v0.4.9) (2026-07-20)
+
+
+### ✨ Features
+
+* **controls:** Rename jobName to job. Add uses and ref to the output, highlighting offending lines better ([70b3c24](https://github.com/getplumber/plumber/commit/70b3c24c2a6a2ff3f7357d371066d77c49e1d8d0))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.8 refs [skip ci] ([cca202e](https://github.com/getplumber/plumber/commit/cca202e5bcaac15f576e77390aa9cfda8b878d27))
+
 ## [0.4.8](https://github.com/getplumber/plumber/compare/v0.4.7...v0.4.8) (2026-07-16)
 
 
