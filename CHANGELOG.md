@@ -1,3 +1,22 @@
+## [0.4.11](https://github.com/getplumber/plumber/compare/v0.4.10...v0.4.11) (2026-07-20)
+
+
+### ✨ Features
+
+* **controls:** actionsMustNotExecuteMutableRemoteCode (ISSUE-714/715/716) ([4357428](https://github.com/getplumber/plumber/commit/43574281418d8599a849659a6d5469aff9df904b)), closes [#295](https://github.com/getplumber/plumber/issues/295)
+* **github:** detect mutable exec in Docker-image actions ([18be485](https://github.com/getplumber/plumber/commit/18be485a140dd10b26c1400c6639b154f2d9b7cd))
+
+
+### 🐛 Bug Fixes
+
+* **control:** emit actionsMustNotExecuteMutableRemoteCode findings in JSON output ([ceb92e4](https://github.com/getplumber/plumber/commit/ceb92e4b5b531bdc6e5b9d602ba8339f91ebaeee))
+* **github:** cut false positives in actionsMustNotExecuteMutableRemoteCode and gate its source fetch on the control being enabled ([#299](https://github.com/getplumber/plumber/issues/299)) ([46ed6c5](https://github.com/getplumber/plumber/commit/46ed6c50fb114dd71f077a508a29f4edad0c8c5b))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.10 refs [skip ci] ([a7e5614](https://github.com/getplumber/plumber/commit/a7e5614cf3e22c337d32797d1d9584a6a401cb2a))
+
 ## [0.4.10](https://github.com/getplumber/plumber/compare/v0.4.9...v0.4.10) (2026-07-20)
 
 
