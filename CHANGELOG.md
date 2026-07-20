@@ -1,3 +1,15 @@
+## [0.4.12](https://github.com/getplumber/plumber/compare/v0.4.11...v0.4.12) (2026-07-20)
+
+
+### 🐛 Bug Fixes
+
+* **cli:** clearer, less noisy terminal output for analyze ([f33fe10](https://github.com/getplumber/plumber/commit/f33fe10649fdfac19ace44aa51ce0cbc80c3098f))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.11 refs [skip ci] ([a24f952](https://github.com/getplumber/plumber/commit/a24f9528fc5b0c70573bcfd114d8b55b59282cd0))
+
 ## [0.4.11](https://github.com/getplumber/plumber/compare/v0.4.10...v0.4.11) (2026-07-20)
 
 
