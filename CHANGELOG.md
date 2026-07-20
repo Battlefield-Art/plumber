@@ -1,3 +1,15 @@
+## [0.4.10](https://github.com/getplumber/plumber/compare/v0.4.9...v0.4.10) (2026-07-20)
+
+
+### 🐛 Bug Fixes
+
+* **cli:** render the progress bar only on a TTY, clarify --print vs --verbose semantics, drop dead LogLevel ([#309](https://github.com/getplumber/plumber/issues/309)) ([7fbc954](https://github.com/getplumber/plumber/commit/7fbc9541716eba7fa8b4457052ec724c5d94a1e0))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.9 refs [skip ci] ([4352de9](https://github.com/getplumber/plumber/commit/4352de9147ff008b56ae37f601d362be1e255ee8))
+
 ## [0.4.9](https://github.com/getplumber/plumber/compare/v0.4.8...v0.4.9) (2026-07-20)
 
 
