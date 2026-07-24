@@ -1,3 +1,15 @@
+## [0.4.13](https://github.com/getplumber/plumber/compare/v0.4.12...v0.4.13) (2026-07-24)
+
+
+### ✨ Features
+
+* **cli:** fall back to the built-in default config when no .plumber.yaml is found instead of failing, so scans work with zero setup. Remove the redundant config baked into the Docker image and drop the stale 'global config' wording ([#326](https://github.com/getplumber/plumber/issues/326)). ([9a1ea62](https://github.com/getplumber/plumber/commit/9a1ea62a70fc3314e26f0bd40a4b8365125c93e8))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.12 refs [skip ci] ([9da2169](https://github.com/getplumber/plumber/commit/9da2169c9fbc082c36158fe6769d7a9cf2750f2b))
+
 ## [0.4.12](https://github.com/getplumber/plumber/compare/v0.4.11...v0.4.12) (2026-07-20)
 
 
