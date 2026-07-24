@@ -21,6 +21,7 @@ Thank you for your interest in contributing to Plumber! This guide will help you
 - [Adding a New Provider](#adding-a-new-provider)
 - [Coding Conventions](#coding-conventions)
 - [Commit Conventions](#commit-conventions)
+- [Releasing: version references](#releasing-version-references)
 - [Review Process](#review-process)
 
 ## AI Usage Policy
@@ -858,6 +859,43 @@ chore(deps): update go-gitlab to v0.100.0
 - Keep the commit message under 72 characters
 - Scope is encouraged but optional
 - Reference issues in the PR description (not in commit messages)
+
+## Releasing: version references
+
+Releases are automated by semantic-release. A handful of version / image-digest references live outside the CLI build; some are bumped by release scripts, the rest are **manual and easy to forget** (they drift a release or two behind if nobody updates them). Check all of these when cutting a release.
+
+### Bumped automatically — do not hand-edit
+
+semantic-release runs two scripts in this repo:
+
+- `scripts/release-bump-version.sh` (in the tagged commit) — `action.yml`: the `version` input default and its "(e.g. vX)" hint.
+- `scripts/release-pin-refs.sh` (post-build, committed with `[skip ci]`) — `README.md` GitHub Action `uses: getplumber/plumber@<sha> # vX` pin, and the `templates/plumber.yml` component **image digest** line (`getplumber/plumber@sha256:… #vX`).
+
+Also automated: the Homebrew formula (the `release.yml` Homebrew job) and `CHANGELOG.md` (semantic-release).
+
+### Manual — update on every release
+
+Nothing bumps these (they're in comments/prose, or in a separate repo the CLI release never touches):
+
+**This repo (`plumber-cli`):**
+- [ ] `templates/plumber.yml` — the `@vX.Y.Z` **usage-comment examples** in the header block. The image-digest line above them is auto-pinned; these comment lines are NOT.
+
+**GitLab component repo (`gitlab.com/getplumber/plumber`) — a hand-maintained mirror of the component:**
+- [ ] `templates/plumber.yml` — component image digest (`getplumber/plumber@sha256:… #vX`) and the `@vX.Y.Z` usage-comment examples.
+- [ ] `README.md` — `@vX.Y.Z` component references.
+
+**Website (`getplumber.io`) — no release automation, entirely manual:**
+- [ ] `.plumber.yaml` — the `# Generated with … (CLI vX)` header comment.
+- [ ] `src/docs/data/docs/en/cli/installation.mdx` — `brew install …@vX` version examples.
+- [ ] `src/docs/data/docs/en/cli/gitlab/index.mdx` — `component: …/plumber@X` examples.
+- [ ] `src/components/Animation/PipelineAnimation.astro` — the terminal-banner `vX`.
+- [ ] Blog posts with hardcoded install/download commands (e.g. `gh release download vX`).
+
+Demo/example repositories that pin the component or action by SHA (`# vX.Y.Z`) are bumped by hand when the examples are refreshed.
+
+### Dynamic — never needs bumping
+
+Prefer these for any new "latest version" mention so it can't go stale: the website's `<ReleaseVersions />` component and any `[data-plumber-cli-version]` element fetch the latest release tag at runtime (`src/js/plumberCliVersion.ts`), and `src/docs/data/docs/en/cli/github/index.mdx` uses a `@COMMIT_SHA` placeholder that users copy from the README's SHA-pinned line.
 
 ## Review Process
 
