@@ -130,8 +130,8 @@ jobs:
       # hash below is the only trust anchor; bump both together.
       - name: Install grype (pinned + checksum-verified)
         env:
-          GRYPE_VERSION: "0.114.0"
-          GRYPE_SHA256: "edda0968d8827daab01d32b3cd7de192ae0915005e7bbfcfef9e68e79bc43343"
+          GRYPE_VERSION: "0.116.0"
+          GRYPE_SHA256: "40aff724297312f91ea390d003bed8d8651c74cc7f5b26732db80b3a408d2fc5"
         run: |
           set -euo pipefail
           tmp="$(mktemp -d)"
