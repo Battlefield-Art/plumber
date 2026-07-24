@@ -1,3 +1,20 @@
+## [0.4.15](https://github.com/getplumber/plumber/compare/v0.4.14...v0.4.15) (2026-07-24)
+
+
+### 🐛 Bug Fixes
+
+* **controls:** don't score GitHub-only controls on GitLab runs — gate findings by provider applicability so plumberScore.counts matches the rendered controls ([#349](https://github.com/getplumber/plumber/issues/349)) ([6cc38ec](https://github.com/getplumber/plumber/commit/6cc38ecc7d179f7d3588dd9aa72d5f53751300a8))
+
+
+### 📚 Documentation
+
+* **template:** Update comment in template and add version reference section in contributing ([5a6ec4e](https://github.com/getplumber/plumber/commit/5a6ec4e9a0de87361a6fdfd7abb243e1e3b23a50))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.14 refs [skip ci] ([f85f762](https://github.com/getplumber/plumber/commit/f85f762b466720b949c5da9d13274ee0e5beb4fe))
+
 ## [0.4.14](https://github.com/getplumber/plumber/compare/v0.4.13...v0.4.14) (2026-07-24)
 
 
