@@ -1,3 +1,15 @@
+## [0.4.14](https://github.com/getplumber/plumber/compare/v0.4.13...v0.4.14) (2026-07-24)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Fix vuln and update grype ref ([6607bb8](https://github.com/getplumber/plumber/commit/6607bb863630b098daf8feda0c17a030efb5c309))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.13 refs [skip ci] ([8472496](https://github.com/getplumber/plumber/commit/8472496e62395bc130896b5e8a17d302539b0730))
+
 ## [0.4.13](https://github.com/getplumber/plumber/compare/v0.4.12...v0.4.13) (2026-07-24)
 
 
