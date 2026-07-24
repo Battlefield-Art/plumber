@@ -1,3 +1,15 @@
+## [0.4.16](https://github.com/getplumber/plumber/compare/v0.4.15...v0.4.16) (2026-07-24)
+
+
+### ✨ Features
+
+* **output:** restructure control output into clear Passed/Skipped/Failed sections ([78b576f](https://github.com/getplumber/plumber/commit/78b576f8451f2af02381f4f1c7efbdca559682fb))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.15 refs [skip ci] ([5ad6b54](https://github.com/getplumber/plumber/commit/5ad6b5472460107be9975c155930f86bbc2adbd3))
+
 ## [0.4.15](https://github.com/getplumber/plumber/compare/v0.4.14...v0.4.15) (2026-07-24)
 
 
