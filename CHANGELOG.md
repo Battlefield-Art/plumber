@@ -1,3 +1,15 @@
+## [0.4.20](https://github.com/getplumber/plumber/compare/v0.4.19...v0.4.20) (2026-07-29)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Component version not getting autoamtically bumped. Remove extra text from PR. change default pr names ([5b8e3ef](https://github.com/getplumber/plumber/commit/5b8e3efaf75a2090007c035f25e2a67100db984d))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.19 refs [skip ci] ([9da670e](https://github.com/getplumber/plumber/commit/9da670ee9fe9a3ac2be203cd7d8d4fc101f26c11))
+
 ## [0.4.19](https://github.com/getplumber/plumber/compare/v0.4.18...v0.4.19) (2026-07-29)
 
 
