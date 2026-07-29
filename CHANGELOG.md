@@ -1,3 +1,15 @@
+## [0.4.18](https://github.com/getplumber/plumber/compare/v0.4.17...v0.4.18) (2026-07-29)
+
+
+### ✨ Features
+
+* **ci:** Automate component and documentation upgrade ([a0fea4a](https://github.com/getplumber/plumber/commit/a0fea4a57389236bcd14b4a7bce2f4fe2eee3708))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.17 refs [skip ci] ([6371abc](https://github.com/getplumber/plumber/commit/6371abc35796f8809bce3188309e7c896217d1e0))
+
 ## [0.4.17](https://github.com/getplumber/plumber/compare/v0.4.16...v0.4.17) (2026-07-29)
 
 
