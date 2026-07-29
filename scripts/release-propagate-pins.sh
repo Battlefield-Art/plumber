@@ -20,7 +20,7 @@
 #      "plumber" with no preceding "/", so a bare fragment would also
 #      (wrongly) match inside rule 1's 2-segment getplumber/plumber@<sha>
 #      lines, which have no "/" before their own "plumber". Only rewritten
-#      when <component-sha> is given -- see "Two-pass component pinning"
+#      when <component-sha> is given -- see "Component SHA deferral"
 #      below.)
 #   3. getplumber/plumber@sha256:<hex>      -> getplumber/plumber@sha256:<digest>
 #   4. every X.Y.Z numeric token            -> <version>  (v prefix preserved)
@@ -31,19 +31,19 @@
 # the script exits 3 after processing every file (a marked pin must never
 # go silently stale).
 #
-# Two-pass component pinning: a GitLab component's own commit SHA cannot be
-# known until after that commit is created (a commit's hash depends on its
-# own tree, so a commit can never embed its own SHA). A line already pinned
-# in the <namespace>/plumber/plumber@<40-hex> form is therefore special-cased:
-# if <component-sha> is omitted, such a line is left completely untouched --
-# neither its SHA nor its version label changes -- so it stays internally
+# Component SHA deferral: a line already pinned in the
+# <namespace>/plumber/plumber@<40-hex> form is special-cased -- if
+# <component-sha> is omitted, such a line is left completely untouched,
+# neither its SHA nor its version label changing, so it stays internally
 # consistent (both fields describe the same, merely one-release-stale, real
 # prior release) instead of drifting into a mismatched SHA/version pair.
-# Callers building a GitLab component sync commit run this script twice:
-# once before creating that commit (no <component-sha>, so these lines are
-# deferred), then again afterwards with the just-computed SHA of that commit
-# (so these lines catch up in a second, follow-up commit). Everything else
-# on the line is unaffected by this deferral.
+# This exists because a commit's SHA is a hash of its own tree, so it can
+# never embed its own SHA: a caller that needs a line to reference a commit
+# it's about to create runs this script twice on the same checkout -- once
+# before that commit exists (component-sha omitted, so these lines defer),
+# then again once its SHA is known (component-sha supplied, so the deferred
+# lines catch up). Everything else on the line is unaffected by this
+# deferral.
 #
 # Usage: release-propagate-pins.sh <version> <commit-sha> <digest> <target-dir> [component-sha]
 #   <version>        e.g. 0.4.17 (no leading v)

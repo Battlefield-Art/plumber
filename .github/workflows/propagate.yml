@@ -6,15 +6,17 @@ name: Propagate Release
 #    lines, write RELEASE_NOTES.md, commit to main and tag v${VERSION}. The
 #    GitLab tag pipeline then creates the release (Catalog publish requires
 #    a CI-created release, so the tag pipeline is the only valid path).
-#    Two commits land on main: the tagged sync commit, then a follow-up
-#    commit that embeds the sync commit's own SHA into the README's
-#    SHA-pinned usage examples (a commit can't embed its own SHA -- see the
-#    comment on the "Sync component repo and tag" step).
+#    Two commits land on main: the content sync (untagged), then a
+#    follow-up commit that pins the README's own SHA-pinned usage examples
+#    to that first commit's SHA -- and it's this second commit that gets
+#    tagged v${VERSION}, not the first. See the comment on the "Sync
+#    component repo and tag" step for why.
 #  - getplumber/getplumber.io: rewrite "pinned plumber version" marked
 #    lines -- including the same component SHA-pin lines, using the
-#    component job's output -- on a release/v${VERSION} branch, and open a
-#    PR for manual review. Runs after propagate-component (needs it for
-#    that SHA), not in parallel.
+#    component job's output -- on a release/auto-bump-v${VERSION} branch
+#    (distinctively named so a stale-PR sweep only ever touches branches
+#    this workflow itself created), and open a PR for manual review. Runs
+#    after propagate-component (needs it for that SHA), not in parallel.
 # Called from release.yml after pin-refs, or run via workflow_dispatch to
 # re-propagate the latest release. Dispatching an older version fails the
 # template pin check on purpose: templates/plumber.yml on main only ever
@@ -92,19 +94,25 @@ jobs:
       # the step env (same pattern as release.yml): .git/config only ever
       # stores the literal helper script, never the token.
       #
-      # Two commits, not one, because a commit's SHA is a hash of its own
-      # tree -- it can never embed its own SHA. Commit A (sync: template +
-      # README pins + release notes) is what gets tagged v${VERSION}; it
-      # does not yet show its own SHA in the README's SHA-pinned component
-      # examples (release-propagate-pins.sh defers those specific lines
-      # when called without a component sha). Once A exists, its SHA is
-      # known locally -- no push or round-trip needed, a commit hash is
-      # computed client-side at `git commit` time -- so commit B, built
-      # immediately after, rewrites just those deferred lines to point at
-      # A and becomes main's new tip. This mirrors how pin-refs already
-      # handles the CLI's own README: the tag points at the untouched
-      # semantic-release commit, and a later, separate, untagged commit
-      # documents that tag's SHA.
+      # A commit's SHA is a hash of its own tree, so it can never embed its
+      # own SHA. Two commits: the first (untagged) syncs the template,
+      # README pins, and release notes -- everything except its own
+      # SHA-pinned usage examples, which the script defers with no
+      # <component-sha> yet. Once that commit exists, its SHA is known
+      # locally (git commit computes the hash client-side; no push or
+      # round-trip needed), so the second commit rewrites just those
+      # deferred lines to point at it. It's the SECOND commit that gets
+      # tagged v${VERSION}, not the first -- so the tag (and the GitLab
+      # Catalog page, which renders the README from the tag) always shows
+      # its own usage examples pointing at a real, current commit, never a
+      # stale one from a previous release. That referenced commit is one
+      # behind the tag, but it's not "behind" in any way that matters: it
+      # already contains this release's actual template and release notes
+      # (the only thing the second commit adds is the self-pin fix, which
+      # has zero effect on how the component behaves), so pinning to it
+      # gives identical behavior to pinning the tag itself. This mirrors
+      # how pin-refs already handles the CLI's own README, just with the
+      # tag moved to the second commit instead of the first.
       - name: Sync component repo and tag
         id: sync
         env:
@@ -132,39 +140,43 @@ jobs:
           git config user.name "plumber-release-bot"
           git config user.email "plumber-release-bot@users.noreply.gitlab.com"
 
-          # Commit A: sync content, no self-reference yet. The trailing ""
-          # is deliberate, not an omitted argument: this pass MUST run
-          # without a component sha (it doesn't exist until this commit
-          # is made), so the SHA-pinned component lines defer. Passing ""
+          # First commit: sync content, no self-reference yet. The trailing
+          # "" is deliberate, not an omitted argument: this pass MUST run
+          # without a component sha (it doesn't exist until this commit is
+          # made), so the SHA-pinned component lines defer. Passing ""
           # explicitly says so, rather than relying on the arg just being
-          # absent.
+          # absent. Left untagged -- see the step comment above.
           cp "$GITHUB_WORKSPACE/templates/plumber.yml" templates/plumber.yml
           bash "$GITHUB_WORKSPACE/scripts/release-propagate-pins.sh" "$VERSION" "$SHA" "$DIGEST" . ""
           cp /tmp/release-notes.md RELEASE_NOTES.md
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "chore(release): v${VERSION}" \
-              -m "Sync component template, README pins, and release notes from github.com/getplumber/plumber@${SHA}."
+            git commit -m "chore(release): sync component template and notes for v${VERSION}" \
+              -m "Syncs templates/plumber.yml and RELEASE_NOTES.md from github.com/getplumber/plumber@${SHA}. The README's own SHA-pinned usage examples are pinned to this commit in the next one, which is what actually gets tagged v${VERSION}."
           else
-            echo "no content changes; tagging current HEAD"
+            echo "no content changes"
+          fi
+          SYNC_SHA="$(git rev-parse HEAD)"
+          [[ "$SYNC_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sync commit sha is invalid: '${SYNC_SHA}'" >&2; exit 1; }
+
+          # Second commit: now that the sync commit's SHA is known, embed
+          # it in the README's SHA-pinned component usage examples. This
+          # commit is what gets tagged.
+          bash "$GITHUB_WORKSPACE/scripts/release-propagate-pins.sh" "$VERSION" "$SHA" "$DIGEST" . "$SYNC_SHA"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): v${VERSION}" \
+              -m "Pins the README's own usage examples to this release's sync commit (${SYNC_SHA})."
+          else
+            echo "no self-pin changes; tagging current HEAD"
           fi
           git tag "v${VERSION}"
           COMPONENT_SHA="$(git rev-parse HEAD)"
-          # This call site must always have a real sha: silently falling
-          # through to the script's deferral behavior here would leave the
-          # SHA-pinned lines stale with no warning. Fail loud instead.
+          # Used by propagate-website to SHA-pin its own copies of these
+          # usage examples: silently falling through to a blank/malformed
+          # value here would leave those lines stale with no warning.
           [[ "$COMPONENT_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::computed component sha is invalid: '${COMPONENT_SHA}'" >&2; exit 1; }
           echo "component_sha=${COMPONENT_SHA}" >> "$GITHUB_OUTPUT"
-
-          # Commit B: now that A's SHA is known, embed it in the README's
-          # SHA-pinned component usage examples. Not tagged -- just becomes
-          # main's new tip.
-          bash "$GITHUB_WORKSPACE/scripts/release-propagate-pins.sh" "$VERSION" "$SHA" "$DIGEST" . "$COMPONENT_SHA"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(release): pin v${VERSION} component self-references" \
-              -m "Embeds this component's own v${VERSION} sync commit (${COMPONENT_SHA}) into the README's SHA-pinned usage examples."
-          fi
 
           # --atomic: main and the tag land together or not at all, so a
           # rejected main push can never publish a tag whose sync commit
@@ -261,7 +273,7 @@ jobs:
           # website's SHA-pinned lines with no warning.
           [[ "$COMPONENT_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::component sha from propagate-component is invalid: '${COMPONENT_SHA}'" >&2; exit 1; }
           cd website
-          BRANCH="release/v${VERSION}"
+          BRANCH="release/auto-bump-v${VERSION}"
           git checkout -b "$BRANCH"
           bash ../scripts/release-propagate-pins.sh "$VERSION" "$SHA" "$DIGEST" . "$COMPONENT_SHA" | tee /tmp/rewrite-log.txt
           if git diff --quiet; then
@@ -273,11 +285,10 @@ jobs:
           git config credential.helper '!f() { echo "username=x-access-token"; echo "password=${APP_TOKEN}"; }; f'
           git add -A
           git diff --cached --stat > /tmp/diff-stat.txt
-          git diff --cached > /tmp/diff-full.patch
           git commit -m "chore(release): bump Plumber pins to v${VERSION}"
           git push -f origin "HEAD:${BRANCH}"
           for old in $(gh pr list --repo getplumber/getplumber.io --state open \
-              --json headRefName --jq '.[].headRefName' | grep '^release/v' | grep -vx "release/v${VERSION}" || true); do
+              --json headRefName --jq '.[].headRefName' | grep '^release/auto-bump-v' | grep -vx "release/auto-bump-v${VERSION}" || true); do
             gh pr close --repo getplumber/getplumber.io "$old" --comment "Superseded by v${VERSION}." || true
           done
           if [ -z "$(gh pr list --repo getplumber/getplumber.io --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
@@ -287,15 +298,6 @@ jobs:
               echo '```'
               cat /tmp/diff-stat.txt
               echo '```'
-              echo
-              echo '<details>'
-              echo '<summary>Full diff</summary>'
-              echo
-              echo '```diff'
-              cat /tmp/diff-full.patch
-              echo '```'
-              echo
-              echo '</details>'
             } > /tmp/pr-body.md
             gh pr create --repo getplumber/getplumber.io \
               --head "$BRANCH" --base main \
