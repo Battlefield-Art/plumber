@@ -1,3 +1,15 @@
+## [0.4.21](https://github.com/getplumber/plumber/compare/v0.4.20...v0.4.21) (2026-07-29)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** Merge dependabot same type ([2d42c8c](https://github.com/getplumber/plumber/commit/2d42c8c114ca20860e55128a7816d4c9689256f4))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.20 refs [skip ci] ([0fe1eef](https://github.com/getplumber/plumber/commit/0fe1eef31011169b4086487a74b8134ad020cba4))
+
 ## [0.4.20](https://github.com/getplumber/plumber/compare/v0.4.19...v0.4.20) (2026-07-29)
 
 
