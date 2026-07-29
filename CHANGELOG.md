@@ -1,3 +1,15 @@
+## [0.4.19](https://github.com/getplumber/plumber/compare/v0.4.18...v0.4.19) (2026-07-29)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** PR body when writing to website ([5ee0d15](https://github.com/getplumber/plumber/commit/5ee0d15b4d299a746961a5d4b1f51c6cf920b89d))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.18 refs [skip ci] ([e91e449](https://github.com/getplumber/plumber/commit/e91e4492b1386e1030dff831ddfbc861e63687ad))
+
 ## [0.4.18](https://github.com/getplumber/plumber/compare/v0.4.17...v0.4.18) (2026-07-29)
 
 
