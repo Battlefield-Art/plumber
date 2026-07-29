@@ -1,3 +1,15 @@
+## [0.4.17](https://github.com/getplumber/plumber/compare/v0.4.16...v0.4.17) (2026-07-29)
+
+
+### 🐛 Bug Fixes
+
+* **conf:** restore gitlab controls in self-scan .plumber.yaml ([34a4cbf](https://github.com/getplumber/plumber/commit/34a4cbf8dd84a49b1282b7e2dbb3f56f2c53ad27))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.16 refs [skip ci] ([cbb9172](https://github.com/getplumber/plumber/commit/cbb9172b5d8ad6de6002c1e8dfee749c9f90e970))
+
 ## [0.4.16](https://github.com/getplumber/plumber/compare/v0.4.15...v0.4.16) (2026-07-24)
 
 
