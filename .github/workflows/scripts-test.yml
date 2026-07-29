@@ -8,11 +8,13 @@ on:
     paths:
       - .github/scripts/**
       - .github/workflows/scripts-test.yml
+      - scripts/**
   push:
     branches: [main]
     paths:
       - .github/scripts/**
       - .github/workflows/scripts-test.yml
+      - scripts/**
 
 permissions: {}
 
@@ -30,3 +32,7 @@ jobs:
       # directory as a module on newer Node instead of discovering test files.
       - name: Run unit tests
         run: node --test .github/scripts/post-review-findings.test.js
+      - name: Run release script tests
+        run: |
+          bash scripts/release-propagate-pins.test.sh
+          bash scripts/release-template-digest.test.sh

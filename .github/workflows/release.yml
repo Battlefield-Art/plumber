@@ -496,3 +496,18 @@ jobs:
           git add README.md templates/plumber.yml
           git commit -m "ci(release): pin v${VERSION} refs [skip ci]"
           git push origin HEAD:main
+
+  propagate:
+    name: Propagate Release
+    needs: [release, docker, upload-release, pin-refs]
+    if: needs.release.outputs.new_release_published == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/propagate.yml
+    with:
+      version: ${{ needs.release.outputs.new_release_version }}
+      digest: ${{ needs.docker.outputs.digest }}
+    secrets:
+      GITLAB_COMPONENT_TOKEN: ${{ secrets.GITLAB_COMPONENT_TOKEN }}
+      RELEASE_APP_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+      RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

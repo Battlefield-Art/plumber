@@ -128,23 +128,23 @@ spec:
 #
 # Usage in .gitlab-ci.yml:
 #   include:
-#     - component: gitlab.com/getplumber/plumber/plumber@~latest
+#     - component: gitlab.com/getplumber/plumber/plumber@<version>
 #
 # With custom config file:
 #   include:
-#     - component: gitlab.com/getplumber/plumber/plumber@v0.4.13
+#     - component: gitlab.com/getplumber/plumber/plumber@<version>
 #       inputs:
 #         config_file: "configs/my-plumber.yaml"  # relative to repo root
 #
 # With a custom CI configuration file path (or override $CI_CONFIG_PATH in project CI/CD variables):
 #   include:
-#     - component: gitlab.com/getplumber/plumber/plumber@v0.4.13
+#     - component: gitlab.com/getplumber/plumber/plumber@<version>
 #       inputs:
 #         ci_config_path: "my-custom-ci.yml"
 #
 # With other custom inputs:
 #   include:
-#     - component: gitlab.com/getplumber/plumber/plumber@v0.4.13
+#     - component: gitlab.com/getplumber/plumber/plumber@<version>
 #       inputs:
 #         min_points: 80
 #         output_file: results.json
