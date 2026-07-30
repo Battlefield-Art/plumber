@@ -1,3 +1,20 @@
+## [0.4.23](https://github.com/getplumber/plumber/compare/v0.4.22...v0.4.23) (2026-07-30)
+
+
+### ✨ Features
+
+* **gitlab:** allow an embedding host to inject a shared HTTP client ([2579221](https://github.com/getplumber/plumber/commit/2579221ef7f4ea771aaa8d1968d92d82b179688f))
+
+
+### ✅ Tests
+
+* **gitlab:** integration — a real Fetch collects through the injected client ([84e18ee](https://github.com/getplumber/plumber/commit/84e18eed4fdbd913554b1294f2ded84f10450329))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.22 refs [skip ci] ([3851e87](https://github.com/getplumber/plumber/commit/3851e87e25f45997c8cb646895e821958c56e57e))
+
 ## [0.4.22](https://github.com/getplumber/plumber/compare/v0.4.21...v0.4.22) (2026-07-29)
 
 
