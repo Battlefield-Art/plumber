@@ -1,3 +1,15 @@
+## [0.4.26](https://github.com/getplumber/plumber/compare/v0.4.25...v0.4.26) (2026-07-31)
+
+
+### 🐛 Bug Fixes
+
+* **config:** trust getplumber/* actions in the shipped default config ([771ec58](https://github.com/getplumber/plumber/commit/771ec58e9f9b6a32a4eced9e2f66eef5166a52a0))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.25 refs [skip ci] ([65c0c08](https://github.com/getplumber/plumber/commit/65c0c08e88246f0ebdae9f4b654f359ddedb67d6))
+
 ## [0.4.25](https://github.com/getplumber/plumber/compare/v0.4.24...v0.4.25) (2026-07-31)
 
 
