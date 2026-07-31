@@ -1,3 +1,31 @@
+## [0.4.25](https://github.com/getplumber/plumber/compare/v0.4.24...v0.4.25) (2026-07-31)
+
+
+### ✨ Features
+
+* **config:** layered .plumber.yaml configuration ([17d3fdb](https://github.com/getplumber/plumber/commit/17d3fdb55db4e305ad5de900a614a598c4a27193)), closes [#375](https://github.com/getplumber/plumber/issues/375)
+* **defaultconfig:** curate the shipped default and source `config init` from it ([aebf2d1](https://github.com/getplumber/plumber/commit/aebf2d1d5d1160e2ea58eabf42419261e127a26c)), closes [#1](https://github.com/getplumber/plumber/issues/1)
+
+
+### 🐛 Bug Fixes
+
+* **control:** avoid allocation-size-overflow pattern flagged by CodeQL ([c6bca30](https://github.com/getplumber/plumber/commit/c6bca306a6938f9c4bbea4a06dfa76197afba838))
+
+
+### 🔧 Chores
+
+* **defaultconfig:** simplify the embedded-default build pipeline ([f55c7de](https://github.com/getplumber/plumber/commit/f55c7debec78b391a4d7f830d786e4ebe0077f1e))
+
+
+### ✅ Tests
+
+* adapt self-scan parity/gating tests to the GitHub-only self-scan config ([9c53bc2](https://github.com/getplumber/plumber/commit/9c53bc2a25971c4b581205664291be8b4956b47a))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.24 refs [skip ci] ([c90df59](https://github.com/getplumber/plumber/commit/c90df592871aa02473b288381e20ee59bdf002f3))
+
 ## [0.4.24](https://github.com/getplumber/plumber/compare/v0.4.23...v0.4.24) (2026-07-31)
 
 
