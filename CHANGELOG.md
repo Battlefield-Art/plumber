@@ -1,3 +1,20 @@
+## [0.4.24](https://github.com/getplumber/plumber/compare/v0.4.23...v0.4.24) (2026-07-31)
+
+
+### 🔧 Chores
+
+* **readme:** smooth token-free scan wording ([8bc4c80](https://github.com/getplumber/plumber/commit/8bc4c807d1ed418599a1c466a32c0ae2d210b00a))
+
+
+### 📚 Documentation
+
+* **readme:** tidy config comment and auth wording ([b1e4ff7](https://github.com/getplumber/plumber/commit/b1e4ff7dc9245513a91dba8a1a20bba114902d09))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.4.23 refs [skip ci] ([cf6b908](https://github.com/getplumber/plumber/commit/cf6b908389f5a6b2719866a4dbedcd2b864644a8))
+
 ## [0.4.23](https://github.com/getplumber/plumber/compare/v0.4.22...v0.4.23) (2026-07-30)
 
 
