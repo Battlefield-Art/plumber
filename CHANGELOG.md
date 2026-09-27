@@ -1,3 +1,19 @@
+## [0.5.10](https://github.com/getplumber/plumber/compare/v0.5.9...v0.5.10) (2026-09-27)
+
+
+### 🐛 Bug Fixes
+
+* **control:** a failed policy marks only the controls it emits, strict evaluation moves to the tests ([7f3dd6c](https://github.com/getplumber/plumber/commit/7f3dd6c1fded39e1b1a1d63c8e21cc0fede4aba9))
+* **control:** a policy that fails to evaluate degrades the run instead of passing it ([ec9813e](https://github.com/getplumber/plumber/commit/ec9813e75a7c48f391792cdddbe84fbc06e18740)), closes [#489](https://github.com/getplumber/plumber/issues/489)
+* **policies:** a recursive workspace upload packs .git, a Git dot-file does not ([e52a267](https://github.com/getplumber/plumber/commit/e52a267b3855b7771af587e4a79f3cdc4df59e83))
+* **policies:** an upload of a path under the workspace does not pack .git ([07b0c26](https://github.com/getplumber/plumber/commit/07b0c26761fc97918ec95381293b6c7fd098ecb1))
+* **policies:** artipacked handles several upload-artifact steps in one job ([d4e9402](https://github.com/getplumber/plumber/commit/d4e9402f981790a7cf3ab86fec1d23406e8cd1cb)), closes [#489](https://github.com/getplumber/plumber/issues/489)
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.5.9 refs [skip ci] ([c93bf1c](https://github.com/getplumber/plumber/commit/c93bf1c71c2ba731082250cdce1a775980fe32a3))
+
 ## [0.5.9](https://github.com/getplumber/plumber/compare/v0.5.8...v0.5.9) (2026-09-27)
 
 
