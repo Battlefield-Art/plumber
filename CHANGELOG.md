@@ -1,3 +1,35 @@
+## [0.5.9](https://github.com/getplumber/plumber/compare/v0.5.8...v0.5.9) (2026-09-27)
+
+
+### 🐛 Bug Fixes
+
+* **control:** derive the disabled-control set from ControlsConfig ([aa486ae](https://github.com/getplumber/plumber/commit/aa486aec4b4691928650d7cf18f1ff1f4d7f987a))
+
+
+### ♻️ Refactoring
+
+* one implementation for each duplicated helper ([7295e37](https://github.com/getplumber/plumber/commit/7295e37ea6d6e040da0612c2558eefb5cbc24807))
+
+
+### 🔧 Chores
+
+* consistent naming, comment forms and signatures across packages ([b8f9ab6](https://github.com/getplumber/plumber/commit/b8f9ab6a63b12dee2fddd46c63be5bb59b9d1938))
+
+
+### 📚 Documentation
+
+* package comments for every package, deprecated identity helper removed ([e541e17](https://github.com/getplumber/plumber/commit/e541e17337ed18b9163b59dc76022341849f41a3))
+
+
+### ✅ Tests
+
+* **gitlab:** pin NormalizeYAMLValue on nested, non-string-keyed and scalar input ([04b4e21](https://github.com/getplumber/plumber/commit/04b4e21f603a72b9718e682f3efba8d3af886ffb))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.5.8 refs [skip ci] ([22f7fcd](https://github.com/getplumber/plumber/commit/22f7fcd3fffbfe05e52adf3f85b79b9eb9f01ee7))
+
 ## [0.5.8](https://github.com/getplumber/plumber/compare/v0.5.7...v0.5.8) (2026-09-23)
 
 
