@@ -1,3 +1,20 @@
+## [0.5.12](https://github.com/getplumber/plumber/compare/v0.5.11...v0.5.12) (2026-09-28)
+
+
+### ✨ Features
+
+* **config:** trust the whole Microsoft Artifact Registry by default ([cb8ce1c](https://github.com/getplumber/plumber/commit/cb8ce1cc6609c3d369c7ce74c6766c6d6031adb7))
+
+
+### 📚 Documentation
+
+* **readme:** fix the quick start for zero-config runs and homebrew 6 tap trust ([bf30577](https://github.com/getplumber/plumber/commit/bf3057794ecf4c821c08d26869bd54dd76df64b6))
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.5.11 refs [skip ci] ([9984299](https://github.com/getplumber/plumber/commit/99842996a0677a720ea0e009d6b3ad27609a48f1))
+
 ## [0.5.11](https://github.com/getplumber/plumber/compare/v0.5.10...v0.5.11) (2026-09-28)
 
 
