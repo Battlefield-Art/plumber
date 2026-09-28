@@ -1,3 +1,15 @@
+## [0.5.11](https://github.com/getplumber/plumber/compare/v0.5.10...v0.5.11) (2026-09-28)
+
+
+### 🐛 Bug Fixes
+
+* **sarif:** anchor a repository-level finding to the repository root ([af21030](https://github.com/getplumber/plumber/commit/af21030ef23790180cec8cf548f6f9fa8f060345)), closes [#352](https://github.com/getplumber/plumber/issues/352)
+
+
+### 👷 CI/CD
+
+* **release:** pin v0.5.10 refs [skip ci] ([3b6af14](https://github.com/getplumber/plumber/commit/3b6af14b803028a785a97c7327d24f4fd41ef51a))
+
 ## [0.5.10](https://github.com/getplumber/plumber/compare/v0.5.9...v0.5.10) (2026-09-27)
 
 
