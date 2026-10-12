@@ -1,3 +1,18 @@
+## [0.6.1](https://github.com/getplumber/plumber/compare/v0.6.0...v0.6.1) (2026-10-12)
+
+
+### ✨ Features
+
+* **conf:** trust Plumber's own GitLab component by default ([b400431](https://github.com/getplumber/plumber/commit/b400431f80eaa088592ad480f77b4940a1781804))
+* **controls:** components and functions must come from authorized sources ([b2bb03a](https://github.com/getplumber/plumber/commit/b2bb03a6cb85107574864fa1600027be0a71df0c))
+* **gitlab:** collect run: step functions and the registry host in the IR ([59c9ddd](https://github.com/getplumber/plumber/commit/59c9ddde55df1b0158f096b351684db6084e9aaf))
+* **score:** component and function sources in the contextual score ([44c5d28](https://github.com/getplumber/plumber/commit/44c5d28676146ae99be9d391e3e9edc79a8d4a76))
+
+
+### 🐛 Bug Fixes
+
+* **build:** move to the Go 1.26.9 toolchain ([6449f05](https://github.com/getplumber/plumber/commit/6449f054e6e7e5a8183d12f34d295d6dbfabf975))
+
 ## [0.6.0](https://github.com/getplumber/plumber/compare/v0.5.24...v0.6.0) (2026-10-08)
 
 
