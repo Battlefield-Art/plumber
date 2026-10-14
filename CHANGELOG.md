@@ -1,3 +1,21 @@
+## [0.6.3](https://github.com/getplumber/plumber/compare/v0.6.2...v0.6.3) (2026-10-14)
+
+
+### ✨ Features
+
+* **cli:** the update notice names the upgrade command of the install channel ([7284a53](https://github.com/getplumber/plumber/commit/7284a53d3e7ff2628db90f85b0f0bf08daa8414a))
+
+
+### ✅ Tests
+
+* **cli:** pin the Homebrew prefixes alone and a go install build's version ([a193a10](https://github.com/getplumber/plumber/commit/a193a1031d134e49e76a2f874ac46aaefdc7a023))
+
+
+### 👷 CI/CD
+
+* prove that brew, mise and go install serve the latest release ([e25d155](https://github.com/getplumber/plumber/commit/e25d155f534309789c04c4aebea7be2e3321562b))
+* the mise channel check resolves without the 24-hour release age ([af8ce1e](https://github.com/getplumber/plumber/commit/af8ce1e30da3e3ae8f958bba5a970d3bb10be7bd))
+
 ## [0.6.2](https://github.com/getplumber/plumber/compare/v0.6.1...v0.6.2) (2026-10-14)
 
 
