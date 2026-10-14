@@ -1,3 +1,26 @@
+## [0.6.2](https://github.com/getplumber/plumber/compare/v0.6.1...v0.6.2) (2026-10-14)
+
+
+### ✨ Features
+
+* **report:** platform mode closes a withheld policy on the Score block too ([00ae5de](https://github.com/getplumber/plumber/commit/00ae5de556a4507da70dcbd4dcd942958f69a614))
+* **report:** the withheld score closes on the Score block too ([0a909cf](https://github.com/getplumber/plumber/commit/0a909cf8d224b41d7b966838103693f2d40309d0))
+
+
+### 🐛 Bug Fixes
+
+* **report:** findings, never issues, in every user-facing text ([b809185](https://github.com/getplumber/plumber/commit/b80918596b53d189e76098e22f4432e1cb4f8b3e))
+
+
+### 📚 Documentation
+
+* **readme:** add Duplicati to the adopters row ([7d3a0e0](https://github.com/getplumber/plumber/commit/7d3a0e0bbad6c1f1de6815a193491929795b36f7)), closes [duplicati/duplicati#7259](https://github.com/duplicati/duplicati/issues/7259)
+
+
+### ✅ Tests
+
+* **report:** a degraded run writes its artifacts above the withheld block ([a0d6790](https://github.com/getplumber/plumber/commit/a0d6790d1425b9c2741e368bac840b1ba98c1ffc))
+
 ## [0.6.1](https://github.com/getplumber/plumber/compare/v0.6.0...v0.6.1) (2026-10-12)
 
 
