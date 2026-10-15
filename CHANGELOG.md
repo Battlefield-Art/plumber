@@ -1,3 +1,15 @@
+## [0.6.4](https://github.com/getplumber/plumber/compare/v0.6.3...v0.6.4) (2026-10-15)
+
+
+### ✨ Features
+
+* **controls:** exempt listed images on a forbidden tag ([b95c432](https://github.com/getplumber/plumber/commit/b95c4325ea9243f0d41002cbd857717f5bf83bc2))
+
+
+### 📚 Documentation
+
+* add a pull request template ([fff78d0](https://github.com/getplumber/plumber/commit/fff78d096e6a5c3354a43218b7eb20f472b4be14))
+
 ## [0.6.3](https://github.com/getplumber/plumber/compare/v0.6.2...v0.6.3) (2026-10-14)
 
 
