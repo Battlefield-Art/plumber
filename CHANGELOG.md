@@ -1,3 +1,24 @@
+## [0.7.0](https://github.com/getplumber/plumber/compare/v0.6.5...v0.7.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **controls:** releaseWorkflowsMustNotRestoreUntrustedCache is renamed
+untrustedTriggersMustNotWriteCache, and publishActions, cacheActions,
+publishScriptPatterns, publishScriptExcludePatterns and allowedJobs are
+removed. The old key is ignored with a warning; plumber config migrate
+renames it. exemptWorkflows and exemptJobs accept the risk of a workflow
+or a job, listed in the output. ISSUE-705 findings re-key (RecipeVersion 7).
+
+### 🐛 Bug Fixes
+
+* **controls:** flag cache write granted to untrusted triggers ([e8f9e5a](https://github.com/getplumber/plumber/commit/e8f9e5a7272285b797638828ddd51d01546ebb96)), closes [#533](https://github.com/getplumber/plumber/issues/533)
+
+
+### ✅ Tests
+
+* **controls:** pin every context a cache-mode expression can read ([8fbab2b](https://github.com/getplumber/plumber/commit/8fbab2bce7690daa3bd3e003dee8b48958a2a299))
+
 ## [0.6.5](https://github.com/getplumber/plumber/compare/v0.6.4...v0.6.5) (2026-10-16)
 
 
