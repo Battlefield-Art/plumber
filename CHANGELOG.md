@@ -1,3 +1,15 @@
+## [0.6.5](https://github.com/getplumber/plumber/compare/v0.6.4...v0.6.5) (2026-10-16)
+
+
+### ✨ Features
+
+* **brand:** teal banner and terminal accent for the new identity ([4330818](https://github.com/getplumber/plumber/commit/43308181325a660f8a16c1d6ac7ee0770cc81bc0)), closes [#09C3C3](https://github.com/getplumber/plumber/issues/09C3C3)
+
+
+### 📚 Documentation
+
+* **readme:** teal wordmark in the plumber analyze recording ([5917a18](https://github.com/getplumber/plumber/commit/5917a183e112f4c3ed3e86762efd9fc2f8a11de3))
+
 ## [0.6.4](https://github.com/getplumber/plumber/compare/v0.6.3...v0.6.4) (2026-10-15)
 
 
