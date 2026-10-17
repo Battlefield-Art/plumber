@@ -1,3 +1,20 @@
+## [0.7.2](https://github.com/getplumber/plumber/compare/v0.7.1...v0.7.2) (2026-10-17)
+
+
+### ✨ Features
+
+* **github:** resolve composite actions and cross-repository reusable workflows into the pipeline with their provenance ([1ba603c](https://github.com/getplumber/plumber/commit/1ba603cdb514e1e535700dea61695261132f4898))
+
+
+### 🐛 Bug Fixes
+
+* **control,identity:** nested findings carry their chain, remediation and identity, the bill names nested includes ([35459d5](https://github.com/getplumber/plumber/commit/35459d5f4f69257c45f189e49c915ae7201abe26)), closes [#533](https://github.com/getplumber/plumber/issues/533)
+
+
+### ✅ Tests
+
+* **github,cmd:** goldens from the nested-actions reproduction, docs and the e2e recipe ([620b4de](https://github.com/getplumber/plumber/commit/620b4de274459229ad4f35041ca8bb48d8241d13)), closes [d/action.yml#L8](https://github.com/d/action.yml/issues/L8)
+
 ## [0.7.1](https://github.com/getplumber/plumber/compare/v0.7.0...v0.7.1) (2026-10-17)
 
 
