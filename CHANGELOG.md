@@ -1,3 +1,13 @@
+## [0.7.1](https://github.com/getplumber/plumber/compare/v0.7.0...v0.7.1) (2026-10-17)
+
+
+### ✨ Features
+
+* **github:** who can trigger a job, environments, inert jobs and the real token default ([717c944](https://github.com/getplumber/plumber/commit/717c944c71915c6c0f6ddb57e645e6381a96dc3e))
+* **report:** every claim of a path carries its state, the Radar corpus as the regression gate ([b26a7ae](https://github.com/getplumber/plumber/commit/b26a7ae81d2884db329801c1ab763d7e7794df13))
+* **score:** claim states and a three-valued evaluator for job conditions ([d3cb330](https://github.com/getplumber/plumber/commit/d3cb330d4f280d775a8f9caf524f1476d40b6bdc))
+* **score:** the tier follows what is proven ([968840b](https://github.com/getplumber/plumber/commit/968840bd260f054001ddc9566c61efa93eacfc5c))
+
 ## [0.7.0](https://github.com/getplumber/plumber/compare/v0.6.5...v0.7.0) (2026-10-16)
 
 
