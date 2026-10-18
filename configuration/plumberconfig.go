@@ -131,6 +131,9 @@ var validControlSchema = map[string][]string{
 	"workflowsMustDeclarePermissions": {
 		"enabled",
 	},
+	"workflowsMustBeValid": {
+		"enabled",
+	},
 	"reusableWorkflowsMustNotInheritSecrets": {
 		"enabled",
 	},
@@ -435,6 +438,10 @@ type ControlsConfig struct {
 	// WorkflowsMustDeclarePermissions control configuration (GitHub Actions only).
 	// Config-free; toggle via `enabled`.
 	WorkflowsMustDeclarePermissions *EnabledOnlyControlConfig `yaml:"workflowsMustDeclarePermissions,omitempty"`
+
+	// WorkflowsMustBeValid control configuration (GitHub Actions only).
+	// Config-free; toggle via `enabled`.
+	WorkflowsMustBeValid *EnabledOnlyControlConfig `yaml:"workflowsMustBeValid,omitempty"`
 
 	// ReusableWorkflowsMustNotInheritSecrets control configuration (GitHub Actions only).
 	// Config-free; toggle via `enabled`.
