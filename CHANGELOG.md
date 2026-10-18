@@ -1,3 +1,10 @@
+## [0.7.4](https://github.com/getplumber/plumber/compare/v0.7.3...v0.7.4) (2026-10-18)
+
+
+### 🔧 Chores
+
+* **deps:** bump the go-dependencies group across 1 directory with 6 updates ([d8b6b08](https://github.com/getplumber/plumber/commit/d8b6b08855c45b5c917afa27d36e18f6d395fa01))
+
 ## [0.7.3](https://github.com/getplumber/plumber/compare/v0.7.2...v0.7.3) (2026-10-18)
 
 
