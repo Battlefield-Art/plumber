@@ -1,3 +1,10 @@
+## [0.7.3](https://github.com/getplumber/plumber/compare/v0.7.2...v0.7.3) (2026-10-18)
+
+
+### 🔧 Chores
+
+* **ci:** bump the github-actions group across 1 directory with 14 updates ([c5b9cf0](https://github.com/getplumber/plumber/commit/c5b9cf0c24a1b7389a78d7629c0274a713efc555))
+
 ## [0.7.2](https://github.com/getplumber/plumber/compare/v0.7.1...v0.7.2) (2026-10-17)
 
 
