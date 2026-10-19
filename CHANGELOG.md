@@ -1,3 +1,10 @@
+## [0.7.7](https://github.com/getplumber/plumber/compare/v0.7.6...v0.7.7) (2026-10-19)
+
+
+### 🐛 Bug Fixes
+
+* **cmd:** the platform push names the component version of the include that defines the running job ([75f9ed1](https://github.com/getplumber/plumber/commit/75f9ed1ea279a56bab3e02d1a6169e680249af5a)), closes [#562](https://github.com/getplumber/plumber/issues/562)
+
 ## [0.7.6](https://github.com/getplumber/plumber/compare/v0.7.5...v0.7.6) (2026-10-19)
 
 
