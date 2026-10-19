@@ -1,3 +1,14 @@
+## [0.7.5](https://github.com/getplumber/plumber/compare/v0.7.4...v0.7.5) (2026-10-19)
+
+
+### ✨ Features
+
+* **capability:** the declarations from the context or .plumber.yaml, and the defaults command ([6686e3f](https://github.com/getplumber/plumber/commit/6686e3f091bee2f1972ff4465c868e4d66040edc))
+* **capability:** the first recognizer and the five evidence rules ([31b1782](https://github.com/getplumber/plumber/commit/31b17822b62f5d6ddd9b57f9c5c7217767f1f5a4))
+* **capability:** user-declared capabilities, the built-in list and the glob matcher ([024cce3](https://github.com/getplumber/plumber/commit/024cce3914c34a0cc5a1ba08d210bfba9606d7bc))
+* **ir:** a job carries the keys of its artifacts.reports and the include that defined it ([8482d15](https://github.com/getplumber/plumber/commit/8482d15c54ca683beb05bdec9d8046b10579f3c1))
+* **pbom:** the bill carries the recognized capabilities from the push and the --pbom artifact ([5541574](https://github.com/getplumber/plumber/commit/55415746dc68c5415b5c8d172a0428acc487031b))
+
 ## [0.7.4](https://github.com/getplumber/plumber/compare/v0.7.3...v0.7.4) (2026-10-18)
 
 
