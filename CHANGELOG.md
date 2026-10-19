@@ -1,3 +1,10 @@
+## [0.7.8](https://github.com/getplumber/plumber/compare/v0.7.7...v0.7.8) (2026-10-19)
+
+
+### ✨ Features
+
+* **capability:** in platform mode the served capabilities are the whole list ([5ca84ca](https://github.com/getplumber/plumber/commit/5ca84ca6aa9cf59d9df7e9fde89bde12af1c29ed))
+
 ## [0.7.7](https://github.com/getplumber/plumber/compare/v0.7.6...v0.7.7) (2026-10-19)
 
 
