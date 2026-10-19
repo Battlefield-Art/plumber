@@ -1,3 +1,27 @@
+## [0.7.9](https://github.com/getplumber/plumber/compare/v0.7.8...v0.7.9) (2026-10-19)
+
+
+### ✨ Features
+
+* **control:** ISSUE-423, flag an invalid GitHub workflow file ([71f5467](https://github.com/getplumber/plumber/commit/71f546738d1ff5c208081ec71f71037f5d87ecef))
+
+
+### 🐛 Bug Fixes
+
+* **control,cmd:** wire workflowsMustBeValid like every live GitHub control ([f82148a](https://github.com/getplumber/plumber/commit/f82148a4ba49bc89b905ccab604c27972fbfd4f6))
+* **control,github:** honest invalid-workflow log, drop the yaml prefix helper ([fe852d9](https://github.com/getplumber/plumber/commit/fe852d9560d4c99cd06fd4743c2b7a06afdba7d3))
+* **control,policies:** never silently drop an invalid workflow file ([ccef650](https://github.com/getplumber/plumber/commit/ccef6505e24cd2a6632b5419a03fd1c160ab6511))
+* **control:** every workflow invalid leaves CI controls not evaluated, not passed ([3f30010](https://github.com/getplumber/plumber/commit/3f300103ea5c4e5b64b833994d48c126e45b4764))
+* **control:** follow the policy's own control tree in platform mode ([73b82e9](https://github.com/getplumber/plumber/commit/73b82e9db2e96974051eae94920102cb1bc20db2))
+* **github:** compare duplicate YAML keys by source text, not YAML 1.1 value ([a8fbd14](https://github.com/getplumber/plumber/commit/a8fbd14acb8c441068eaefe706608c611c15d65d))
+* **github:** duplicate YAML keys compare case-insensitively, as GitHub does ([c5cc37a](https://github.com/getplumber/plumber/commit/c5cc37a7d97424c270353e6eb0931d5d402678a7))
+* **github:** separate an invalid workflow file from a collection failure ([a910afe](https://github.com/getplumber/plumber/commit/a910afeb34ee1b7dcf477e904b8f9937c125f53c))
+
+
+### 📚 Documentation
+
+* **control,github:** scope ISSUE-423 to YAML parse failures, pin out-of-scope files ([9b41d6e](https://github.com/getplumber/plumber/commit/9b41d6e99efddc8b6c3a4077cb38d6aec119521d))
+
 ## [0.7.8](https://github.com/getplumber/plumber/compare/v0.7.7...v0.7.8) (2026-10-19)
 
 
