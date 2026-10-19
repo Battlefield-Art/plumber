@@ -1,3 +1,12 @@
+## [0.7.6](https://github.com/getplumber/plumber/compare/v0.7.5...v0.7.6) (2026-10-19)
+
+
+### 🐛 Bug Fixes
+
+* **github:** read a local action's entrypoint within the repository ([018074a](https://github.com/getplumber/plumber/commit/018074a97187c0d3ccc0edf9a1a0d5519d9c39a0))
+* **github:** resolve only well-formed action references ([b06e171](https://github.com/getplumber/plumber/commit/b06e171a90a5aeee9ebb53957529e51334d685a0))
+* **gitlab:** bound variable and local-include expansion ([13a6f97](https://github.com/getplumber/plumber/commit/13a6f97f673dab607755d4d5584faf3fec011933))
+
 ## [0.7.5](https://github.com/getplumber/plumber/compare/v0.7.4...v0.7.5) (2026-10-19)
 
 
