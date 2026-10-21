@@ -1,3 +1,26 @@
+## [0.7.11](https://github.com/getplumber/plumber/compare/v0.7.10...v0.7.11) (2026-10-21)
+
+
+### ✨ Features
+
+* **control,github:** a workflow lockfile pins steps, not reusable workflows ([07984e2](https://github.com/getplumber/plumber/commit/07984e2271c8ec672395338b873b73e8805248a8)), closes [gh-actions-lock#194](https://github.com/getplumber/gh-actions-lock/issues/194) [#542](https://github.com/getplumber/plumber/issues/542)
+* **control,github:** ISSUE-701 accepts a tag backed by an immutable release ([9db85c9](https://github.com/getplumber/plumber/commit/9db85c925c33ee338a7ce0a8d07da4b813fdd88e)), closes [#421](https://github.com/getplumber/plumber/issues/421)
+
+
+### 🔧 Chores
+
+* **ci:** bump the github-actions group with 5 updates ([418f3fd](https://github.com/getplumber/plumber/commit/418f3fd8f6687eed946483e4ca52b39612a3b67b))
+
+
+### 📚 Documentation
+
+* **control:** a lockfile's presence is enough, GitHub enforces its coverage ([7272b17](https://github.com/getplumber/plumber/commit/7272b1702d2fa158fff51e42f917c9f7ac2304c9)), closes [#567](https://github.com/getplumber/plumber/issues/567) [#542](https://github.com/getplumber/plumber/issues/542) [#542](https://github.com/getplumber/plumber/issues/542)
+
+
+### ✅ Tests
+
+* **cmd:** cover sort and dedup of immutable release refs ([a05b314](https://github.com/getplumber/plumber/commit/a05b314eb31c224c9f0bbc9f9ca11916ef299e22))
+
 ## [0.7.10](https://github.com/getplumber/plumber/compare/v0.7.9...v0.7.10) (2026-10-21)
 
 
