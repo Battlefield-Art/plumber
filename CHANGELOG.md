@@ -1,3 +1,10 @@
+## [0.7.10](https://github.com/getplumber/plumber/compare/v0.7.9...v0.7.10) (2026-10-21)
+
+
+### 🔧 Chores
+
+* **deps:** bump golang.org/x/term ([2860509](https://github.com/getplumber/plumber/commit/2860509d95daa03af91404c5cbd61a51e638b0af))
+
 ## [0.7.9](https://github.com/getplumber/plumber/compare/v0.7.8...v0.7.9) (2026-10-19)
 
 
